@@ -1,0 +1,3 @@
+[submodule "thirdparty/gtsam_ext"]
+	path = thirdparty/gtsam_ext
+	url = git@mobarobo.tk:KenjiKoide/gtsam_ext
