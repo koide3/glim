@@ -1,3 +1,6 @@
 [submodule "thirdparty/gtsam_ext"]
 	path = thirdparty/gtsam_ext
 	url = git@mobarobo.tk:KenjiKoide/gtsam_ext
+[submodule "thirdparty/json"]
+	path = thirdparty/json
+	url = https://github.com/nlohmann/json.git

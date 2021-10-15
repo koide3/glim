@@ -1,0 +1,14 @@
+{
+  "odometry_estimation": {
+    "factor_type": "VGICP_GPU",
+    "smoother_lag": 5.0,
+    "use_isam2_dogleg": false,
+    "isam2_relinearize_skip": 1,
+    "isam2_relinearize_thresh": 0.1,
+    "voxel_resolution": 0.25,
+    "full_connection_window_size": 3,
+    "max_num_keyframes": 15,
+    "keyframe_min_overlap": 0.1,
+    "keyframe_max_overlap": 0.8
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "global": {
+    "config_path": "",
+    "config_sensors": "config_sensors.json",
+    "config_preprocess": "config_preprocess.json",
+    "config_frontend": "config_frontend.json"
+  }
+}

@@ -1,0 +1,95 @@
+cmake_minimum_required(VERSION 3.5)
+project(glim)
+
+add_compile_options(-std=c++17)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+
+option(BUILD_WITH_CUDA "Build with GPU support" ON)
+option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
+option(BUILD_WITH_VIEWER "Build with visualizer" ON)
+
+if(BUILD_WITH_MARCH_NATIVE)
+  add_definitions(-march=native)
+  set(CMAKE_C_FLAGS "-march=native ${CMAKE_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-march=native ${CMAKE_CXX_FLAGS}")
+endif()
+
+find_package(Boost REQUIRED timer)
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(GTSAM REQUIRED)
+
+find_package(OpenMP)
+if (OPENMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
+if(BUILD_WITH_VIEWER)
+  find_package(Iridescence REQUIRED)
+endif()
+
+# GPU-related
+if(BUILD_WITH_CUDA)
+  find_package(CUDA REQUIRED)
+  add_definitions(-DBUILD_GTSAM_EXT_GPU)
+
+  # set(CUDA_HOST_COMPILER clang++)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-c99-extensions")
+  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --std=c++17 --expt-relaxed-constexpr")
+  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_75")
+  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode=arch=compute_75,code=sm_75")
+endif()
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(thirdparty/json)
+add_subdirectory(thirdparty/gtsam_ext)
+
+###########
+## Build ##
+###########
+
+add_library(glim SHARED
+  # util
+  src/glim/util/config.cpp
+  # preprocess
+  src/glim/preprocess/cloud_preprocessor.cpp
+  src/glim/preprocess/downsampling.cpp
+  # common process
+  src/glim/common/imu_integration.cpp
+  src/glim/common/cloud_deskewing.cpp
+  src/glim/common/cloud_covariance_estimation.cpp
+  # frontend
+  src/glim/frontend/initial_state_estimation.cpp
+  src/glim/frontend/odometry_estimation.cpp
+)
+target_include_directories(glim PUBLIC
+  include
+  thirdparty/json/include
+  thirdparty/gtsam_ext/include
+  ${EIGEN3_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${GTSAM_INCLUDE_DIRS}
+)
+target_link_libraries(glim
+  gtsam_ext
+  ${OpenCV_LIBRARIES}
+  ${GTSAM_LIBRARIES}
+)
+
+install(TARGETS glim gtsam_ext gtsam_ext_cuda)
+install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
+
+
+###########
+## ament ##
+###########
+find_package(ament_cmake)
+if(ament_cmake_FOUND)
+  ament_export_include_directories(include)
+  ament_export_libraries(glim)
+  ament_package()
+endif()

@@ -1,0 +1,26 @@
+{
+  "sensors": {
+    "_note0": "SE3 poses are written in the TUM format [x, y, z, qx, qy, qz, qw]",
+    "T_lidar_imu": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "T_world_lidar": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "imu_acc_noise": 0.01,
+    "imu_gyro_noise": 0.01,
+    "imu_int_noise": 0.01
+  }
+}
