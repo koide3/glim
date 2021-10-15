@@ -6,8 +6,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
-option(BUILD_WITH_CUDA "Build with GPU support" ON)
 option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
+option(BUILD_WITH_CUDA "Build with GPU support" ON)
 option(BUILD_WITH_VIEWER "Build with visualizer" ON)
 
 if(BUILD_WITH_MARCH_NATIVE)
@@ -25,10 +25,6 @@ find_package(OpenMP)
 if (OPENMP_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
-
-if(BUILD_WITH_VIEWER)
-  find_package(Iridescence REQUIRED)
 endif()
 
 # GPU-related
@@ -62,6 +58,7 @@ add_library(glim SHARED
   src/glim/common/cloud_deskewing.cpp
   src/glim/common/cloud_covariance_estimation.cpp
   # frontend
+  src/glim/frontend/callbacks.cpp
   src/glim/frontend/initial_state_estimation.cpp
   src/glim/frontend/odometry_estimation.cpp
 )
@@ -83,6 +80,28 @@ install(TARGETS glim gtsam_ext gtsam_ext_cuda)
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 
+if(BUILD_WITH_VIEWER)
+  find_package(Iridescence REQUIRED)
+
+  add_library(glim_vis SHARED
+    src/glim/viewer/interactive_viewer.cpp
+  )
+  target_include_directories(glim_vis PUBLIC
+    include
+    thirdparty/json/include
+    thirdparty/gtsam_ext/include
+    ${Iridescence_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+    ${GTSAM_INCLUDE_DIRS}
+  )
+  target_link_libraries(glim_vis
+    ${Iridescence_LIBRARIES}
+  )
+
+  install(TARGETS glim_vis)
+endif()
+
 
 ###########
 ## ament ##
@@ -90,6 +109,6 @@ install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 find_package(ament_cmake)
 if(ament_cmake_FOUND)
   ament_export_include_directories(include)
-  ament_export_libraries(glim)
+  ament_export_libraries(glim glim_vis)
   ament_package()
 endif()

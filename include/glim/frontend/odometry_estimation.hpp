@@ -28,7 +28,7 @@ public:
   virtual ~OdometryEstimation() override;
 
   virtual void insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
-  virtual EstimationFrame::ConstPtr insert_frame(PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::Ptr>& marginalized_frames) override;
+  virtual EstimationFrame::ConstPtr insert_frame(PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
 
 private:
   void fallback_smoother();
@@ -52,8 +52,8 @@ private:
   Eigen::Isometry3d T_imu_lidar;
 
   int marginalized_cursor;
-  std::vector<EstimationFrame::Ptr> keyframes;
   std::vector<EstimationFrame::Ptr> frames;
+  std::vector<EstimationFrame::ConstPtr> keyframes;
 
   std::unique_ptr<InitialStateEstimation> init_estimation;
 

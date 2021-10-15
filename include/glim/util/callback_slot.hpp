@@ -16,8 +16,10 @@ public:
 
   void erase(int callback_id) { callbacks[callback_id] = nullptr; }
 
+  operator bool() const { return !callbacks.empty(); }
+
   template <class... Args>
-  void call(const Args... args) const {
+  void call(Args&... args) const {
     for (const auto& callback : callbacks) {
       if (callback) {
         callback(args...);
@@ -26,7 +28,7 @@ public:
   }
 
   template <class... Args>
-  void operator()(const Args... args) const {
+  void operator()(Args&... args) const {
     return call(args...);
   }
 

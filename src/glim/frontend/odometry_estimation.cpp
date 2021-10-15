@@ -18,7 +18,11 @@
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 
+#include <glim/frontend/callbacks.hpp>
+
 namespace glim {
+
+using Callbacks = OdometryEstimationCallbacks;
 
 using gtsam::symbol_shorthand::B;  // IMU bias
 using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
@@ -69,7 +73,7 @@ void OdometryEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_
   imu_integration->insert_imu(stamp, linear_acc, angular_vel);
 }
 
-EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::Ptr>& marginalized_frames) {
+EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
   const int current = frames.size();
   const int last = current - 1;
 
@@ -105,7 +109,9 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Pt
     new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(voxel_resolution, points_imu, covs);
     new_frame->frame_id = "imu";
 
+    Callbacks::on_new_frame(new_frame);
     frames.push_back(new_frame);
+    keyframes.push_back(new_frame);
 
     // Initialize the estimator
     gtsam::Values new_values;
@@ -197,12 +203,14 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Pt
   new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(voxel_resolution, deskewed, deskewed_covs);
   new_frame->frame_id = "imu";
 
+  Callbacks::on_new_frame(new_frame);
   frames.push_back(new_frame);
 
   // Create matching cost factors
   new_factors.add(create_matching_cost_factors(current));
 
   // Update smoother
+  Callbacks::on_smoother_update(*smoother);
   smoother->update(new_factors, new_values, new_stamps);
 
   // Find out marginalized frames
@@ -216,10 +224,15 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Pt
     frames[marginalized_cursor].reset();
     marginalized_cursor++;
   }
+  Callbacks::on_marginalized_frames(marginalized_frames);
 
   // Update frames and keyframes
   update_frames(current);
   update_keyframes(current);
+
+  std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
+  Callbacks::on_update_frames(active_frames);
+  Callbacks::on_update_keyframes(keyframes);
 
   return frames[current];
 }
@@ -242,6 +255,7 @@ void OdometryEstimation::update_frames(int current) {
       frames[i]->imu_bias = imu_bias;
     } catch (std::out_of_range& e) {
       std::cerr << "caught " << e.what() << std::endl;
+      Callbacks::on_smoother_corruption();
       fallback_smoother();
       break;
     }
