@@ -1,16 +1,9 @@
 {
   "sensors": {
     "_note0": "SE3 poses are written in the TUM format [x, y, z, qx, qy, qz, qw]",
+    "_note1": "Livox: [0, 0, 0, 0, 0, 0, 1]",
+    "_note2": "Realsense L515: [-0.012, 0.016, 0.001, 0, 0, 0, 1]",
     "T_lidar_imu": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1
-    ],
-    "T_world_lidar": [
       0,
       0,
       0,

@@ -1,0 +1,11 @@
+{
+  "sub_mapping": {
+    "enable_optimization": true,
+    "min_num_frames": 10,
+    "max_num_frames": 15,
+    "min_keyframe_overlap": 0.1,
+    "max_keyframe_overlap": 0.95,
+    "submap_downsample_resolution": 0.1,
+    "submap_voxel_resolution": 0.25
+  }
+}

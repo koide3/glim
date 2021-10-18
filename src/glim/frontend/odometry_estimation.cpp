@@ -66,14 +66,18 @@ OdometryEstimation::OdometryEstimation() {
 
 OdometryEstimation ::~OdometryEstimation() {}
 
-void OdometryEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
+void OdometryEstimation::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
+  Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
+
   if (init_estimation) {
     init_estimation->insert_imu(stamp, linear_acc, angular_vel);
   }
   imu_integration->insert_imu(stamp, linear_acc, angular_vel);
 }
 
-EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
+EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
+  Callbacks::on_insert_frame(raw_frame);
+
   const int current = frames.size();
   const int last = current - 1;
 
@@ -210,7 +214,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(PreprocessedFrame::Pt
   new_factors.add(create_matching_cost_factors(current));
 
   // Update smoother
-  Callbacks::on_smoother_update(*smoother);
+  Callbacks::on_smoother_update(*smoother, new_factors, new_values);
   smoother->update(new_factors, new_values, new_stamps);
 
   // Find out marginalized frames

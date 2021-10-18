@@ -20,6 +20,10 @@ public:
 
   template <class... Args>
   void call(Args&... args) const {
+    if(callbacks.empty()) {
+      return;
+    }
+
     for (const auto& callback : callbacks) {
       if (callback) {
         callback(args...);

@@ -3,6 +3,9 @@
 #include <glim/frontend/callbacks.hpp>
 #include <glim/frontend/estimation_frame.hpp>
 
+#include <glim/backend/callbacks.hpp>
+
+#include <glk/colormap.hpp>
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/primitives/primitives.hpp>
 #include <guik/viewer/light_viewer.hpp>
@@ -22,8 +25,12 @@ public:
   }
 
   void viewer_loop() {
-    auto viewer = guik::LightViewer::instance();
+    auto viewer = guik::LightViewer::instance(Eigen::Vector2i(2560, 1440));
     viewer->enable_vsync();
+    auto submap_viewer = viewer->sub_viewer("submap");
+    submap_viewer->set_pos(Eigen::Vector2i(100, 800));
+    submap_viewer->set_draw_xy_grid(false);
+    submap_viewer->use_topdown_camera_control(30.0);
 
     while (viewer->spin_once()) {
       std::lock_guard<std::mutex> lock(invoke_queue_mutex);
@@ -40,9 +47,14 @@ public:
   }
 
   void set_callbacks() {
-    OdometryEstimationCallbacks::on_new_frame.add(std::bind(&Impl::frontend_new_frame, this, std::placeholders::_1));
-    OdometryEstimationCallbacks::on_update_frames.add(std::bind(&Impl::frontend_on_update_frames, this, std::placeholders::_1));
-    OdometryEstimationCallbacks::on_marginalized_frames.add(std::bind(&Impl::frontend_on_marginalized_frames, this, std::placeholders::_1));
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+
+    OdometryEstimationCallbacks::on_new_frame.add(std::bind(&Impl::frontend_new_frame, this, _1));
+    OdometryEstimationCallbacks::on_update_frames.add(std::bind(&Impl::frontend_on_update_frames, this, _1));
+    OdometryEstimationCallbacks::on_marginalized_frames.add(std::bind(&Impl::frontend_on_marginalized_frames, this, _1));
+
+    SubMappingCallbacks::on_new_keyframe.add(std::bind(&Impl::submap_on_new_keyframe, this, _1, _2));
   }
 
   void frontend_new_frame(const EstimationFrame::ConstPtr& new_frame) {
@@ -104,6 +116,38 @@ public:
       }
     });
   }
+
+  void submap_on_new_keyframe(int id, const EstimationFrame::ConstPtr& keyframe) {
+    gtsam_ext::Frame::ConstPtr frame = keyframe->frame;
+
+    invoke([this, id, keyframe, frame] {
+      auto viewer = guik::LightViewer::instance();
+      auto sub_viewer = viewer->sub_viewer("submap");
+
+      const Eigen::Vector4f color = glk::colormap_categoricalf(glk::COLORMAP::TURBO, id, 16);
+      auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(frame->points, frame->size());
+
+      guik::FlatColor shader_setting(color);
+
+      if (id == 0) {
+        sub_viewer->clear_drawables();
+
+        Eigen::Isometry3f T_key0_world = keyframe->T_world_imu.inverse().cast<float>();
+        T_key0_world.translation().setZero();
+        shader_setting.add("T_key0_world", T_key0_world.matrix().eval());
+      } else {
+        auto drawable = sub_viewer->find_drawable("frame_0");
+        if (drawable.first) {
+          const Eigen::Matrix4f T_key0_world = *drawable.first->get<Eigen::Matrix4f>("T_key0_world");
+          const Eigen::Matrix4f T_key0_key1 = T_key0_world * keyframe->T_world_imu.matrix().cast<float>();
+          shader_setting.add("model_matrix", T_key0_key1);
+        }
+      }
+
+      sub_viewer->update_drawable("frame_" + std::to_string(id), cloud_buffer, shader_setting);
+    });
+  }
+
 
 private:
   std::thread thread;

@@ -20,6 +20,7 @@ find_package(Boost REQUIRED timer)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(GTSAM REQUIRED)
+find_package(Iridescence REQUIRED)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -60,7 +61,12 @@ add_library(glim SHARED
   # frontend
   src/glim/frontend/callbacks.cpp
   src/glim/frontend/initial_state_estimation.cpp
+  src/glim/frontend/odometry_estimation_base.cpp
   src/glim/frontend/odometry_estimation.cpp
+  # backend
+  src/glim/backend/callbacks.cpp
+  src/glim/backend/sub_mapping_base.cpp
+  src/glim/backend/sub_mapping.cpp
 )
 target_include_directories(glim PUBLIC
   include
@@ -69,6 +75,7 @@ target_include_directories(glim PUBLIC
   ${EIGEN3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIRS}
+  ${Iridescence_INCLUDE_DIRS}
 )
 target_link_libraries(glim
   gtsam_ext
@@ -81,8 +88,6 @@ install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 
 if(BUILD_WITH_VIEWER)
-  find_package(Iridescence REQUIRED)
-
   add_library(glim_vis SHARED
     src/glim/viewer/interactive_viewer.cpp
   )
