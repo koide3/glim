@@ -17,6 +17,8 @@ public:
   using ConstPtr = std::shared_ptr<const SubMap>;
 
 public:
+  int id;
+  
   Eigen::Isometry3d T_world_origin;
   Eigen::Isometry3d T_origin_endpoint_L;
   Eigen::Isometry3d T_origin_endpoint_R;

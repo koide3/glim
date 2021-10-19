@@ -37,6 +37,7 @@ SubMapping::SubMapping() {
   submap_downsample_resolution = config.param<double>("sub_mapping", "submap_downsample_resolution", 0.25);
   submap_voxel_resolution = config.param<double>("sub_mapping", "submap_voxel_resolution", 0.5);
 
+  submap_count = 0;
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation);
@@ -118,8 +119,10 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   auto new_submap = create_submap();
 
   if(new_submap) {
+    new_submap->id = submap_count++;
+
     Callbacks::on_new_submap(new_submap);
-    submaps_queue.push_back(new_submap);
+    submap_queue.push_back(new_submap);
 
     odom_frames.clear();
     keyframes.clear();
@@ -159,12 +162,12 @@ EstimationFrame::Ptr SubMapping::create_keyframe(const EstimationFrame::ConstPtr
   return keyframe;
 }
 
-SubMap::Ptr SubMapping::create_submap() const {
-  if(keyframes.size() < min_num_frames) {
+SubMap::Ptr SubMapping::create_submap(bool force_create) const {
+  if (keyframes.size() < min_num_frames && !force_create) {
     return nullptr;
   }
 
-  if(keyframes.size() < max_num_frames) {
+  if (keyframes.size() < max_num_frames && !force_create) {
     const Eigen::Isometry3d delta_first_last = keyframes.front()->T_world_imu.inverse() * keyframes.back()->T_world_imu;
     const double overlap_first_last = keyframes.back()->frame->overlap_gpu(keyframes.front()->frame, delta_first_last);
 
@@ -178,6 +181,7 @@ SubMap::Ptr SubMapping::create_submap() const {
   *values = optimizer.optimize();
 
   SubMap::Ptr submap(new SubMap);
+  submap->id = 0;
 
   const int center = odom_frames.size() / 2;
   submap->T_world_origin = Eigen::Isometry3d(values->at<gtsam::Pose3>(X(center)).matrix());
@@ -215,6 +219,19 @@ SubMap::Ptr SubMapping::create_submap() const {
   return submap;
 }
 
-std::vector<SubMap::Ptr> SubMapping::get_submaps() {}
+std::vector<SubMap::Ptr> SubMapping::get_submaps() {
+  std::vector<SubMap::Ptr> submaps;
+  submap_queue.swap(submaps);
+  return submaps;
+}
+
+std::vector<SubMap::Ptr> SubMapping::submit_end_of_sequence() {
+  std::vector<SubMap::Ptr> submaps;
+  if (!odom_frames.empty()) {
+    submaps.push_back(create_submap(true));
+  }
+
+  return submaps;
+}
 
 } // namespace glim

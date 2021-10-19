@@ -115,6 +115,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
     Callbacks::on_new_frame(new_frame);
     frames.push_back(new_frame);
+    imu_factors.push_back(nullptr);
     keyframes.push_back(new_frame);
 
     // Initialize the estimator
@@ -171,8 +172,9 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
   // Constant IMU bias assumption
   new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
   // Create IMU factor
+  gtsam::ImuFactor::shared_ptr imu_factor;
   if (num_imu_integrated > 2) {
-    auto imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
+    imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
     new_factors.add(imu_factor);
   } else {
     std::cerr << "warning: insufficient number of IMU data between LiDAR scans!! (odometry_estimation)" << std::endl;
@@ -209,6 +211,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
   Callbacks::on_new_frame(new_frame);
   frames.push_back(new_frame);
+  imu_factors.push_back(imu_factor);
 
   // Create matching cost factors
   new_factors.add(create_matching_cost_factors(current));
@@ -226,6 +229,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
     marginalized_frames.push_back(frames[marginalized_cursor]);
     frames[marginalized_cursor].reset();
+    imu_factors[marginalized_cursor].reset();
     marginalized_cursor++;
   }
   Callbacks::on_marginalized_frames(marginalized_frames);
@@ -241,9 +245,65 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
   return frames[current];
 }
 
+std::vector<EstimationFrame::ConstPtr> OdometryEstimation::submit_end_of_sequence() {
+  std::vector<EstimationFrame::ConstPtr> marginalized_frames;
+  for (int i = marginalized_cursor; i<frames.size(); i++) {
+    marginalized_frames.push_back(frames[i]);
+  }
+
+  Callbacks::on_marginalized_frames(marginalized_frames);
+
+  return marginalized_frames;
+}
+
 void OdometryEstimation::fallback_smoother() {
-  std::cerr << "good bye!" << std::endl;
-  abort();
+  // We observed that IncrementalFixedLagSmoother occasionally marginalize values that are
+  // still in the optimization window, resulting in an out_of_range exception
+  // (we have to remember that it is in gtsam_unstable directory)
+  // To continue estimation, we reset the smoother here with saved states
+  std::cerr << "warning: smoother corrupted!!" << std::endl;
+  std::cerr << "       : falling back to recover the smoother!!" << std::endl;
+
+  std::cout << "num_frames:" << frames.size() << std::endl;
+  std::cout << "mc        :" << marginalized_cursor << std::endl;
+
+  Config config(GlobalConfig::get_config_path("config_frontend"));
+  gtsam::ISAM2Params isam2_params;
+  if (config.param<bool>("odometry_estimation", "use_isam2_dogleg", false)) {
+    isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
+  }
+  isam2_params.setRelinearizeSkip(config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1));
+  isam2_params.setRelinearizeThreshold(config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1));
+  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(smoother_lag, isam2_params));
+
+  gtsam::Values values;
+  gtsam::NonlinearFactorGraph factors;
+  gtsam::FixedLagSmootherKeyTimestampMap stamps;
+
+  for (int i = marginalized_cursor; i < frames.size(); i++) {
+    const auto& frame = frames[i];
+    values.insert(X(i), gtsam::Pose3(frame->T_world_imu.matrix()));
+    values.insert(V(i), frame->v_world_imu);
+    values.insert(B(i), gtsam::imuBias::ConstantBias(frame->imu_bias));
+    stamps[X(i)] = frame->stamp;
+    stamps[V(i)] = frame->stamp;
+    stamps[B(i)] = frame->stamp;
+
+    factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(i), gtsam::Pose3(frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+    factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(i), frame->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
+    factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i), gtsam::imuBias::ConstantBias(frame->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+
+    if(i != marginalized_cursor) {
+      auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
+      auto& stream = stream_buffer.first;
+      auto& buffer = stream_buffer.second;
+      factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i - 1), X(i), frames[i - 1]->frame, frames[i]->frame, stream, buffer);
+      factors.push_back(imu_factors[i]);
+      factors.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(i - 1), B(i), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+    }
+  }
+
+  smoother->update(factors, values, stamps);
 }
 
 void OdometryEstimation::update_frames(int current) {

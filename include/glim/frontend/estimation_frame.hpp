@@ -15,6 +15,12 @@ struct EstimationFrame {
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  void purge_frames() const {
+    // warning: dirty code!!
+    std::const_pointer_cast<PreprocessedFrame>(raw_frame).reset();
+    std::const_pointer_cast<gtsam_ext::VoxelizedFrame>(frame).reset();
+  }
+
   long id;
   double stamp;
 

@@ -12,7 +12,7 @@
       0,
       1
     ],
-    "imu_acc_noise": 0.01,
+    "imu_acc_noise": 0.0001,
     "imu_gyro_noise": 0.01,
     "imu_int_noise": 0.01
   }

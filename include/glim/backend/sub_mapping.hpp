@@ -29,10 +29,12 @@ public:
 
   virtual std::vector<SubMap::Ptr> get_submaps() override;
 
+  virtual std::vector<SubMap::Ptr> submit_end_of_sequence() override;
+
 private:
   EstimationFrame::Ptr create_keyframe(const EstimationFrame::ConstPtr& odom_frame) const;
 
-  SubMap::Ptr create_submap() const;
+  SubMap::Ptr create_submap(bool force_create = false) const;
 
 private:
   bool enable_optimization;
@@ -42,6 +44,8 @@ private:
   double min_keyframe_overlap;
   double submap_downsample_resolution;
   double submap_voxel_resolution;
+
+  int submap_count; 
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::unique_ptr<CloudDeskewing> deskewing;
@@ -57,7 +61,7 @@ private:
   std::unique_ptr<gtsam::Values> values;
   std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
 
-  std::vector<SubMap::ConstPtr> submaps_queue;
+  std::vector<SubMap::Ptr> submap_queue;
 };
 
 }  // namespace glim

@@ -1,10 +1,13 @@
 #pragma once
 
 #include <memory>
+
+#include <boost/shared_ptr.hpp>
 #include <glim/frontend/odometry_estimation_base.hpp>
 #include <glim/frontend/initial_state_estimation.hpp>
 
 namespace gtsam {
+class ImuFactor;
 class NonlinearFactorGraph;
 }
 
@@ -29,6 +32,7 @@ public:
 
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
   virtual EstimationFrame::ConstPtr insert_frame(const PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
+  virtual std::vector<EstimationFrame::ConstPtr> submit_end_of_sequence() override;
 
 private:
   void fallback_smoother();
@@ -53,6 +57,8 @@ private:
 
   int marginalized_cursor;
   std::vector<EstimationFrame::Ptr> frames;
+  std::vector<boost::shared_ptr<gtsam::ImuFactor>> imu_factors;
+
   std::vector<EstimationFrame::ConstPtr> keyframes;
 
   std::unique_ptr<InitialStateEstimation> init_estimation;

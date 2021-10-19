@@ -67,6 +67,8 @@ add_library(glim SHARED
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_mapping_base.cpp
   src/glim/backend/sub_mapping.cpp
+  src/glim/backend/global_mapping_base.cpp
+  src/glim/backend/global_mapping.cpp
 )
 target_include_directories(glim PUBLIC
   include
