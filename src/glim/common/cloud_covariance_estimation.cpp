@@ -63,7 +63,19 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
       return c;
     }
 
-    case RegularizationMethod::FROBENIUS: {
+    case RegularizationMethod::NORMALIZED_MIN_EIG: {
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eig;
+      eig.computeDirect(cov.block<3, 3>(0, 0));
+
+      Eigen::Vector3d values = eig.eigenvalues() / eig.eigenvalues()[2];
+      values = values.array().max(1e-3);
+
+      Eigen::Matrix4d c = Eigen::Matrix4d::Zero();
+      c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().inverse();
+      return c;
+    }
+
+      case RegularizationMethod::FROBENIUS: {
       const double lambda = 1e-3;
       Eigen::Matrix3d C = cov.block<3, 3>(0, 0) + lambda * Eigen::Matrix3d::Identity();
       Eigen::Matrix3d C_inv = C.inverse();

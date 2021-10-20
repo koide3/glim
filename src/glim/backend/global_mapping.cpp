@@ -144,14 +144,20 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
   auto result = isam2->update(*new_factors, *new_values);
-  isam2->update();
   new_values.reset(new gtsam::Values);
   new_factors.reset(new gtsam::NonlinearFactorGraph);
+  Callbacks::on_smoother_update_result(*isam2, result);
 
   update_submaps();
   Callbacks::on_update_submaps(submaps);
+}
 
-  std::cout << result.to_string() << std::endl;
+void GlobalMapping::optimize() {
+  if(isam2->empty()) {
+    return;
+  }
+  auto result = isam2->update();
+  Callbacks::on_smoother_update_result(*isam2, result);
 }
 
 boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost_factors(int current) const {

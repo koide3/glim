@@ -94,7 +94,7 @@ install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 
 if(BUILD_WITH_VIEWER)
   add_library(glim_vis SHARED
-    src/glim/viewer/interactive_viewer.cpp
+    src/glim/viewer/standard_viewer.cpp
   )
   target_include_directories(glim_vis PUBLIC
     include

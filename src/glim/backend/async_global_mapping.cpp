@@ -35,7 +35,7 @@ void AsyncGlobalMapping::join() {
 }
 
 int AsyncGlobalMapping::input_queue_size() const {
-  input_submap_queue.size();
+  return input_submap_queue.size();
 }
 
 int AsyncGlobalMapping::output_queue_size() const {
@@ -53,7 +53,8 @@ void AsyncGlobalMapping::run() {
         break;
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      global_mapping->optimize();
+      std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       continue;
     }
 

@@ -5,10 +5,10 @@
 
 namespace glim {
 
-class InteractiveViewer {
+class StandardViewer {
 public:
-  InteractiveViewer();
-  ~InteractiveViewer();
+  StandardViewer();
+  ~StandardViewer();
 
 private:
   class Impl;

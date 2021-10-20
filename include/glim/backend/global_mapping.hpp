@@ -23,8 +23,10 @@ public:
   GlobalMapping();
   virtual ~GlobalMapping();
 
-  virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel);
-  virtual void insert_submap(const SubMap::Ptr& submap);
+  virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
+  virtual void insert_submap(const SubMap::Ptr& submap) override;
+
+  virtual void optimize() override;
 
 private:
   boost::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;

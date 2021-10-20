@@ -5,7 +5,7 @@
 
 namespace glim {
 
-enum class RegularizationMethod { NONE, PLANE, FROBENIUS };
+enum class RegularizationMethod { NONE, PLANE, NORMALIZED_MIN_EIG, FROBENIUS };
 
 class CloudCovarianceEstimation {
 public:

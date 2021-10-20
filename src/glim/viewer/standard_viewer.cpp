@@ -1,4 +1,4 @@
-#include <glim/viewer/interactive_viewer.hpp>
+#include <glim/viewer/standard_viewer.hpp>
 
 #include <gtsam/inference/Symbol.h>
 
@@ -15,7 +15,7 @@
 
 namespace glim {
 
-class InteractiveViewer::Impl {
+class StandardViewer::Impl {
 public:
   Impl() {
     show_current = true;
@@ -96,6 +96,7 @@ public:
     GlobalMappingCallbacks::on_insert_submap.add(std::bind(&Impl::globalmap_on_insert_submap, this, _1));
     GlobalMappingCallbacks::on_update_submaps.add(std::bind(&Impl::globalmap_on_update_submaps, this, _1));
     GlobalMappingCallbacks::on_smoother_update.add(std::bind(&Impl::globalmap_on_smoother_update, this, _1, _2, _3));
+    GlobalMappingCallbacks::on_smoother_update_result.add(std::bind(&Impl::globalmap_on_smoother_update_result, this, _1, _2));
   }
 
   void frontend_new_frame(const EstimationFrame::ConstPtr& new_frame) {
@@ -265,6 +266,11 @@ public:
     }
   }
 
+  void globalmap_on_smoother_update_result(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result) {
+    auto viewer = guik::LightViewer::instance();
+    viewer->append_text(result.to_string());
+  }
+
 private:
   std::thread thread;
 
@@ -279,10 +285,10 @@ private:
   std::vector<std::function<void()>> invoke_queue;
 };
 
-InteractiveViewer::InteractiveViewer() {
+StandardViewer::StandardViewer() {
   impl.reset(new Impl);
 }
 
-InteractiveViewer::~InteractiveViewer() {}
+StandardViewer::~StandardViewer() {}
 
 }  // namespace glim

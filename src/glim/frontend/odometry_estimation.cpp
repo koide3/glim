@@ -20,6 +20,8 @@
 
 #include <glim/frontend/callbacks.hpp>
 
+#include <guik/viewer/light_viewer.hpp>
+
 namespace glim {
 
 using Callbacks = OdometryEstimationCallbacks;
@@ -41,6 +43,7 @@ OdometryEstimation::OdometryEstimation() {
   keyframe_max_overlap = config.param<double>("odometry_estimation", "keyframe_max_overlap", 0.9);
 
   marginalized_cursor = 0;
+  enable_matching_cost_factors = true;
 
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
@@ -58,6 +61,15 @@ OdometryEstimation::OdometryEstimation() {
   isam2_params.setRelinearizeSkip(config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1));
   isam2_params.setRelinearizeThreshold(config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1));
   smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(smoother_lag, isam2_params));
+
+  guik::LightViewer::instance()->invoke([this] {
+    guik::LightViewer::instance()->register_ui_callback("call", [&] {
+      bool flag = enable_matching_cost_factors;
+      if(ImGui::Checkbox("enable matching cost factors", &flag)) {
+        enable_matching_cost_factors = flag;
+      }
+    });
+  });
 
 #if BUILD_GTSAM_EXT_GPU
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
@@ -247,7 +259,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
 std::vector<EstimationFrame::ConstPtr> OdometryEstimation::get_remaining_frames() {
   std::vector<EstimationFrame::ConstPtr> marginalized_frames;
-  for (int i = marginalized_cursor; i<frames.size(); i++) {
+  for (int i = marginalized_cursor; i < frames.size(); i++) {
     marginalized_frames.push_back(frames[i]);
   }
 
@@ -293,13 +305,13 @@ void OdometryEstimation::fallback_smoother() {
     factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(i), frame->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
     factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i), gtsam::imuBias::ConstantBias(frame->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
 
-    if(i != marginalized_cursor) {
+    if (i != marginalized_cursor) {
       factors.push_back(imu_factors[i]);
       factors.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(i - 1), B(i), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
     }
 
-    for (int target = i - full_connection_window_size; target < i; target++){
-      if(target <= marginalized_cursor) {
+    for (int target = i - full_connection_window_size; target < i; target++) {
+      if (target <= marginalized_cursor) {
         continue;
       }
 
@@ -450,7 +462,7 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
   };
 
   gtsam::NonlinearFactorGraph factors;
-  if (current == 0) {
+  if (current == 0 || !enable_matching_cost_factors) {
     return factors;
   }
 

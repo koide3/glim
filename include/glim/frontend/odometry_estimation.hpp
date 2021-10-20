@@ -52,6 +52,8 @@ private:
 
   double smoother_lag;
 
+  std::atomic_bool enable_matching_cost_factors;
+
   Eigen::Isometry3d T_lidar_imu;
   Eigen::Isometry3d T_imu_lidar;
 

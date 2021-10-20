@@ -30,5 +30,6 @@ struct GlobalMappingCallbacks {
   static CallbackSlot<void(const std::vector<SubMap::Ptr>& submaps)> on_update_submaps;
 
   static CallbackSlot<void(gtsam_ext::ISAM2Ext&, gtsam::NonlinearFactorGraph&, gtsam::Values&)> on_smoother_update;
+  static CallbackSlot<void(gtsam_ext::ISAM2Ext&, const gtsam_ext::ISAM2ResultExt& result)> on_smoother_update_result;
 };
 }
