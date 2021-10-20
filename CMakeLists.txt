@@ -62,12 +62,15 @@ add_library(glim SHARED
   src/glim/frontend/callbacks.cpp
   src/glim/frontend/initial_state_estimation.cpp
   src/glim/frontend/odometry_estimation_base.cpp
+  src/glim/frontend/async_odometry_estimation.cpp
   src/glim/frontend/odometry_estimation.cpp
   # backend
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_mapping_base.cpp
+  src/glim/backend/async_sub_mapping.cpp
   src/glim/backend/sub_mapping.cpp
   src/glim/backend/global_mapping_base.cpp
+  src/glim/backend/async_global_mapping.cpp
   src/glim/backend/global_mapping.cpp
 )
 target_include_directories(glim PUBLIC

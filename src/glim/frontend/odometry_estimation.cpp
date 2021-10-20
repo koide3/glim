@@ -245,7 +245,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
   return frames[current];
 }
 
-std::vector<EstimationFrame::ConstPtr> OdometryEstimation::submit_end_of_sequence() {
+std::vector<EstimationFrame::ConstPtr> OdometryEstimation::get_remaining_frames() {
   std::vector<EstimationFrame::ConstPtr> marginalized_frames;
   for (int i = marginalized_cursor; i<frames.size(); i++) {
     marginalized_frames.push_back(frames[i]);
@@ -294,12 +294,19 @@ void OdometryEstimation::fallback_smoother() {
     factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i), gtsam::imuBias::ConstantBias(frame->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
 
     if(i != marginalized_cursor) {
+      factors.push_back(imu_factors[i]);
+      factors.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(i - 1), B(i), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+    }
+
+    for (int target = i - full_connection_window_size; target < i; target++){
+      if(target <= marginalized_cursor) {
+        continue;
+      }
+
       auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
       auto& stream = stream_buffer.first;
       auto& buffer = stream_buffer.second;
-      factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i - 1), X(i), frames[i - 1]->frame, frames[i]->frame, stream, buffer);
-      factors.push_back(imu_factors[i]);
-      factors.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(i - 1), B(i), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+      factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(target), X(i), frames[target]->frame, frames[i]->frame, stream, buffer);
     }
   }
 
@@ -319,6 +326,8 @@ void OdometryEstimation::update_frames(int current) {
       frames[i]->imu_bias = imu_bias;
     } catch (std::out_of_range& e) {
       std::cerr << "caught " << e.what() << std::endl;
+      std::cerr << "current:" << current << std::endl;
+      std::cerr << "marginalized_cursor:" << marginalized_cursor << std::endl;
       Callbacks::on_smoother_corruption();
       fallback_smoother();
       break;

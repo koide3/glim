@@ -123,7 +123,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   new_factors->emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(current * 2 + 1), imu_biasR, prior_noise6);
 
   if (current == 0) {
-    new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_imu, gtsam::noiseModel::Isotropic::Precision(6, 1e4));
+    new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_imu, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
   } else {
     new_factors->add(*create_matching_cost_factors(current));
 
@@ -180,7 +180,6 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     const auto& buffer = stream_buffer.second;
 
     factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), submaps[i]->frame, current_submap->frame, stream, buffer);
-    std::cout << "between " << i << " and " << current << std::endl;
   }
 
   return factors;

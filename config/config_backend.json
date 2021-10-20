@@ -5,7 +5,7 @@
     "max_num_frames": 15,
     "min_keyframe_overlap": 0.1,
     "max_keyframe_overlap": 0.95,
-    "submap_downsample_resolution": 0.05,
+    "submap_downsample_resolution": 0.1,
     "submap_voxel_resolution": 0.25
   },
   "global_mapping": {
