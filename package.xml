@@ -7,9 +7,8 @@
   <maintainer email="k.koide@aist.go.jp">k.koide</maintainer>
   <license>GPLv3</license>
 
+  <!--
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <export>
-    <build_type>ament_cmake</build_type>
-  </export>
+  -->
+  <buildtool_depend>catkin</buildtool_depend>
 </package>

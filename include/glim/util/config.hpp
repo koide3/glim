@@ -40,7 +40,7 @@ public:
   static std::string get_config_path(const std::string& config_name) {
     auto config = instance();
     const std::string directory = config->param<std::string>("global", "config_path", ".");
-    const std::string filename = config->param<std::string>("global", "config_sensors", config_name + ".json");
+    const std::string filename = config->param<std::string>("global", config_name, config_name + ".json");
     return directory + "/" + filename;
   }
 

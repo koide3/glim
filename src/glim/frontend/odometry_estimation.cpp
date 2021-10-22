@@ -318,7 +318,7 @@ void OdometryEstimation::fallback_smoother() {
       auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
       auto& stream = stream_buffer.first;
       auto& buffer = stream_buffer.second;
-      factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(target), X(i), frames[target]->frame, frames[i]->frame, stream, buffer);
+      factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(target), X(i), frames[target]->voxelized_frame(), frames[i]->frame, stream, buffer);
     }
   }
 
@@ -356,7 +356,7 @@ void OdometryEstimation::update_keyframes(int current) {
   std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> keyframes_(keyframes.size());
   std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> delta_from_keyframes(keyframes.size());
   for (int i = 0; i < keyframes.size(); i++) {
-    keyframes_[i] = keyframes[i]->frame;
+    keyframes_[i] = keyframes[i]->voxelized_frame();
     delta_from_keyframes[i] = keyframes[i]->T_world_imu.inverse() * frames[current]->T_world_imu;
   }
 
@@ -375,7 +375,7 @@ void OdometryEstimation::update_keyframes(int current) {
   // Remove keyframes without overlap to the new keyframe
   for (int i = 0; i < keyframes.size(); i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->frame, delta);
+    const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->voxelized_frame(), delta);
     if (overlap < keyframe_min_overlap) {
       keyframes.erase(keyframes.begin() + i);
       i--;
@@ -390,7 +390,7 @@ void OdometryEstimation::update_keyframes(int current) {
   std::vector<double> scores(keyframes.size() - 1, 0.0);
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const auto& keyframe = keyframes[i];
-    const double overlap_latest = new_keyframe->frame->overlap_gpu(keyframe->frame, keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu);
+    const double overlap_latest = new_keyframe->frame->overlap_gpu(keyframe->voxelized_frame(), keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu);
 
     std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> other_keyframes;
     std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> delta_from_others;
@@ -400,7 +400,7 @@ void OdometryEstimation::update_keyframes(int current) {
       }
 
       const auto& other = keyframes[j];
-      other_keyframes.push_back(other->frame);
+      other_keyframes.push_back(other->voxelized_frame());
       delta_from_others.push_back(other->T_world_imu.inverse() * keyframe->T_world_imu);
     }
 
@@ -425,7 +425,7 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
                                       gtsam::Key target_key,
                                       gtsam::Key source_key,
                                       const gtsam_ext::VoxelizedFrame::ConstPtr& target,
-                                      const gtsam_ext::VoxelizedFrame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
+                                      const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
     if (factor_type == "VGICP_GPU") {
       auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
       const auto& stream = stream_buffer.first;
@@ -445,7 +445,7 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
                                      const gtsam::Pose3& fixed_target_pose,
                                      gtsam::Key source_key,
                                      const gtsam_ext::VoxelizedFrame::ConstPtr& target,
-                                     const gtsam_ext::VoxelizedFrame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
+                                     const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
     if (factor_type == "VGICP_GPU") {
       auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
       const auto& stream = stream_buffer.first;
@@ -472,7 +472,7 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
       continue;
     }
 
-    factors.add(create_binary_factor(X(target), X(current), frames[target]->frame, frames[current]->frame));
+    factors.add(create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame));
   }
 
   for (const auto& keyframe : keyframes) {
@@ -489,11 +489,11 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
     if (span > smoother_lag - 0.1) {
       // Create unary factor
       const gtsam::Pose3 key_T_world_imu(keyframe->T_world_imu.matrix());
-      factors.add(create_unary_factor(key_T_world_imu, X(current), keyframe->frame, frames[current]->frame));
+      factors.add(create_unary_factor(key_T_world_imu, X(current), keyframe->voxelized_frame(), frames[current]->frame));
     } else {
       // Create binary factor
       const int target = keyframe->id;
-      auto factor = create_binary_factor(X(target), X(current), frames[target]->frame, frames[current]->frame);
+      auto factor = create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame);
       factors.add(factor);
     }
   }

@@ -91,7 +91,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> targets(keyframes.size());
     std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> deltas(keyframes.size());
     for (int i = 0; i < keyframes.size(); i++) {
-      targets[i] = keyframes[i]->frame;
+      targets[i] = keyframes[i]->voxelized_frame();
       deltas[i] = keyframes[i]->T_world_imu.inverse() * odom_frame->T_world_imu;
     }
 
@@ -111,8 +111,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
 
-
-      graph->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), keyframes[i]->frame, keyframes.back()->frame, stream, buffer);
+      graph->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), keyframes[i]->voxelized_frame(), keyframes.back()->frame, stream, buffer);
     }
   }
 
@@ -157,7 +156,7 @@ EstimationFrame::Ptr SubMapping::create_keyframe(const EstimationFrame::ConstPtr
   keyframe->raw_frame = odom_frame->raw_frame;
 
   keyframe->frame_id = odom_frame->frame_id;
-  keyframe->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(odom_frame->frame->voxel_resolution(), deskewed, covs);
+  keyframe->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(odom_frame->voxelized_frame()->voxel_resolution(), deskewed, covs);
 
   return keyframe;
 }
@@ -169,7 +168,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
 
   if (keyframes.size() < max_num_frames && !force_create) {
     const Eigen::Isometry3d delta_first_last = keyframes.front()->T_world_imu.inverse() * keyframes.back()->T_world_imu;
-    const double overlap_first_last = keyframes.back()->frame->overlap_gpu(keyframes.front()->frame, delta_first_last);
+    const double overlap_first_last = keyframes.back()->frame->overlap_gpu(keyframes.front()->voxelized_frame(), delta_first_last);
 
     if(overlap_first_last > min_num_frames) {
       return nullptr;

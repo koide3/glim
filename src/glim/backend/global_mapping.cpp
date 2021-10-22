@@ -12,9 +12,6 @@
 #include <gtsam_ext/optimizers/isam2_ext.hpp>
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 
-#include <gtsam_ext/optimizers/isam2_ext.hpp>
-#include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
-
 #include <glim/util/config.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/backend/callbacks.hpp>
@@ -58,12 +55,7 @@ void GlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear
 }
 
 void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
-  for (auto& frame : submap->frames) {
-    frame->purge_frames();
-  }
-  for (auto& frame : submap->odom_frames) {
-    frame->purge_frames();
-  }
+  submap->drop_odom_frames();
 
   const int current = submaps.size();
   const int last = current - 1;

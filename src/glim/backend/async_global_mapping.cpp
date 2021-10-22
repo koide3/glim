@@ -43,6 +43,8 @@ int AsyncGlobalMapping::output_queue_size() const {
 }
 
 void AsyncGlobalMapping::run() {
+  auto last_optimization_time = std::chrono::high_resolution_clock::now();
+
   while (!kill_switch) {
     auto images = input_image_queue.get_all_and_clear();
     auto imu_frames = input_imu_queue.get_all_and_clear();
@@ -53,8 +55,11 @@ void AsyncGlobalMapping::run() {
         break;
       }
 
-      global_mapping->optimize();
-      std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+      if (std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(5)) {
+        global_mapping->optimize();
+        last_optimization_time = std::chrono::high_resolution_clock::now();
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       continue;
     }
 
@@ -72,6 +77,8 @@ void AsyncGlobalMapping::run() {
     for (const auto& submap : submaps) {
       global_mapping->insert_submap(submap);
     }
+
+    last_optimization_time = std::chrono::high_resolution_clock::now();
   }
 }
 

@@ -121,6 +121,8 @@ template <typename T>
 T Config::param(const std::string& module_name, const std::string& param_name, const T& default_value) const {
   auto found = param<T>(module_name, param_name);
   if (!found) {
+    std::cerr << "warning: param " << param_name << " not found" << std::endl;
+    std::cerr << "       : use the default value" << std::endl;
     return default_value;
   }
 

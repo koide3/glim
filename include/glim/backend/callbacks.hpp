@@ -1,14 +1,23 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
-#include <gtsam/nonlinear/Values.h>
-
 #include <glim/util/callback_slot.hpp>
-#include <glim/backend/sub_map.hpp>
 #include <glim/frontend/estimation_frame.hpp>
+#include <glim/backend/sub_map.hpp>
 
-#include <gtsam_ext/optimizers/isam2_ext.hpp>
-#include <gtsam_ext/optimizers/levenberg_marquardt_optimization_status.hpp>
+namespace cv {
+class Mat;
+}
+
+namespace gtsam {
+class Values;
+class NonlinearFactorGraph;
+}  // namespace gtsam
+
+namespace gtsam_ext {
+class ISAM2Ext;
+class ISAM2ResultExt;
+class LevenbergMarquardtOptimizationStatus;
+}  // namespace gtsam_ext
 
 namespace glim {
 
@@ -19,6 +28,8 @@ struct SubMappingCallbacks {
 
   static CallbackSlot<void(int id, const EstimationFrame::ConstPtr&)> on_new_keyframe;
 
+  static CallbackSlot<void(gtsam::NonlinearFactorGraph&, gtsam::Values&)> on_optimize_submap;
+  static CallbackSlot<void(const gtsam_ext::LevenbergMarquardtOptimizationStatus&, const gtsam::Values& values)> on_optimization_status;
   static CallbackSlot<void(const SubMap::ConstPtr&)> on_new_submap;
 };
 

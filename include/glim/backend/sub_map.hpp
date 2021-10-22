@@ -16,9 +16,19 @@ public:
   using Ptr = std::shared_ptr<SubMap>;
   using ConstPtr = std::shared_ptr<const SubMap>;
 
+  void drop_odom_frames() {
+    for (auto& frame : frames) {
+      frame = frame->clone_wo_points();
+    }
+
+    for (auto& frame : odom_frames) {
+      frame = frame->clone_wo_points();
+    }
+  }
+
 public:
   int id;
-  
+
   Eigen::Isometry3d T_world_origin;
   Eigen::Isometry3d T_origin_endpoint_L;
   Eigen::Isometry3d T_origin_endpoint_R;
@@ -28,4 +38,4 @@ public:
   std::vector<EstimationFrame::ConstPtr> odom_frames;
 };
 
-} // namespace  glim 
+}  // namespace  glim

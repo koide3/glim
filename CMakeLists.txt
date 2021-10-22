@@ -64,14 +64,17 @@ add_library(glim SHARED
   src/glim/frontend/odometry_estimation_base.cpp
   src/glim/frontend/async_odometry_estimation.cpp
   src/glim/frontend/odometry_estimation.cpp
+  src/glim/frontend/odometry_estimation_ct.cpp
   # backend
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_mapping_base.cpp
   src/glim/backend/async_sub_mapping.cpp
   src/glim/backend/sub_mapping.cpp
+  src/glim/backend/sub_mapping_ct.cpp
   src/glim/backend/global_mapping_base.cpp
   src/glim/backend/async_global_mapping.cpp
   src/glim/backend/global_mapping.cpp
+  src/glim/backend/global_mapping_ct.cpp
 )
 target_include_directories(glim PUBLIC
   include
@@ -116,9 +119,20 @@ endif()
 ###########
 ## ament ##
 ###########
-find_package(ament_cmake)
-if(ament_cmake_FOUND)
-  ament_export_include_directories(include)
-  ament_export_libraries(glim glim_vis)
-  ament_package()
-endif()
+# find_package(ament_cmake)
+# if(ament_cmake_FOUND)
+#   ament_export_include_directories(include)
+#   ament_export_libraries(glim glim_vis)
+#   ament_package()
+# endif()
+
+############
+## catkin ##
+############
+find_package(catkin)
+catkin_package(
+  INCLUDE_DIRS include thirdparty/gtsam_ext/include
+  LIBRARIES glim glim_vis
+#  CATKIN_DEPENDS other_catkin_pkg
+#  DEPENDS system_lib
+)

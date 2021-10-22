@@ -15,11 +15,15 @@ struct EstimationFrame {
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  void purge_frames() const {
-    // warning: dirty code!!
-    std::const_pointer_cast<PreprocessedFrame>(raw_frame).reset();
-    std::const_pointer_cast<gtsam_ext::VoxelizedFrame>(frame).reset();
+  EstimationFrame::Ptr clone_wo_points() const {
+    EstimationFrame::Ptr cloned(new EstimationFrame);
+    *cloned = *this;
+    cloned->raw_frame.reset();
+    cloned->frame.reset();
+    return cloned;
   }
+
+  gtsam_ext::VoxelizedFrame::ConstPtr voxelized_frame() const { return std::dynamic_pointer_cast<const gtsam_ext::VoxelizedFrame>(frame); }
 
   long id;
   double stamp;
@@ -34,6 +38,6 @@ struct EstimationFrame {
   PreprocessedFrame::ConstPtr raw_frame;
 
   std::string frame_id;  // "lidar" or "imu"
-  gtsam_ext::VoxelizedFrame::ConstPtr frame;
+  gtsam_ext::Frame::ConstPtr frame;
 };
 }  // namespace glim

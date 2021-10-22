@@ -1,10 +1,20 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
 #include <glim/util/callback_slot.hpp>
 #include <glim/frontend/estimation_frame.hpp>
 
-#include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_ext.hpp>
+namespace cv {
+class Mat;
+}
+
+namespace gtsam {
+class Values;
+class NonlinearFactorGraph;
+}  // namespace gtsam
+
+namespace gtsam_ext {
+class IncrementalFixedLagSmootherExt;
+}
 
 namespace glim {
 
@@ -18,6 +28,7 @@ struct OdometryEstimationCallbacks {
   static CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> on_update_frames;
   static CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> on_update_keyframes;
   static CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> on_marginalized_frames;
+  static CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> on_marginalized_keyframes;
 
   static CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExt&, gtsam::NonlinearFactorGraph&, gtsam::Values&)> on_smoother_update;
 
