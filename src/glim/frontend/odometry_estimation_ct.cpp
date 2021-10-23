@@ -113,7 +113,28 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   lm_params.setlambdaInitial(1e-12);
   lm_params.setAbsoluteErrorTol(1e-2);
   lm_params.setMaxIterations(10);
-  lm_params.callback = [](const auto& status, const auto& values) { std::cout << status.to_string() << std::endl; };
+
+  gtsam::Values last_values = values;
+  lm_params.termination_criteria = [&](const gtsam::Values& values_) {
+    const gtsam::Pose3 delta0 = last_values.at<gtsam::Pose3>(X(0)).inverse() * values_.at<gtsam::Pose3>(X(0));
+    const gtsam::Pose3 delta1 = last_values.at<gtsam::Pose3>(X(1)).inverse() * values_.at<gtsam::Pose3>(X(1));
+
+    const double delta_trans_0 = delta0.translation().norm();
+    const double delta_trans_1 = delta1.translation().norm();
+    const double delta_angle_0 = Eigen::AngleAxisd(delta0.rotation().matrix()).angle();
+    const double delta_angle_1 = Eigen::AngleAxisd(delta1.rotation().matrix()).angle();
+
+    const double trans_eps = 1e-4;
+    const double angle_eps = 1e-4;
+
+    if (std::max(delta_trans_0, delta_trans_1) < trans_eps && std::max(delta_angle_0, delta_angle_1) < angle_eps) {
+      return true;
+    }
+    last_values = values_;
+    return false;
+  };
+
+  // lm_params.callback = [&](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values_) { std::cout << status.to_string() << std::endl; };
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();
 
