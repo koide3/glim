@@ -92,7 +92,7 @@ Config::Config(const std::string& config_filename) {
   if (!ifs) {
     std::cerr << "error: failed to open " << config_filename << std::endl;
   } else {
-    ifs >> json;
+    json = nlohmann::json::parse(ifs, nullptr, true, true);
   }
 
   config = json;

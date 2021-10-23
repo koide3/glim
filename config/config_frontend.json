@@ -1,4 +1,17 @@
 {
+  /*** Keyframe-based VGICP frontend ***
+  // smoother_lag                : Fixed-lag smoothing window size [sec]
+  // use_isam2_dogleg            : Use the dogleg optimizer as the backend of ISAM2 that is slow but more robust
+  // isam2_relinearize_skip      :
+  // isam2_relinearize_thresh    :
+  // voxel_resolution            : Resolution for VGICP voxels (0.25 ~ 0.5 for indoor, 0.5 ~ 2.0 for outdoor)
+  // full_connection_window_size : Latest sensor pose variable is connected with all of the past $full_connection_window_size poses
+  //                             : Must be >1. Increase this for aggressive motion data (3~5)
+  // max_num_keyframes           : Maximum number of keyframes
+  // keyframe_min_overlap        : Keyframes that overlap to the latest with a rate smaller than this will be eliminated
+  // keyframe_max_overlap        : If the overlap between the latest frame and keyframes is smaller than this,
+  //                             : it is inserted into the keyframe list
+  */
   "odometry_estimation": {
     "factor_type": "VGICP_GPU",
     "smoother_lag": 3.0,

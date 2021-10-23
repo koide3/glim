@@ -3,7 +3,7 @@
     "enable_optimization": true,
     "max_num_frames": 20,
     "keyframe_update_interval_rot": 3.15,
-    "keyframe_update_interval_trans": 2.0,
+    "keyframe_update_interval_trans": 0.5,
     "keyframe_randomsampling_rate": 0.1,
     "keyframe_voxel_resolution": 0.5,
     "submap_downsample_resolution": 0.1,

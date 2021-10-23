@@ -1,4 +1,5 @@
 {
+  /*** Global Configuration ***/
   "global": {
     "config_path": "",
     "config_sensors": "config_sensors.json",

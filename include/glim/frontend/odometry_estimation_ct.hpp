@@ -33,12 +33,14 @@ private:
   std::shared_ptr<TargetMap> create_target_map(const std::vector<EstimationFrame::ConstPtr>& keyframes);
 
 private:
+  int num_threads;
   double max_correspondence_distance;
   double stiffness_factor_inf_scale;
 
   int max_num_keyframes;
   double keyframe_update_interval_rot;
   double keyframe_update_interval_trans;
+  int lm_max_iterations;
 
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 

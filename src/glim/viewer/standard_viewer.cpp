@@ -22,6 +22,8 @@ namespace glim {
 class StandardViewer::Impl {
 public:
   Impl() {
+    kill_switch = false;
+
     show_current = true;
     show_frontend_scans = true;
     show_frontend_keyframes = true;
@@ -33,6 +35,7 @@ public:
     thread = std::thread([this] { viewer_loop(); });
   }
   ~Impl() {
+    kill_switch = true;
     if (thread.joinable()) {
       thread.join();
     }
@@ -49,13 +52,15 @@ public:
     viewer->add_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
     viewer->register_ui_callback("selection", [this] { drawing_selection(); });
 
-    while (viewer->spin_once()) {
+    while (!kill_switch && viewer->spin_once()) {
       std::lock_guard<std::mutex> lock(invoke_queue_mutex);
       for (const auto& task : invoke_queue) {
         task();
       }
       invoke_queue.clear();
     }
+
+    kill_switch = true;
   }
 
   bool drawable_filter(const std::string& name) {
@@ -332,9 +337,9 @@ public:
 
     invoke([this, latest_submap, submap_ids, submap_poses] {
       auto viewer = guik::LightViewer::instance();
-      for (int i = 0; i<submap_ids.size(); i++) {
+      for (int i = 0; i < submap_ids.size(); i++) {
         auto drawable = viewer->find_drawable("submap_" + std::to_string(submap_ids[i]));
-        if(drawable.first) {
+        if (drawable.first) {
           drawable.first->add("model_matrix", submap_poses[i].matrix());
         }
         viewer->update_drawable("submap_coord_" + std::to_string(submap_ids[i]), glk::Primitives::coordinate_system(), guik::VertexColor(submap_poses[i]));
@@ -343,8 +348,8 @@ public:
       std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> factor_lines;
       factor_lines.reserve(global_between_factors.size() * 2);
 
-      for(const auto& factor: global_between_factors) {
-        if(factor.first >= submap_poses.size() || factor.second >= submap_poses.size()) {
+      for (const auto& factor : global_between_factors) {
+        if (factor.first >= submap_poses.size() || factor.second >= submap_poses.size()) {
           continue;
         }
 
@@ -357,15 +362,15 @@ public:
   }
 
   void globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values) {
-    for(const auto& factor: new_factors) {
-      if(factor->keys().size() != 2) {
+    for (const auto& factor : new_factors) {
+      if (factor->keys().size() != 2) {
         continue;
       }
 
       const gtsam::Symbol symbol0(factor->keys()[0]);
       const gtsam::Symbol symbol1(factor->keys()[1]);
 
-      if(symbol0.chr() != 'x' || symbol1.chr() != 'x') {
+      if (symbol0.chr() != 'x' || symbol1.chr() != 'x') {
         continue;
       }
 
@@ -379,7 +384,8 @@ public:
     viewer->append_text(result.to_string());
   }
 
-private:
+public:
+  std::atomic_bool kill_switch;
   std::thread thread;
 
   bool show_current;
@@ -402,5 +408,15 @@ StandardViewer::StandardViewer() {
 }
 
 StandardViewer::~StandardViewer() {}
+
+bool StandardViewer::ok() const {
+  return !impl->kill_switch;
+}
+
+void StandardViewer::wait() {
+  if (impl->thread.joinable()) {
+    impl->thread.join();
+  }
+}
 
 }  // namespace glim
