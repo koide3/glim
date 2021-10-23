@@ -3,7 +3,11 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 
+#include <gtsam_ext/types/frame.hpp>
+#include <gtsam_ext/types/frame_cpu.hpp>
+#include <gtsam_ext/types/frame_gpu.hpp>
 #include <gtsam_ext/types/voxelized_frame.hpp>
+#include <gtsam_ext/types/voxelized_frame_cpu.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
@@ -28,29 +32,52 @@ using Callbacks = SubMappingCallbacks;
 SubMapping::SubMapping() {
   Config config(GlobalConfig::get_config_path("config_backend"));
 
+  enable_imu = config.param<bool>("sub_mapping", "enable_imu", true);
   enable_optimization = config.param<bool>("sub_mapping", "enable_optimization", true);
-  min_num_frames = config.param<int>("sub_mapping", "min_num_frames", 5);
-  max_num_frames = config.param<int>("sub_mapping", "max_num_frames", 15);
+
+  max_num_keyframes = config.param<int>("sub_mapping", "max_num_keyframes", 15);
+
+  keyframe_update_strategy = config.param<std::string>("sub_mapping", "keyframe_update_strategy", "OVERLAP");
+  keyframe_update_interval_rot = config.param<double>("sub_mapping", "keyframe_update_interval_rot", 3.15);
+  keyframe_update_interval_trans = config.param<double>("sub_mapping", "keyframe_update_interval_trans", 1.0);
   min_keyframe_overlap = config.param<double>("sub_mapping", "min_keyframe_overlap", 0.05);
   max_keyframe_overlap = config.param<double>("sub_mapping", "max_keyframe_overlap", 0.8);
+
+  create_between_factors = config.param<bool>("sub_mapping", "create_between_factors", true);
+  between_registration_type = config.param<std::string>("sub_mapping", "between_registration_type", "GICP");
+
+  registration_error_factor_type = config.param<std::string>("sub_mapping", "registration_error_factor_type", "VGICP");
+  keyframe_randomsampling_rate = config.param<double>("sub_mapping", "keyframe_randomsampling_rate", 0.1);
+  keyframe_voxel_resolution = config.param<double>("sub_mapping", "keyframe_voxel_resolution", 0.5);
+
   submap_downsample_resolution = config.param<double>("sub_mapping", "submap_downsample_resolution", 0.25);
   submap_voxel_resolution = config.param<double>("sub_mapping", "submap_voxel_resolution", 0.5);
+
+  enable_gpu = false;
+  if (registration_error_factor_type.find("GPU") != std::string::npos) {
+    enable_gpu = true;
+  }
 
   submap_count = 0;
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation);
-  stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin(32));
 
   values.reset(new gtsam::Values);
   graph.reset(new gtsam::NonlinearFactorGraph);
+
+#ifdef BUILD_GTSAM_EXT_GPU
+  stream_buffer_roundrobin = std::make_shared<gtsam_ext::StreamTempBufferRoundRobin>(32);
+#endif
 }
 
 SubMapping::~SubMapping() {}
 
 void SubMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
-  imu_integration->insert_imu(stamp, linear_acc, angular_vel);
+  if (enable_imu) {
+    imu_integration->insert_imu(stamp, linear_acc, angular_vel);
+  }
 }
 
 void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
@@ -60,57 +87,90 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   const int last = current - 1;
   odom_frames.push_back(odom_frame);
 
-  const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
-
-  values->insert(X(current), gtsam::Pose3(odom_frame->T_world_imu.matrix()));
-  values->insert(V(current), odom_frame->v_world_imu);
-  values->insert(B(current), imu_bias);
-
-  graph->emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(current), odom_frame->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
-  graph->emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(current), imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
   if (current == 0) {
-    graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(odom_frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-  } else {
-    int num_integrated = 0;
-    const int imu_read_cursor = imu_integration->integrate_imu(odom_frames[last]->stamp, odom_frames[current]->stamp, imu_bias, &num_integrated);
-    imu_integration->erase_imu_data(imu_read_cursor);
+    graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values->at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  } else if (create_between_factors) {
+    auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), odom_frames[last]->frame, odom_frames[current]->frame);
+    auto linearized = factor->linearize(*values);
+    auto H = linearized->hessianBlockDiagonal()[X(current)];
 
-    graph->emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-    if (num_integrated) {
-      graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
-    } else {
-      std::cerr << "warning: no IMU data between LiDAR frames!! (sub_mapping)" << std::endl;
-      graph->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
+    const Eigen::Isometry3d delta = odom_frames[last]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
+    graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
+  }
+
+  if (enable_imu) {
+    const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
+
+    values->insert(V(current), odom_frame->v_world_imu);
+    values->insert(B(current), imu_bias);
+
+    graph->emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(current), odom_frame->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
+    graph->emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(current), imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+
+    if (current != 0) {
+      int num_integrated = 0;
+      const int imu_read_cursor = imu_integration->integrate_imu(odom_frames[last]->stamp, odom_frames[current]->stamp, imu_bias, &num_integrated);
+      imu_integration->erase_imu_data(imu_read_cursor);
+
+      graph
+        ->emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+      if (num_integrated < 2) {
+        graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
+      } else {
+        std::cerr << "warning: insufficient IMU data between LiDAR frames!! (sub_mapping)" << std::endl;
+        graph->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
+      }
     }
   }
 
   bool insert_as_keyframe = keyframes.empty();
   if (!insert_as_keyframe) {
-    std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> targets(keyframes.size());
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> deltas(keyframes.size());
-    for (int i = 0; i < keyframes.size(); i++) {
-      targets[i] = keyframes[i]->voxelized_frame();
-      deltas[i] = keyframes[i]->T_world_imu.inverse() * odom_frame->T_world_imu;
-    }
+    // Overlap-based keyframe update
+    if (keyframe_update_strategy == "OVERLAP") {
+      std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> targets(keyframes.size());
+      std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> deltas(keyframes.size());
+      for (int i = 0; i < keyframes.size(); i++) {
+        targets[i] = voxelized_keyframes[i];
+        deltas[i] = keyframes[i]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
+      }
 
-    const double overlap = odom_frame->frame->overlap_gpu(targets, deltas);
-    if (overlap < max_keyframe_overlap) {
-      insert_as_keyframe = true;
+      const double overlap = odom_frame->frame->overlap_auto(targets, deltas);
+      insert_as_keyframe = overlap < max_keyframe_overlap;
+    }
+    // Displacement-based keyframe update
+    else if (keyframe_update_strategy == "DISPLACEMENT") {
+      const Eigen::Isometry3d delta_from_keyframe = keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor();
+      const double delta_trans = delta_from_keyframe.translation().norm();
+      const double delta_angle = Eigen::AngleAxisd(delta_from_keyframe.linear()).angle();
+
+      insert_as_keyframe = delta_trans > keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot;
+    } else {
+      std::cerr << "warning: unknown keyframe update strategy " << keyframe_update_strategy << std::endl;
     }
   }
 
   if (insert_as_keyframe) {
-    keyframe_indices.push_back(current);
-    keyframes.push_back(create_keyframe(odom_frame));
+    insert_keyframe(current, odom_frame);
     Callbacks::on_new_keyframe(current, keyframes.back());
 
     for (int i = 0; i < keyframes.size() - 1; i++) {
-      auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
-      const auto& stream = stream_buffer.first;
-      const auto& buffer = stream_buffer.second;
-
-      graph->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), keyframes[i]->voxelized_frame(), keyframes.back()->frame, stream, buffer);
+      if (registration_error_factor_type == "VGICP") {
+        graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelized_keyframes[i], keyframes.back()->frame);
+      }
+#ifdef BUILD_GTSAM_EXT_GPU
+      else if (registration_error_factor_type == "VGICP_GPU") {
+        auto roundrobin = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin);
+        auto stream_buffer = roundrobin->get_stream_buffer();
+        const auto& stream = stream_buffer.first;
+        const auto& buffer = stream_buffer.second;
+        graph->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), voxelized_keyframes[i], keyframes.back()->frame, stream, buffer);
+      }
+#endif
+      else {
+        std::cerr << "warning: unknown registration error factor type " << registration_error_factor_type << std::endl;
+      }
     }
   }
 
@@ -118,64 +178,71 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
   if (new_submap) {
     new_submap->id = submap_count++;
-
-    Callbacks::on_new_submap(new_submap);
     submap_queue.push_back(new_submap);
+    Callbacks::on_new_submap(new_submap);
 
     odom_frames.clear();
     keyframes.clear();
+    voxelized_keyframes.clear();
     keyframe_indices.clear();
     values.reset(new gtsam::Values);
     graph.reset(new gtsam::NonlinearFactorGraph);
   }
 }
 
-EstimationFrame::Ptr SubMapping::create_keyframe(const EstimationFrame::ConstPtr& odom_frame) const {
-  const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
-  const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
+void SubMapping::insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame) {
+  gtsam_ext::Frame::ConstPtr deskewed_frame = odom_frame->frame;
 
-  std::vector<double> imu_pred_times;
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> imu_pred_poses;
-  imu_integration->integrate_imu(odom_frame->raw_frame->stamp, odom_frame->raw_frame->scan_end_time, nav_world_imu, imu_bias, imu_pred_times, imu_pred_poses);
+  // Re-perform deskewing
+  if (enable_imu) {
+    const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
+    const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
-  auto deskewed =
-    deskewing->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
-  auto covs = covariance_estimation->estimate(deskewed, odom_frame->raw_frame->neighbors);
+    // TODO: smoothing-based pose estimation
+    std::vector<double> imu_pred_times;
+    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> imu_pred_poses;
+    imu_integration->integrate_imu(odom_frame->raw_frame->stamp, odom_frame->raw_frame->scan_end_time, nav_world_imu, imu_bias, imu_pred_times, imu_pred_poses);
 
+    auto deskewed =
+      deskewing
+        ->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
+    auto covs = covariance_estimation->estimate(deskewed, odom_frame->raw_frame->neighbors);
+
+    auto frame = std::make_shared<gtsam_ext::FrameCPU>(deskewed);
+    frame->add_covs(covs);
+    deskewed_frame = frame;
+  }
+
+  gtsam_ext::Frame::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, keyframe_randomsampling_rate, mt);
+
+  gtsam_ext::VoxelizedFrame::Ptr voxelized_keyframe;
   EstimationFrame::Ptr keyframe(new EstimationFrame);
-  keyframe->id = odom_frame->id;
-  keyframe->stamp = odom_frame->stamp;
+  *keyframe = *odom_frame;
 
-  keyframe->T_lidar_imu = odom_frame->T_lidar_imu;
-  keyframe->T_world_lidar = odom_frame->T_world_lidar;
-  keyframe->T_world_imu = odom_frame->T_world_imu;
+  if (enable_gpu) {
+    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(keyframe_voxel_resolution, deskewed_frame->points, deskewed_frame->covs, deskewed_frame->size());
+    keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
+  } else {
+    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(keyframe_voxel_resolution, deskewed_frame);
+    keyframe->frame = subsampled_frame;
+  }
 
-  keyframe->v_world_imu = odom_frame->v_world_imu;
-  keyframe->imu_bias = odom_frame->imu_bias;
-
-  keyframe->raw_frame = odom_frame->raw_frame;
-
-  keyframe->frame_id = odom_frame->frame_id;
-  keyframe->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(odom_frame->voxelized_frame()->voxel_resolution(), deskewed, covs);
-
-  return keyframe;
+  keyframes.push_back(keyframe);
+  voxelized_keyframes.push_back(voxelized_keyframe);
+  keyframe_indices.push_back(current);
 }
 
 SubMap::Ptr SubMapping::create_submap(bool force_create) const {
-  if (keyframes.size() < min_num_frames && !force_create) {
+  if (keyframes.size() < max_num_keyframes && !force_create) {
     return nullptr;
   }
 
-  if (keyframes.size() < max_num_frames && !force_create) {
-    const Eigen::Isometry3d delta_first_last = keyframes.front()->T_world_imu.inverse() * keyframes.back()->T_world_imu;
-    const double overlap_first_last = keyframes.back()->frame->overlap_gpu(keyframes.front()->voxelized_frame(), delta_first_last);
-
-    if (overlap_first_last > min_num_frames) {
-      return nullptr;
-    }
-  }
-
+  Callbacks::on_optimize_submap(*graph, *values);
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
+  lm_params.setMaxIterations(20);
+  if (Callbacks::on_optimization_status) {
+    lm_params.callback = [](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) { Callbacks::on_optimization_status(status, values); };
+  }
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
   *values = optimizer.optimize();
 
@@ -191,15 +258,15 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   submap->frames.resize(odom_frames.size());
   for (int i = 0; i < odom_frames.size(); i++) {
     EstimationFrame::Ptr frame(new EstimationFrame);
-    frame->id = odom_frames[i]->id;
-    frame->stamp = odom_frames[i]->stamp;
+    *frame = *odom_frames[i];
 
-    frame->T_lidar_imu = odom_frames[i]->T_lidar_imu;
-    frame->T_world_imu = Eigen::Isometry3d(values->at<gtsam::Pose3>(X(i)).matrix());
-    frame->T_world_lidar = frame->T_world_imu * frame->T_lidar_imu.inverse();
+    const Eigen::Isometry3d T_world_sensor(values->at<gtsam::Pose3>(X(i)).matrix());
+    frame->set_T_world_sensor(odom_frames[i]->frame_id, T_world_sensor);
 
-    frame->v_world_imu = values->at<gtsam::Vector3>(V(i));
-    frame->imu_bias = values->at<gtsam::imuBias::ConstantBias>(B(i)).vector();
+    if (enable_imu) {
+      frame->v_world_imu = values->at<gtsam::Vector3>(V(i));
+      frame->imu_bias = values->at<gtsam::imuBias::ConstantBias>(B(i)).vector();
+    }
 
     submap->frames[i] = frame;
   }
@@ -207,13 +274,19 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   std::vector<gtsam_ext::Frame::ConstPtr> keyframes_to_merge(keyframes.size());
   std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> poses_to_merge(keyframes.size());
   for (int i = 0; i < keyframes.size(); i++) {
-    keyframes_to_merge[i] = keyframes[i]->frame;
+    keyframes_to_merge[i] = voxelized_keyframes[i];
     poses_to_merge[i] = submap->T_world_origin.inverse() * Eigen::Isometry3d(values->at<gtsam::Pose3>(X(keyframe_indices[i])).matrix());
   }
 
-  const bool allocate_cpu = keyframes.front()->frame->points != nullptr;
-  auto merged = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, allocate_cpu);
-  submap->frame = merged;
+#ifdef BUILD_GTSAM_EXT_GPU
+  if (enable_gpu) {
+    submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
+  }
+#endif
+
+  if (submap->frame == nullptr) {
+    submap->frame = gtsam_ext::merge_voxelized_frames(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution);
+  }
 
   return submap;
 }

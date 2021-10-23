@@ -1,10 +1,23 @@
 {
   "sub_mapping": {
-    "enable_optimization": true,
-    "min_num_frames": 10,
-    "max_num_frames": 15,
+    "enable_imu": false,
+    "enable_optimization": false,
+    // Keyframe update strategy
+    "min_num_keyframes": 10,
+    "max_num_keyframes": 20,
+    "keyframe_update_strategy": "OVERLAP",
+    "keyframe_update_interval_rot": 3.14,
+    "keyframe_update_interval_trans": 1.0,
     "min_keyframe_overlap": 0.1,
     "max_keyframe_overlap": 0.95,
+    // Relative pose factors
+    "create_between_factors": true,
+    "between_registration_type": "GICP",
+    // Registration error factors
+    "registration_error_factor_type": "VGICP_GPU",
+    "keyframe_randomsampling_rate": 0.1,
+    "keyframe_voxel_resolution": 0.5,
+    // Post processing for created submaps
     "submap_downsample_resolution": 0.1,
     "submap_voxel_resolution": 0.25
   },

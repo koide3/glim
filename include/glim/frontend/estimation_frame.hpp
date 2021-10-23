@@ -42,6 +42,7 @@ struct EstimationFrame {
     switch (frame_id) {
       default:
         std::cerr << "error: frame_id must be either of LIDAR or IMU" << std::endl;
+        abort();
         break;
 
       case FrameID::LIDAR:

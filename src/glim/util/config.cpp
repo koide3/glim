@@ -8,6 +8,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <glim/util/console_colors.hpp>
+
 namespace glim {
 
 namespace {
@@ -90,7 +92,7 @@ Config::Config(const std::string& config_filename) {
 
   std::ifstream ifs(config_filename);
   if (!ifs) {
-    std::cerr << "error: failed to open " << config_filename << std::endl;
+    std::cerr << console::bold_red << "error: failed to open " << config_filename << console::reset << std::endl;
   } else {
     json = nlohmann::json::parse(ifs, nullptr, true, true);
   }
@@ -121,8 +123,10 @@ template <typename T>
 T Config::param(const std::string& module_name, const std::string& param_name, const T& default_value) const {
   auto found = param<T>(module_name, param_name);
   if (!found) {
-    std::cerr << "warning: param " << param_name << " not found" << std::endl;
+    std::cerr << console::yellow;
+    std::cerr << "warning: param " << console::underline << module_name << "/" << param_name << console::reset << console::yellow << " not found" << std::endl;
     std::cerr << "       : use the default value" << std::endl;
+    std::cerr << console::reset;
     return default_value;
   }
 

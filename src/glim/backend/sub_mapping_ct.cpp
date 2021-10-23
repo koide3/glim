@@ -63,9 +63,6 @@ void SubMappingCT::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     auto linearized = factor->linearize(*values);
     auto H = linearized->hessianBlockDiagonal()[X(current)];
 
-    // const auto noise = gtsam::Pose3::Expmap(gtsam::Vector6::Random() * 0.1);
-    // values->update<gtsam::Pose3>(X(current), values->at<gtsam::Pose3>(X(current)) * noise);
-
     const Eigen::Isometry3d delta = odom_frames[last]->T_world_lidar.inverse() * odom_frame->T_world_lidar;
     graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
   }

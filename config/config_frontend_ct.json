@@ -23,7 +23,7 @@
     "keyframe_update_interval_rot": 0.5,
     "keyframe_update_interval_trans": 0.5,
     "stiffness_scale_first": 1e6,
-    "stiffness_scale_second": 1e6,
+    "stiffness_scale_second": 1e4,
     "lm_max_iterations_first": 5,
     "lm_max_iterations_second": 5
   }

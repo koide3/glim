@@ -26,13 +26,14 @@ private:
 
 class GlobalConfig : public Config {
 private:
-  GlobalConfig() : Config("") {}
+  GlobalConfig(const std::string& global_config_path) : Config(global_config_path) {}
   virtual ~GlobalConfig() override {}
 
 public:
-  static GlobalConfig* instance() {
+  static GlobalConfig* instance(const std::string& config_path = "") {
     if (inst == nullptr) {
-      inst = new GlobalConfig();
+      inst = new GlobalConfig(config_path + "/config_global.json");
+      inst->override_param("global", "config_path", config_path);
     }
     return inst;
   }

@@ -25,6 +25,7 @@ public:
     kill_switch = false;
     request_to_terminate = false;
 
+    track = true;
     show_current = true;
     show_frontend_scans = true;
     show_frontend_keyframes = true;
@@ -99,6 +100,7 @@ public:
 
   void drawing_selection() {
     ImGui::Begin("selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Checkbox("track", &track);
     ImGui::Checkbox("current", &show_current);
     ImGui::Checkbox("frontend scans", &show_frontend_scans);
     ImGui::Checkbox("frontend keyframes", &show_frontend_keyframes);
@@ -154,7 +156,9 @@ public:
       trajectory->add_odom(new_frame->stamp, new_frame->T_world_imu);
       Eigen::Isometry3f pose = resolve_pose(new_frame);
 
-      viewer->lookat(pose.translation());
+      if (track) {
+        viewer->lookat(pose.translation());
+      }
       viewer->update_drawable("current_frame", cloud_buffer, guik::FlatColor(1.0, 0.5, 0.0, 1.0, pose).add("point_scale", 2.0f));
       viewer->update_drawable("current_coord", glk::Primitives::coordinate_system(), guik::VertexColor(pose * Eigen::UniformScaling<float>(1.5f)));
       viewer->update_drawable("frame_" + std::to_string(new_frame->id), cloud_buffer, guik::Rainbow(pose));
@@ -305,7 +309,8 @@ public:
         covs[i] = submap->frame->covs[i].block<3, 3>(0, 0);
       }
 
-      viewer->update_drawable("submap", std::make_shared<glk::NormalDistributions>(means, covs), guik::Rainbow());
+      viewer->update_drawable("submap", std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size()), guik::Rainbow());
+      // viewer->update_drawable("submap", std::make_shared<glk::NormalDistributions>(means, covs), guik::Rainbow());
     });
   }
 
@@ -392,6 +397,7 @@ public:
   std::atomic_bool kill_switch;
   std::thread thread;
 
+  bool track;
   bool show_current;
   bool show_frontend_scans;
   bool show_frontend_keyframes;

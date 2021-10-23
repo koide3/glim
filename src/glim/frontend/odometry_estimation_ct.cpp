@@ -74,8 +74,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   // Handling the first input frame
   if (keyframes.empty()) {
-    new_frame->T_world_lidar = Eigen::Isometry3d::Identity();
-    new_frame->T_world_imu = new_frame->T_world_lidar * new_frame->T_lidar_imu;
+    new_frame->set_T_world_sensor(FrameID::LIDAR, Eigen::Isometry3d::Identity());
     Callbacks::on_new_frame(new_frame);
 
     last_frame = new_frame;
@@ -100,7 +99,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   const double dt_last_current = raw_frame->stamp - last_frame->stamp;
   const double dt_scan = raw_frame->times.back() - raw_frame->times.front();
   const gtsam::Pose3 predicted_T_world_lidar_begin = gtsam::Pose3(last_frame->T_world_lidar.matrix()) * gtsam::Pose3::Expmap(dt_last_current * predicted_v_last_current);
-  const gtsam::Pose3 predicted_T_world_lidar_end = predicted_T_world_lidar_begin * gtsam::Pose3(dt_scan * predicted_v_last_current);
+  const gtsam::Pose3 predicted_T_world_lidar_end = predicted_T_world_lidar_begin * gtsam::Pose3::Expmap(dt_scan * predicted_v_last_current);
 
   gtsam::Values values;
   values.insert(X(0), gtsam::Pose3(predicted_T_world_lidar_begin));
@@ -131,15 +130,14 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
   // Calculate the linear and angular velocity and record them for the estimation of successive frames
-  const gtsam::Pose3 T_last_current = gtsam::Pose3(last_frame->T_world_lidar.inverse().matrix()) * values.at<gtsam::Pose3>(X(0));
+  const gtsam::Pose3 T_last_current = values.at<gtsam::Pose3>(X(0)).inverse() * values.at<gtsam::Pose3>(X(1));
   const gtsam::Vector6 v_last_current = gtsam::Pose3::Logmap(T_last_current) / dt_last_current;
   v_last_current_history.push_back(v_last_current);
   if (v_last_current_history.size() > 3) {
     v_last_current_history.pop_front();
   }
 
-  new_frame->T_world_lidar = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(0)).matrix());
-  new_frame->T_world_imu = new_frame->T_world_lidar * new_frame->T_lidar_imu;
+  new_frame->set_T_world_sensor(FrameID::LIDAR, Eigen::Isometry3d(values.at<gtsam::Pose3>(X(0)).matrix()));
   Callbacks::on_new_frame(new_frame);
 
   // Deskew the input points and covs
