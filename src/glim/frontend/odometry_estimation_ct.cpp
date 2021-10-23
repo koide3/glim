@@ -4,6 +4,7 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/geometry/Pose3.h>
+#include <gtsam/slam/BetweenFactor.h>
 
 #include <gtsam_ext/ann/kdtree.hpp>
 #include <gtsam_ext/types/frame_cpu.hpp>
@@ -27,6 +28,9 @@ struct OdometryEstimationCT::TargetMap {
 
 OdometryEstimationCT::OdometryEstimationCT() {
   Config config(GlobalConfig::get_config_path("config_frontend_ct"));
+
+  max_correspondence_distance = config.param<double>("odometry_estimation_ct", "max_correspondence_distance", 1.0);
+  stiffness_factor_inf_scale = config.param<double>("odometry_estimation_ct", "stiffness_factor_inf_scale", 1e3);
 
   max_num_keyframes = config.param<int>("odometry_estimation_ct", "max_num_keyframes", 20);
   keyframe_update_interval_rot = config.param<double>("odometry_estimation_ct", "keyframe_update_interval_rot", 3.15);
@@ -96,12 +100,14 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   gtsam::NonlinearFactorGraph graph;
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor>(X(0), X(1), target_map->frame, frame, target_map->kdtree);
+  factor->set_max_corresponding_distance(max_correspondence_distance);
   graph.add(factor);
+  graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_factor_inf_scale));
 
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setAbsoluteErrorTol(1e-2);
-  lm_params.setMaxIterations(6);
+  lm_params.setMaxIterations(10);
   // lm_params.callback = [](const auto& status, const auto& values) { std::cout << status.to_string() << std::endl; };
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();
@@ -109,7 +115,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   const gtsam::Pose3 T_last_current = gtsam::Pose3(last_frame->T_world_lidar.inverse().matrix()) * values.at<gtsam::Pose3>(X(0));
   const gtsam::Vector6 v_last_current = gtsam::Pose3::Logmap(T_last_current) / dt_last_current;
   v_last_current_history.push_back(v_last_current);
-  if (v_last_current_history.size() > 5) {
+  if (v_last_current_history.size() > 3) {
     v_last_current_history.pop_front();
   }
 

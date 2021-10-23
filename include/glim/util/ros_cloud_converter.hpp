@@ -25,6 +25,7 @@ builtin_interfaces::msg::Time from_sec(const double time) {
   builtin_interfaces::msg::Time stamp;
   stamp.sec = std::floor(time);
   stamp.nanosec = (time - stamp.sec) * 1e9;
+  return stamp;
 }
 
 }  // namespace glim
@@ -43,8 +44,9 @@ double to_sec(const Stamp& stamp) {
 
 ros::Time from_sec(const double time) {
   ros::Time stamp;
-  stamp.secs = std::floor(time);
-  stamp.nsecs = (time - stamp.secs) * 1e9;
+  stamp.sec = std::floor(time);
+  stamp.nsec = (time - stamp.sec) * 1e9;
+  return stamp;
 }
 
 }  // namespace glim
@@ -68,23 +70,22 @@ public:
     int x_type = 0;
     int y_type = 0;
     int z_type = 0;
-    int time_type = 0;        // ouster and livox
-    int time_stamp_type = 0;  // for hesai lidar
+    int time_type = 0;  // ouster and livox
     int intensity_type = 0;
 
     int x_offset = -1;
     int y_offset = -1;
     int z_offset = -1;
     int time_offset = -1;
-    int time_stamp_offset = -1;
     int intensity_offset = -1;
 
     std::unordered_map<std::string, std::pair<int*, int*>> fields;
     fields["x"] = std::make_pair(&x_type, &x_offset);
     fields["y"] = std::make_pair(&y_type, &y_offset);
     fields["z"] = std::make_pair(&z_type, &z_offset);
+    fields["t"] = std::make_pair(&time_type, &time_offset);
     fields["time"] = std::make_pair(&time_type, &time_offset);
-    fields["time_stamp"] = std::make_pair(&time_stamp_type, &time_stamp_offset);
+    fields["time_stamp"] = std::make_pair(&time_type, &time_offset);
     fields["intensity"] = std::make_pair(&intensity_type, &intensity_offset);
 
     for (const auto& field : points_msg->fields) {
@@ -102,9 +103,7 @@ public:
       return nullptr;
     }
 
-    const auto FLOAT32 = PointField::FLOAT32;
-    const auto FLOAT64 = PointField::FLOAT64;
-    if ((x_type != FLOAT32 && x_type != FLOAT64) || x_type != y_type || x_type != y_type) {
+    if ((x_type != PointField::FLOAT32 && x_type != PointField::FLOAT64) || x_type != y_type || x_type != y_type) {
       std::cerr << "warning: unsupported points type" << std::endl;
       return nullptr;
     }
@@ -116,7 +115,7 @@ public:
       const auto* y_ptr = &points_msg->data[points_msg->point_step * i + y_offset];
       const auto* z_ptr = &points_msg->data[points_msg->point_step * i + z_offset];
 
-      if (x_type == FLOAT32) {
+      if (x_type == PointField::FLOAT32) {
         points[i] = get_vec4<float>(x_ptr, y_ptr, z_ptr);
       } else {
         points[i] = get_vec4<double>(x_ptr, y_ptr, z_ptr);
@@ -129,28 +128,19 @@ public:
 
       for (int i = 0; i < num_points; i++) {
         const auto* time_ptr = &points_msg->data[points_msg->point_step * i + time_offset];
-        if (time_type == FLOAT32) {
-          times[i] = *reinterpret_cast<const float*>(time_ptr);
-        } else if (time_type == FLOAT64) {
-          times[i] = *reinterpret_cast<const double*>(time_ptr);
-        } else {
-          std::cerr << "warning: unsupported time type" << std::endl;
-          return nullptr;
-        }
-      }
-    }
-
-    if (time_stamp_offset >= 0) {
-      times.resize(num_points);
-      for (int i = 0; i < num_points; i++) {
-        const auto* time_ptr = &points_msg->data[points_msg->point_step * i + time_stamp_offset];
-        if (time_stamp_type == FLOAT32) {
-          times[i] = *reinterpret_cast<const float*>(time_ptr);
-        } else if (time_stamp_type == FLOAT64) {
-          times[i] = *reinterpret_cast<const double*>(time_ptr);
-        } else {
-          std::cerr << "warning: unsupported time type" << std::endl;
-          return nullptr;
+        switch (time_type) {
+          case PointField::UINT32:
+            times[i] = *reinterpret_cast<const uint32_t*>(time_ptr) / 1e9;
+            break;
+          case PointField::FLOAT32:
+            times[i] = *reinterpret_cast<const float*>(time_ptr);
+            break;
+          case PointField::FLOAT64:
+            times[i] = *reinterpret_cast<const double*>(time_ptr);
+            break;
+          default:
+            std::cerr << "warning: unsupported time type " << time_type << std::endl;
+            return nullptr;
         }
       }
 
@@ -176,9 +166,9 @@ public:
 
       for (int i = 0; i < num_points; i++) {
         const auto* intensity_ptr = &points_msg->data[points_msg->point_step * i + intensity_offset];
-        if (intensity_type == FLOAT32) {
+        if (intensity_type == PointField::FLOAT32) {
           intensities[i] = *reinterpret_cast<const float*>(intensity_ptr);
-        } else if (intensity_type == FLOAT64) {
+        } else if (intensity_type == PointField::FLOAT64) {
           intensities[i] = *reinterpret_cast<const double*>(intensity_ptr);
         } else {
           std::cerr << "warning: unsupported intensity type" << std::endl;

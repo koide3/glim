@@ -1,7 +1,9 @@
 {
   "odometry_estimation_ct": {
+    "max_correspondence_distance": 2.0,
+    "stiffness_factor_inf_scale": 1e6,
     "max_num_keyframes": 25,
     "keyframe_update_interval_rot": 3.15,
-    "keyframe_update_interval_trans": 2.0
+    "keyframe_update_interval_trans": 0.5
   }
 }
