@@ -110,20 +110,7 @@ void SubMappingCT::insert_keyframe(const int current, const EstimationFrame::Con
 
   EstimationFrame::Ptr keyframe(new EstimationFrame);
   *keyframe = *odom_frame;
-
-  const int num_samples = odom_frame->frame->size() * keyframe_randomsampling_rate;
-  std::vector<int> sample_indices(num_samples);
-  std::sample(boost::counting_iterator<int>(0), boost::counting_iterator<int>(odom_frame->frame->size()), sample_indices.begin(), num_samples, mt);
-  std::sort(sample_indices.begin(), sample_indices.end());
-
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> sampled_points(num_samples);
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> sampled_covs(num_samples);
-  std::transform(sample_indices.begin(), sample_indices.end(), sampled_points.begin(), [&](const int i) { return odom_frame->frame->points[i]; });
-  std::transform(sample_indices.begin(), sample_indices.end(), sampled_covs.begin(), [&](const int i) { return odom_frame->frame->covs[i]; });
-
-  auto frame = std::make_shared<gtsam_ext::FrameCPU>(sampled_points);
-  frame->add_covs(sampled_covs);
-  keyframe->frame = frame;
+  keyframe->frame = gtsam_ext::random_sampling(odom_frame->frame, keyframe_randomsampling_rate, mt);
 
   keyframes.push_back(keyframe);
   voxelized_keyframes.push_back(keyframe_voxels);

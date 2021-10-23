@@ -3,22 +3,28 @@
   // For aggressive motion data, set stiffness_factor_inf_scale to a large number (e.g., 1e6)
   // and increase lm_max_iterations (e.g., 10 ~ 16)
   //
+  // Estimation and deskewing are carried out with two-step optimization
+  // The first step uses a larger stiffness to better stabilize the estimation
+  // The second step uses a more elastic setting to better fit the scan to the map
+  //
   // num_threads                : Number of threads used for CT-ICP
   // max_correspondence_distance: Maximum distance for ICP correspondence search
-  // stiffness_factor_inf_scale : Scale of the information matrix for "stiffness" factor between the scan beginning and end
-  //                            : Setting this to large makes the algorithm behaves as a plain ICP
   // max_num_keyframes          : Maximum number of keyframes
   // keyframe_update_interval_* : When the displacement from the last keyframe exceeds this param,
   //                            : the latest scan is inserted into the keyframe list (trans[m], rot[rad])
-  // lm_max_iterations          : Maximum iterations for LM optimization
+  // stiffness_scale_*          : Scale of the information matrix for "stiffness" factor between the scan beginning and end
+  //                            : Setting this to large makes the registration behaves like a plain ICP
+  // lm_max_iterations_*        : Maximum iterations for LM optimization for each optimization step
   */
   "odometry_estimation_ct": {
     "num_threads": 4,
     "max_correspondence_distance": 2.0,
-    "stiffness_factor_inf_scale": 1e6,
     "max_num_keyframes": 25,
-    "keyframe_update_interval_rot": 3.15,
+    "keyframe_update_interval_rot": 0.5,
     "keyframe_update_interval_trans": 0.5,
-    "lm_max_iterations": 10
+    "stiffness_scale_first": 1e6,
+    "stiffness_scale_second": 1e4,
+    "lm_max_iterations_first": 5,
+    "lm_max_iterations_second": 5
   }
 }

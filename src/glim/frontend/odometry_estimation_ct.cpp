@@ -31,13 +31,15 @@ OdometryEstimationCT::OdometryEstimationCT() {
 
   num_threads = config.param<int>("odometry_estimation_ct", "num_threads", 4);
   max_correspondence_distance = config.param<double>("odometry_estimation_ct", "max_correspondence_distance", 1.0);
-  stiffness_factor_inf_scale = config.param<double>("odometry_estimation_ct", "stiffness_factor_inf_scale", 1e3);
 
   max_num_keyframes = config.param<int>("odometry_estimation_ct", "max_num_keyframes", 20);
   keyframe_update_interval_rot = config.param<double>("odometry_estimation_ct", "keyframe_update_interval_rot", 3.15);
   keyframe_update_interval_trans = config.param<double>("odometry_estimation_ct", "keyframe_update_interval_trans", 1.0);
 
-  lm_max_iterations = config.param<int>("odometry_estimation_ct", "lm_max_iterations", 10);
+  stiffness_scale_first = config.param<double>("odometry_estimation_ct", "stiffness_scale_first", 1e6);
+  stiffness_scale_second = config.param<double>("odometry_estimation_ct", "stiffness_scale_second", 1e3);
+  lm_max_iterations_first = config.param<int>("odometry_estimation_ct", "lm_max_iterations_first", 5);
+  lm_max_iterations_second = config.param<int>("odometry_estimation_ct", "lm_max_iterations_second", 5);
 
   v_last_current_history.push_back(gtsam::Vector6::Zero());
 
@@ -107,12 +109,10 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   factor->set_num_threads(num_threads);
   factor->set_max_corresponding_distance(max_correspondence_distance);
   graph.add(factor);
-  graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_factor_inf_scale));
 
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setAbsoluteErrorTol(1e-2);
-  lm_params.setMaxIterations(10);
 
   gtsam::Values last_values = values;
   lm_params.termination_criteria = [&](const gtsam::Values& values_) {
@@ -135,8 +135,14 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   };
 
   // lm_params.callback = [&](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values_) { std::cout << status.to_string() << std::endl; };
-  gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
-  values = optimizer.optimize();
+  graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_first));
+  lm_params.setMaxIterations(lm_max_iterations_first);
+  values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+
+  graph.erase(graph.end() - 1);
+  graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_second));
+  lm_params.setMaxIterations(lm_max_iterations_second);
+  values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
   const gtsam::Pose3 T_last_current = gtsam::Pose3(last_frame->T_world_lidar.inverse().matrix()) * values.at<gtsam::Pose3>(X(0));
   const gtsam::Vector6 v_last_current = gtsam::Pose3::Logmap(T_last_current) / dt_last_current;
