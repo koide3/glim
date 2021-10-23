@@ -67,6 +67,7 @@ add_library(glim SHARED
   src/glim/frontend/odometry_estimation_ct.cpp
   # backend
   src/glim/backend/callbacks.cpp
+  src/glim/backend/sub_map.cpp
   src/glim/backend/sub_mapping_base.cpp
   src/glim/backend/async_sub_mapping.cpp
   src/glim/backend/sub_mapping.cpp

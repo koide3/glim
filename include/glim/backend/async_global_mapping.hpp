@@ -21,6 +21,8 @@ public:
   int input_queue_size() const;
   int output_queue_size() const;
 
+  void save(const std::string& path);
+
 private:
   void run();
 

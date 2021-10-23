@@ -29,7 +29,7 @@ void AsyncGlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
 void AsyncGlobalMapping::join() {
   end_of_sequence = true;
-  if(thread.joinable()) {
+  if (thread.joinable()) {
     thread.join();
   }
 }
@@ -40,6 +40,10 @@ int AsyncGlobalMapping::input_queue_size() const {
 
 int AsyncGlobalMapping::output_queue_size() const {
   return 0;
+}
+
+void AsyncGlobalMapping::save(const std::string& path) {
+  global_mapping->save(path);
 }
 
 void AsyncGlobalMapping::run() {
@@ -82,4 +86,4 @@ void AsyncGlobalMapping::run() {
   }
 }
 
-}
+}  // namespace glim

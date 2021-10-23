@@ -17,5 +17,7 @@ public:
   virtual void insert_submap(const SubMap::Ptr& submap);
 
   virtual void optimize();
+
+  virtual void save(const std::string& path) {}
 };
 }

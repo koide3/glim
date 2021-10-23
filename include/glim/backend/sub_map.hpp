@@ -7,7 +7,7 @@
 
 #include <glim/frontend/estimation_frame.hpp>
 
-namespace  glim {
+namespace glim {
 
 struct SubMap {
 public:
@@ -16,15 +16,9 @@ public:
   using Ptr = std::shared_ptr<SubMap>;
   using ConstPtr = std::shared_ptr<const SubMap>;
 
-  void drop_odom_frames() {
-    for (auto& frame : frames) {
-      frame = frame->clone_wo_points();
-    }
+  void drop_odom_frames();
 
-    for (auto& frame : odom_frames) {
-      frame = frame->clone_wo_points();
-    }
-  }
+  void save(const std::string& path);
 
 public:
   int id;

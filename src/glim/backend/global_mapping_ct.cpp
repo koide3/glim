@@ -1,5 +1,8 @@
 #include <glim/backend/global_mapping_ct.hpp>
 
+#include <boost/format.hpp>
+#include <boost/filesystem.hpp>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 
@@ -162,6 +165,53 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingCT::create_matching_
 void GlobalMappingCT::update_submaps() {
   for (int i = 0; i < submaps.size(); i++) {
     submaps[i]->T_world_origin = Eigen::Isometry3d(isam2->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
+  }
+}
+
+void GlobalMappingCT::save(const std::string& path) {
+  boost::filesystem::create_directories(path);
+  std::ofstream ofs(path + "/graph.txt");
+  ofs << "num_submaps: " << submaps.size() << std::endl;
+  ofs << "num_all_frames: " << std::accumulate(submaps.begin(), submaps.end(), 0, [](int sum, const SubMap::ConstPtr& submap) { return sum + submap->frames.size(); }) << std::endl;
+
+  ofs << "num_factors: " << isam2->getFactorsUnsafe().size() << std::endl;
+  for (const auto& factor : isam2->getFactorsUnsafe()) {
+    if (factor->keys().size() != 2) {
+      continue;
+    }
+
+    gtsam::Symbol symbol0(factor->keys()[0]);
+    gtsam::Symbol symbol1(factor->keys()[1]);
+    if (symbol0.chr() != 'x' || symbol1.chr() != 'x') {
+      continue;
+    }
+
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factor)) {
+      ofs << "between " << symbol0.index() << " " << symbol1.index() << std::endl;
+    } else {
+      ofs << "matching_cost " << symbol0.index() << " " << symbol1.index() << std::endl;
+    }
+  }
+
+  std::ofstream odom_lidar_ofs(path + "/odom_lidar.txt");
+  std::ofstream traj_lidar_ofs(path + "/traj_lidar.txt");
+
+  const auto write_tum_frame = [](std::ofstream& ofs, const double stamp, const Eigen::Isometry3d& pose) {
+    const Eigen::Quaterniond quat(pose.linear());
+    const Eigen::Vector3d trans(pose.translation());
+    ofs << boost::format("%.9f %.6f %.6f %.6f %.6f %.6f %.6f %.6f") % stamp % trans.x() % trans.y() % trans.z() % quat.x() % quat.y() % quat.z() % quat.w() << std::endl;
+  };
+
+  for (int i = 0; i < submaps.size(); i++) {
+    for (const auto& frame : submaps[i]->odom_frames) {
+      write_tum_frame(odom_lidar_ofs, frame->stamp, frame->T_world_lidar);
+    }
+
+    for (const auto& frame : submaps[i]->frames) {
+      write_tum_frame(traj_lidar_ofs, frame->stamp, frame->T_world_lidar);
+    }
+
+    submaps[i]->save((boost::format("%s/%06d") % path % i).str());
   }
 }
 

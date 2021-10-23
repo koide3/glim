@@ -23,6 +23,7 @@ class StandardViewer::Impl {
 public:
   Impl() {
     kill_switch = false;
+    request_to_terminate = false;
 
     show_current = true;
     show_frontend_scans = true;
@@ -34,6 +35,7 @@ public:
     set_callbacks();
     thread = std::thread([this] { viewer_loop(); });
   }
+
   ~Impl() {
     kill_switch = true;
     if (thread.joinable()) {
@@ -52,7 +54,11 @@ public:
     viewer->add_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
     viewer->register_ui_callback("selection", [this] { drawing_selection(); });
 
-    while (!kill_switch && viewer->spin_once()) {
+    while (!kill_switch) {
+      if (!viewer->spin_once()) {
+        request_to_terminate = true;
+      }
+
       std::lock_guard<std::mutex> lock(invoke_queue_mutex);
       for (const auto& task : invoke_queue) {
         task();
@@ -60,7 +66,7 @@ public:
       invoke_queue.clear();
     }
 
-    kill_switch = true;
+    guik::LightViewer::destroy();
   }
 
   bool drawable_filter(const std::string& name) {
@@ -101,6 +107,10 @@ public:
   }
 
   void invoke(const std::function<void()>& task) {
+    if (kill_switch) {
+      return;
+    }
+
     std::lock_guard<std::mutex> lock(invoke_queue_mutex);
     invoke_queue.push_back(task);
   }
@@ -288,7 +298,7 @@ public:
 
   void submap_on_optimization_status(const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
     const std::string text = status.to_short_string();
-    guik::LightViewer::instance()->sub_viewer("submap")->append_text(text);
+    invoke([this, text] { guik::LightViewer::instance()->sub_viewer("submap")->append_text(text); });
   }
 
   void submap_on_new_submap(const SubMap::ConstPtr& submap) {
@@ -379,12 +389,14 @@ public:
   }
 
   void globalmap_on_smoother_update_result(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result) {
-    auto viewer = guik::LightViewer::instance();
-    viewer->append_text((boost::format("--- iSAM2 update (%d values / %d factors) ---") % result.num_values % result.num_factors).str());
-    viewer->append_text(result.to_string());
+    std::string text = (boost::format("--- iSAM2 update (%d values / %d factors) ---\n") % result.num_values % result.num_factors).str();
+    text += result.to_string();
+
+    invoke([this, text] { guik::LightViewer::instance()->append_text(text); });
   }
 
 public:
+  std::atomic_bool request_to_terminate;
   std::atomic_bool kill_switch;
   std::thread thread;
 
@@ -410,10 +422,20 @@ StandardViewer::StandardViewer() {
 StandardViewer::~StandardViewer() {}
 
 bool StandardViewer::ok() const {
-  return !impl->kill_switch;
+  return !impl->request_to_terminate;
 }
 
 void StandardViewer::wait() {
+  while (!impl->request_to_terminate) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  stop();
+}
+
+void StandardViewer::stop() {
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  impl->kill_switch = true;
   if (impl->thread.joinable()) {
     impl->thread.join();
   }

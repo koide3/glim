@@ -12,6 +12,7 @@ public:
 
   bool ok() const;
   void wait();
+  void stop();
 
 private:
   class Impl;
