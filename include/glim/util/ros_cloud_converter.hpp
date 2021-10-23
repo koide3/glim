@@ -6,12 +6,13 @@
 #include <boost/format.hpp>
 
 #include <Eigen/Core>
+#include <gtsam_ext/types/frame.hpp>
 
-// #define ROS2
-
-#ifdef ROS2
+#ifdef GLIM_ROS2
 #include <sensor_msgs/msg/point_cloud2.hpp>
 namespace glim {
+using PointCloud2 = sensor_msgs::msg::PointCloud2;
+using PointCloud2Ptr = sensor_msgs::msg::PointCloud2::SharedPtr;
 using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
 using PointField = sensor_msgs::msg::PointField;
 
@@ -20,16 +21,30 @@ double to_sec(const Stamp& stamp) {
   return stamp.sec + stamp.nanosec / 1e9;
 }
 
+builtin_interfaces::msg::Time from_sec(const double time) {
+  builtin_interfaces::msg::Time stamp;
+  stamp.sec = std::floor(time);
+  stamp.nanosec = (time - stamp.sec) * 1e9;
+}
+
 }  // namespace glim
 #else
 #include <sensor_msgs/PointCloud2.h>
 namespace glim {
+using PointCloud2 = sensor_msgs::PointCloud2;
+using PointCloud2Ptr = sensor_msgs::PointCloud2::Ptr;
 using PointCloud2ConstPtr = sensor_msgs::PointCloud2::ConstPtr;
 using PointField = sensor_msgs::PointField;
 
 template <typename Stamp>
 double to_sec(const Stamp& stamp) {
   return stamp.toSec();
+}
+
+ros::Time from_sec(const double time) {
+  ros::Time stamp;
+  stamp.secs = std::floor(time);
+  stamp.nsecs = (time - stamp.secs) * 1e9;
 }
 
 }  // namespace glim
@@ -182,4 +197,43 @@ public:
   std::vector<double> intensities;
   std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;
 };
+
+PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_ext::Frame& frame) {
+  PointCloud2Ptr msg(new PointCloud2);
+  msg->header.frame_id = frame_id;
+  msg->header.stamp = from_sec(stamp);
+
+  msg->width = frame.size();
+  msg->height = 1;
+
+  std::vector<std::string> field_names = {"x", "y", "z", "t"};
+  int num_fields = frame.times ? 4 : 3;
+  msg->fields.resize(num_fields);
+
+  for (int i = 0; i < num_fields; i++) {
+    msg->fields[i].name = field_names[i];
+    msg->fields[i].offset = sizeof(float) * i;
+    msg->fields[i].datatype = PointField::FLOAT32;
+    msg->fields[i].count = 1;
+  }
+
+  msg->is_bigendian = false;
+  msg->point_step = sizeof(float) * num_fields;
+  msg->row_step = sizeof(float) * num_fields * frame.size();
+
+  msg->data.resize(sizeof(float) * num_fields * frame.size());
+  for (int i = 0; i < frame.size(); i++) {
+    float* point = reinterpret_cast<float*>(msg->data.data() + msg->point_step * i);
+    for (int j = 0; j < 3; j++) {
+      point[j] = frame.points[i][j];
+    }
+
+    if (frame.times) {
+      point[3] = frame.times[i];
+    }
+  }
+
+  return msg;
+}
+
 }  // namespace glim

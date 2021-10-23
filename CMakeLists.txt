@@ -119,20 +119,21 @@ endif()
 ###########
 ## ament ##
 ###########
-# find_package(ament_cmake)
-# if(ament_cmake_FOUND)
-#   ament_export_include_directories(include)
-#   ament_export_libraries(glim glim_vis)
-#   ament_package()
-# endif()
+find_package(ament_cmake)
+if(ament_cmake_FOUND)
+  add_definitions(-DBUILD_GTSAM_EXT_GPU)
+  ament_export_include_directories(include)
+  ament_export_libraries(glim glim_vis)
+  ament_package()
+endif()
 
 ############
 ## catkin ##
 ############
 find_package(catkin)
-catkin_package(
-  INCLUDE_DIRS include thirdparty/gtsam_ext/include
-  LIBRARIES glim glim_vis
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
-)
+if(catkin_FOUND)
+  catkin_package(
+    INCLUDE_DIRS include thirdparty/gtsam_ext/include
+    LIBRARIES glim glim_vis
+  )
+endif()
