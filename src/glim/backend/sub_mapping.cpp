@@ -17,8 +17,7 @@
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/backend/callbacks.hpp>
 
-namespace glim
-{
+namespace glim {
 
 using gtsam::symbol_shorthand::B;
 using gtsam::symbol_shorthand::V;
@@ -70,7 +69,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   graph->emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(current), odom_frame->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
   graph->emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(current), imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
-  if(current == 0) {
+  if (current == 0) {
     graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(odom_frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
   } else {
     int num_integrated = 0;
@@ -78,7 +77,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     imu_integration->erase_imu_data(imu_read_cursor);
 
     graph->emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-    if(num_integrated) {
+    if (num_integrated) {
       graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
     } else {
       std::cerr << "warning: no IMU data between LiDAR frames!! (sub_mapping)" << std::endl;
@@ -87,7 +86,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   }
 
   bool insert_as_keyframe = keyframes.empty();
-  if(!insert_as_keyframe) {
+  if (!insert_as_keyframe) {
     std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> targets(keyframes.size());
     std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> deltas(keyframes.size());
     for (int i = 0; i < keyframes.size(); i++) {
@@ -101,7 +100,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     }
   }
 
-  if(insert_as_keyframe) {
+  if (insert_as_keyframe) {
     keyframe_indices.push_back(current);
     keyframes.push_back(create_keyframe(odom_frame));
     Callbacks::on_new_keyframe(current, keyframes.back());
@@ -117,7 +116,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
   auto new_submap = create_submap();
 
-  if(new_submap) {
+  if (new_submap) {
     new_submap->id = submap_count++;
 
     Callbacks::on_new_submap(new_submap);
@@ -139,7 +138,8 @@ EstimationFrame::Ptr SubMapping::create_keyframe(const EstimationFrame::ConstPtr
   std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> imu_pred_poses;
   imu_integration->integrate_imu(odom_frame->raw_frame->stamp, odom_frame->raw_frame->scan_end_time, nav_world_imu, imu_bias, imu_pred_times, imu_pred_poses);
 
-  auto deskewed = deskewing->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
+  auto deskewed =
+    deskewing->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
   auto covs = covariance_estimation->estimate(deskewed, odom_frame->raw_frame->neighbors);
 
   EstimationFrame::Ptr keyframe(new EstimationFrame);
@@ -170,7 +170,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     const Eigen::Isometry3d delta_first_last = keyframes.front()->T_world_imu.inverse() * keyframes.back()->T_world_imu;
     const double overlap_first_last = keyframes.back()->frame->overlap_gpu(keyframes.front()->voxelized_frame(), delta_first_last);
 
-    if(overlap_first_last > min_num_frames) {
+    if (overlap_first_last > min_num_frames) {
       return nullptr;
     }
   }
@@ -206,7 +206,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
 
   std::vector<gtsam_ext::Frame::ConstPtr> keyframes_to_merge(keyframes.size());
   std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> poses_to_merge(keyframes.size());
-  for (int i = 0; i < keyframes.size(); i++){
+  for (int i = 0; i < keyframes.size(); i++) {
     keyframes_to_merge[i] = keyframes[i]->frame;
     poses_to_merge[i] = submap->T_world_origin.inverse() * Eigen::Isometry3d(values->at<gtsam::Pose3>(X(keyframe_indices[i])).matrix());
   }
@@ -233,4 +233,4 @@ std::vector<SubMap::Ptr> SubMapping::submit_end_of_sequence() {
   return submaps;
 }
 
-} // namespace glim
+}  // namespace glim

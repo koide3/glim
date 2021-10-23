@@ -19,6 +19,9 @@ namespace glim {
 
 class CloudCovarianceEstimation;
 
+/**
+ * @brief LiDAR-only odometry estimation based on CT-GICP scan-to-model matching
+ */
 class OdometryEstimationCT : public OdometryEstimationBase {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

@@ -45,7 +45,7 @@ private:
   double submap_downsample_resolution;
   double submap_voxel_resolution;
 
-  int submap_count; 
+  int submap_count;
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::unique_ptr<CloudDeskewing> deskewing;

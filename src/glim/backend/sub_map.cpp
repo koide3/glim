@@ -27,7 +27,7 @@ void SubMap::save(const std::string& path) {
   if (!frames.empty()) {
     ofs << "T_lidar_imu: " << std::endl << frames.back()->T_lidar_imu.matrix() << std::endl;
     ofs << "imu_bias: " << frames.back()->imu_bias.transpose() << std::endl;
-    ofs << "frame_id: " << frames.back()->frame_id << std::endl;
+    ofs << "frame_id: " << static_cast<int>(frames.back()->frame_id) << std::endl;
   }
 
   ofs << "num_frames: " << frames.size() << std::endl;

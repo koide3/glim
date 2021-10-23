@@ -21,6 +21,9 @@ namespace glim {
 using gtsam::symbol_shorthand::X;
 using Callbacks = OdometryEstimationCallbacks;
 
+/**
+ * @brief Target map for scan-to-model matching
+ */
 struct OdometryEstimationCT::TargetMap {
   gtsam_ext::Frame::Ptr frame;
   std::shared_ptr<gtsam_ext::NearestNeighborSearch> kdtree;
@@ -52,6 +55,7 @@ OdometryEstimationCT::~OdometryEstimationCT() {}
 EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
   Callbacks::on_insert_frame(raw_frame);
 
+  // Create a frame to hold the current estimation state
   EstimationFrame::Ptr new_frame(new EstimationFrame);
   new_frame->id = frame_count++;
   new_frame->stamp = raw_frame->stamp;
@@ -62,15 +66,16 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   new_frame->raw_frame = raw_frame;
 
+  new_frame->frame_id = FrameID::LIDAR;
+  gtsam_ext::FrameCPU::Ptr frame_cpu(new gtsam_ext::FrameCPU(raw_frame->points));
+  frame_cpu->add_times(raw_frame->times);
+  frame_cpu->add_covs(covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors));
+  new_frame->frame = frame_cpu;
+
+  // Handling the first input frame
   if (keyframes.empty()) {
     new_frame->T_world_lidar = Eigen::Isometry3d::Identity();
     new_frame->T_world_imu = new_frame->T_world_lidar * new_frame->T_lidar_imu;
-
-    new_frame->frame_id = "lidar";
-    gtsam_ext::FrameCPU::Ptr frame_cpu(new gtsam_ext::FrameCPU(raw_frame->points));
-    frame_cpu->add_times(raw_frame->times);
-    frame_cpu->add_covs(covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors));
-    new_frame->frame = frame_cpu;
     Callbacks::on_new_frame(new_frame);
 
     last_frame = new_frame;
@@ -84,17 +89,14 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     return new_frame;
   }
 
-  const auto covs = covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors);
-  gtsam_ext::FrameCPU::Ptr frame(new gtsam_ext::FrameCPU(raw_frame->points));
-  frame->add_times(raw_frame->times);
-  frame->add_covs(covs);
-
+  // Constant linear and angular velocity assumption
   gtsam::Vector6 predicted_v_last_current = gtsam::Vector6::Zero();
   for (const auto& v : v_last_current_history) {
     predicted_v_last_current += v;
   }
   predicted_v_last_current /= v_last_current_history.size();
 
+  // Predict the current sensor poses at the scan beginning and end
   const double dt_last_current = raw_frame->stamp - last_frame->stamp;
   const double dt_scan = raw_frame->times.back() - raw_frame->times.front();
   const gtsam::Pose3 predicted_T_world_lidar_begin = gtsam::Pose3(last_frame->T_world_lidar.matrix()) * gtsam::Pose3::Expmap(dt_last_current * predicted_v_last_current);
@@ -102,48 +104,33 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   gtsam::Values values;
   values.insert(X(0), gtsam::Pose3(predicted_T_world_lidar_begin));
-  values.insert(X(1), gtsam::Pose3(predicted_T_world_lidar_begin));
+  values.insert(X(1), gtsam::Pose3(predicted_T_world_lidar_end));
 
+  // Create CT-GICP factor
   gtsam::NonlinearFactorGraph graph;
-  auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor>(X(0), X(1), target_map->frame, frame, target_map->kdtree);
+  auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor>(X(0), X(1), target_map->frame, new_frame->frame, target_map->kdtree);
   factor->set_num_threads(num_threads);
   factor->set_max_corresponding_distance(max_correspondence_distance);
   graph.add(factor);
 
+  // LM configuration
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setAbsoluteErrorTol(1e-2);
-
-  gtsam::Values last_values = values;
-  lm_params.termination_criteria = [&](const gtsam::Values& values_) {
-    const gtsam::Pose3 delta0 = last_values.at<gtsam::Pose3>(X(0)).inverse() * values_.at<gtsam::Pose3>(X(0));
-    const gtsam::Pose3 delta1 = last_values.at<gtsam::Pose3>(X(1)).inverse() * values_.at<gtsam::Pose3>(X(1));
-
-    const double delta_trans_0 = delta0.translation().norm();
-    const double delta_trans_1 = delta1.translation().norm();
-    const double delta_angle_0 = Eigen::AngleAxisd(delta0.rotation().matrix()).angle();
-    const double delta_angle_1 = Eigen::AngleAxisd(delta1.rotation().matrix()).angle();
-
-    const double trans_eps = 1e-4;
-    const double angle_eps = 1e-4;
-
-    if (std::max(delta_trans_0, delta_trans_1) < trans_eps && std::max(delta_angle_0, delta_angle_1) < angle_eps) {
-      return true;
-    }
-    last_values = values_;
-    return false;
-  };
-
   // lm_params.callback = [&](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values_) { std::cout << status.to_string() << std::endl; };
+
+  // First optimization step with a large stiffness
   graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_first));
   lm_params.setMaxIterations(lm_max_iterations_first);
   values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
+  // Second optimization step with a more elastic setting
   graph.erase(graph.end() - 1);
   graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_second));
   lm_params.setMaxIterations(lm_max_iterations_second);
   values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
+  // Calculate the linear and angular velocity and record them for the estimation of successive frames
   const gtsam::Pose3 T_last_current = gtsam::Pose3(last_frame->T_world_lidar.inverse().matrix()) * values.at<gtsam::Pose3>(X(0));
   const gtsam::Vector6 v_last_current = gtsam::Pose3::Logmap(T_last_current) / dt_last_current;
   v_last_current_history.push_back(v_last_current);
@@ -153,17 +140,17 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   new_frame->T_world_lidar = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(0)).matrix());
   new_frame->T_world_imu = new_frame->T_world_lidar * new_frame->T_lidar_imu;
-  new_frame->frame_id = "lidar";
-  new_frame->frame = frame;
   Callbacks::on_new_frame(new_frame);
 
+  // Deskew the input points and covs
   auto deskewed_points = factor->deskewed_source_points(values, true);
   auto deskewed_covs = covariance_estimation->estimate(deskewed_points, raw_frame->neighbors);
   for (int i = 0; i < deskewed_points.size(); i++) {
-    frame->points[i] = deskewed_points[i];
-    frame->covs[i] = deskewed_covs[i];
+    new_frame->frame->points[i] = deskewed_points[i];
+    new_frame->frame->covs[i] = deskewed_covs[i];
   }
 
+  // Update the keyframe list
   const Eigen::Isometry3d delta_from_last_keyframe = keyframes.back()->T_world_lidar.inverse() * new_frame->T_world_lidar;
   const double delta_trans = delta_from_last_keyframe.translation().norm();
   const double delta_angle = Eigen::AngleAxisd(delta_from_last_keyframe.linear()).angle();
@@ -171,6 +158,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   if (delta_trans > keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot) {
     keyframes.push_back(new_frame);
 
+    // Create the target map in background
     if (!async_target.valid()) {
       std::vector<EstimationFrame::ConstPtr> keyframe_clones(keyframes.begin(), keyframes.end());
       Callbacks::on_update_keyframes(keyframe_clones);
@@ -178,15 +166,17 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     }
   }
 
+  // Get the target map created asynchronously
   if (async_target.valid() && async_target.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
     target_map = async_target.get();
   }
 
+  // Pop the oldest keyframe
   if (keyframes.size() > max_num_keyframes) {
     std::vector<EstimationFrame::ConstPtr> marginalized_keyframes = {keyframes.front()};
     Callbacks::on_marginalized_keyframes(marginalized_keyframes);
 
-    keyframes.erase(keyframes.begin());
+    keyframes.pop_front();
   }
 
   last_frame = new_frame;
@@ -206,6 +196,7 @@ std::shared_ptr<OdometryEstimationCT::TargetMap> OdometryEstimationCT::create_ta
   frame->points_storage.resize(total_num_points);
   frame->covs_storage.resize(total_num_points);
 
+  // Accumulate all the points in the world frame
   int begin = 0;
   for (const auto& keyframe : keyframes) {
     Eigen::Matrix4d R_world_lidar = Eigen::Matrix4d::Identity();
@@ -222,6 +213,7 @@ std::shared_ptr<OdometryEstimationCT::TargetMap> OdometryEstimationCT::create_ta
   frame->points = frame->points_storage.data();
   frame->covs = frame->covs_storage.data();
 
+  // Create a KDTree
   auto kdtree = std::make_shared<gtsam_ext::KdTree>(frame->points, frame->size());
   kdtree->search_eps = 1e-3;
 

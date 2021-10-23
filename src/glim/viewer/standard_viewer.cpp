@@ -137,20 +137,12 @@ public:
   }
 
   Eigen::Isometry3f resolve_pose(const EstimationFrame::ConstPtr& frame) {
-    if (frame->frame_id.empty()) {
-      return Eigen::Isometry3f::Identity();
-    }
-
-    switch (frame->frame_id[0]) {
-      default:
-      case 'w':
+    switch (frame->frame_id) {
+      case FrameID::WORLD:
         return Eigen::Isometry3f::Identity();
 
-      case 'l':
-        return trajectory->odom2world(frame->T_world_lidar).cast<float>();
-
-      case 'i':
-        return trajectory->odom2world(frame->T_world_imu).cast<float>();
+      default:
+        return trajectory->odom2world(frame->T_world_sensor()).cast<float>();
     }
   }
 

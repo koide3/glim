@@ -9,6 +9,8 @@
 
 namespace glim {
 
+enum class FrameID { WORLD, LIDAR, IMU };
+
 struct EstimationFrame {
   using Ptr = std::shared_ptr<EstimationFrame>;
   using ConstPtr = std::shared_ptr<const EstimationFrame>;
@@ -25,6 +27,35 @@ struct EstimationFrame {
 
   gtsam_ext::VoxelizedFrame::ConstPtr voxelized_frame() const { return std::dynamic_pointer_cast<const gtsam_ext::VoxelizedFrame>(frame); }
 
+  const Eigen::Isometry3d T_world_sensor() const {
+    switch (frame_id) {
+      case FrameID::WORLD:
+        return Eigen::Isometry3d::Identity();
+      case FrameID::LIDAR:
+        return T_world_lidar;
+      case FrameID::IMU:
+        return T_world_imu;
+    }
+  }
+
+  void set_T_world_sensor(FrameID frame_id, const Eigen::Isometry3d& T) {
+    switch (frame_id) {
+      default:
+        std::cerr << "error: frame_id must be either of LIDAR or IMU" << std::endl;
+        break;
+
+      case FrameID::LIDAR:
+        T_world_lidar = T;
+        T_world_imu = T_world_lidar * T_lidar_imu;
+        break;
+
+      case FrameID::IMU:
+        T_world_imu = T;
+        T_world_lidar = T_world_imu * T_lidar_imu.inverse();
+        break;
+    }
+  }
+
   long id;
   double stamp;
 
@@ -37,7 +68,7 @@ struct EstimationFrame {
 
   PreprocessedFrame::ConstPtr raw_frame;
 
-  std::string frame_id;  // "lidar" or "imu"
+  FrameID frame_id;  // "lidar" or "imu"
   gtsam_ext::Frame::ConstPtr frame;
 };
 }  // namespace glim

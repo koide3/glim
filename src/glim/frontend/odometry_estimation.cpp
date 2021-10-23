@@ -65,7 +65,7 @@ OdometryEstimation::OdometryEstimation() {
   guik::LightViewer::instance()->invoke([this] {
     guik::LightViewer::instance()->register_ui_callback("call", [&] {
       bool flag = enable_matching_cost_factors;
-      if(ImGui::Checkbox("enable matching cost factors", &flag)) {
+      if (ImGui::Checkbox("enable matching cost factors", &flag)) {
         enable_matching_cost_factors = flag;
       }
     });
@@ -123,7 +123,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
     auto covs = covariance_estimation->estimate(points_imu, raw_frame->neighbors);
     new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(voxel_resolution, points_imu, covs);
-    new_frame->frame_id = "imu";
+    new_frame->frame_id = FrameID::IMU;
 
     Callbacks::on_new_frame(new_frame);
     frames.push_back(new_frame);
@@ -219,7 +219,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
   auto deskewed_covs = covariance_estimation->estimate(deskewed, raw_frame->neighbors);
   new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(voxel_resolution, deskewed, deskewed_covs);
-  new_frame->frame_id = "imu";
+  new_frame->frame_id = FrameID::IMU;
 
   Callbacks::on_new_frame(new_frame);
   frames.push_back(new_frame);
