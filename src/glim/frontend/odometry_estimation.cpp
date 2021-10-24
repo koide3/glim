@@ -20,8 +20,6 @@
 
 #include <glim/frontend/callbacks.hpp>
 
-#include <guik/viewer/light_viewer.hpp>
-
 namespace glim {
 
 using Callbacks = OdometryEstimationCallbacks;
@@ -61,15 +59,6 @@ OdometryEstimation::OdometryEstimation() {
   isam2_params.setRelinearizeSkip(config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1));
   isam2_params.setRelinearizeThreshold(config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1));
   smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(smoother_lag, isam2_params));
-
-  guik::LightViewer::instance()->invoke([this] {
-    guik::LightViewer::instance()->register_ui_callback("call", [&] {
-      bool flag = enable_matching_cost_factors;
-      if (ImGui::Checkbox("enable matching cost factors", &flag)) {
-        enable_matching_cost_factors = flag;
-      }
-    });
-  });
 
 #if BUILD_GTSAM_EXT_GPU
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
@@ -372,17 +361,21 @@ void OdometryEstimation::update_keyframes(int current) {
     return;
   }
 
+  std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;
+
   // Remove keyframes without overlap to the new keyframe
   for (int i = 0; i < keyframes.size(); i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
     const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->voxelized_frame(), delta);
     if (overlap < keyframe_min_overlap) {
+      marginalized_keyframes.push_back(keyframes[i]);
       keyframes.erase(keyframes.begin() + i);
       i--;
     }
   }
 
   if (keyframes.size() <= max_num_keyframes) {
+    Callbacks::on_marginalized_keyframes(marginalized_keyframes);
     return;
   }
 
@@ -417,7 +410,9 @@ void OdometryEstimation::update_keyframes(int current) {
     }
   }
 
+  marginalized_keyframes.push_back(keyframes[frame_to_eliminate]);
   keyframes.erase(keyframes.begin() + frame_to_eliminate);
+  Callbacks::on_marginalized_keyframes(marginalized_keyframes);
 }
 
 gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int current) {
@@ -426,19 +421,10 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
                                       gtsam::Key source_key,
                                       const gtsam_ext::VoxelizedFrame::ConstPtr& target,
                                       const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
-    if (factor_type == "VGICP_GPU") {
-      auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
-      const auto& stream = stream_buffer.first;
-      const auto& buffer = stream_buffer.second;
-      return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, target, source, stream, buffer);
-    } else if (factor_type == "VGICP") {
-      return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactor>(target_key, source_key, target, source);
-    } else if (factor_type == "GICP") {
-      return gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(target_key, source_key, target, source);
-    }
-
-    std::cerr << "error: unknown factor type " << factor_type << std::endl;
-    return nullptr;
+    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
+    const auto& stream = stream_buffer.first;
+    const auto& buffer = stream_buffer.second;
+    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, target, source, stream, buffer);
   };
 
   const auto create_unary_factor = [this](
@@ -446,19 +432,10 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
                                      gtsam::Key source_key,
                                      const gtsam_ext::VoxelizedFrame::ConstPtr& target,
                                      const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
-    if (factor_type == "VGICP_GPU") {
-      auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
-      const auto& stream = stream_buffer.first;
-      const auto& buffer = stream_buffer.second;
-      return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, target, source, stream, buffer);
-    } else if (factor_type == "VGICP") {
-      return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactor>(fixed_target_pose, source_key, target, source);
-    } else if (factor_type == "GICP") {
-      return gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(fixed_target_pose, source_key, target, source);
-    }
-
-    std::cerr << "error: unknown factor type " << factor_type << std::endl;
-    return nullptr;
+    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
+    const auto& stream = stream_buffer.first;
+    const auto& buffer = stream_buffer.second;
+    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, target, source, stream, buffer);
   };
 
   gtsam::NonlinearFactorGraph factors;

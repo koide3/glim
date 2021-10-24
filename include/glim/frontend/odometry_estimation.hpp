@@ -9,7 +9,7 @@
 namespace gtsam {
 class ImuFactor;
 class NonlinearFactorGraph;
-}
+}  // namespace gtsam
 
 namespace gtsam_ext {
 class VoxelizedFrame;

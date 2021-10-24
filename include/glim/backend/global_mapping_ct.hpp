@@ -30,7 +30,7 @@ public:
   virtual void save(const std::string& path) override;
 
 private:
-  boost::shared_ptr<gtsam::NonlinearFactorGraph> create_consecutive_factors(int current) const;
+  boost::shared_ptr<gtsam::NonlinearFactorGraph> create_between_factors(int current) const;
   boost::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
 
   void update_submaps();

@@ -30,19 +30,24 @@
     "keyframe_update_strategy": "DISPLACEMENT",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
-    "max_keyframe_overlap": 0.95,
+    "max_keyframe_overlap": 0.5,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",
     // Registration error factors
-    "registration_error_factor_type": "VGICP",
-    "keyframe_randomsampling_rate": 0.1,
+    "registration_error_factor_type": "VGICP_GPU",
+    "keyframe_randomsampling_rate": 1.0,
     "keyframe_voxel_resolution": 0.5,
     // Post processing
     "submap_downsample_resolution": 0.1,
     "submap_voxel_resolution": 0.25
   },
   "global_mapping": {
+    "enable_imu": false,
+    "create_between_factors": false,
+    "between_registration_type": "GICP",
+    "registration_error_factor_type": "VGICP_GPU",
+    "randomsampling_rate": 1.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,

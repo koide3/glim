@@ -27,7 +27,7 @@ public:
   Eigen::Isometry3d T_origin_endpoint_L;  // frame.front() pose w.r.t. the origin
   Eigen::Isometry3d T_origin_endpoint_R;  // frame.back() pose w.r.t. the origin
 
-  gtsam_ext::VoxelizedFrame::ConstPtr frame;           // Merged submap frame
+  gtsam_ext::Frame::Ptr frame;                         // Merged submap frame
   std::vector<EstimationFrame::ConstPtr> frames;       // Optimized odometry frames
   std::vector<EstimationFrame::ConstPtr> odom_frames;  // Original odometry frames
 };

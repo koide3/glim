@@ -1,6 +1,8 @@
 #pragma once
 
+#include <any>
 #include <memory>
+#include <random>
 #include <boost/shared_ptr.hpp>
 #include <glim/backend/global_mapping_base.hpp>
 
@@ -29,18 +31,32 @@ public:
   virtual void optimize() override;
 
 private:
+  void insert_submap(int current, const SubMap::Ptr& submap);
+
+  boost::shared_ptr<gtsam::NonlinearFactorGraph> create_between_factors(int current) const;
   boost::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
 
   void update_submaps();
 
 private:
+  std::mt19937 mt;
+
+  bool enable_gpu;
+  bool enable_imu;
+  bool enable_between_factors;
+  std::string between_registration_type;
+
+  std::string registration_error_factor_type;
+  double randomsampling_rate;
   double max_implicit_loop_distance;
   double min_implicit_loop_overlap;
 
   std::unique_ptr<IMUIntegration> imu_integration;
-  std::unique_ptr<gtsam_ext::StreamTempBufferRoundRobin> stream_buffer_roundrobin;
+  std::any stream_buffer_roundrobin;
 
   std::vector<SubMap::Ptr> submaps;
+  std::vector<gtsam_ext::Frame::Ptr> subsampled_submaps;
+  std::vector<gtsam_ext::VoxelizedFrame::Ptr> voxelized_submaps;
 
   std::unique_ptr<gtsam::Values> new_values;
   std::unique_ptr<gtsam::NonlinearFactorGraph> new_factors;

@@ -5,6 +5,7 @@
 #include <gtsam_ext/optimizers/isam2_result_ext.hpp>
 #include <gtsam_ext/optimizers/levenberg_marquardt_optimization_status.hpp>
 
+#include <glim/common/callbacks.hpp>
 #include <glim/frontend/callbacks.hpp>
 #include <glim/frontend/estimation_frame.hpp>
 #include <glim/backend/callbacks.hpp>
@@ -122,6 +123,8 @@ public:
     using std::placeholders::_2;
     using std::placeholders::_3;
 
+    CommonCallbacks::on_notification.add(std::bind(&Impl::common_notification, this, _1, _2));
+
     OdometryEstimationCallbacks::on_new_frame.add(std::bind(&Impl::frontend_new_frame, this, _1));
     OdometryEstimationCallbacks::on_update_keyframes.add(std::bind(&Impl::frontend_on_update_keyframes, this, _1));
     OdometryEstimationCallbacks::on_marginalized_frames.add(std::bind(&Impl::frontend_on_marginalized_frames, this, _1));
@@ -146,6 +149,10 @@ public:
       default:
         return trajectory->odom2world(frame->T_world_sensor()).cast<float>();
     }
+  }
+
+  void common_notification(NotificationLevel level, const std::string& message) {
+    invoke([this, level, message] { guik::LightViewer::instance()->append_text(message); });
   }
 
   void frontend_new_frame(const EstimationFrame::ConstPtr& new_frame) {

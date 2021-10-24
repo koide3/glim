@@ -87,6 +87,10 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   const int last = current - 1;
   odom_frames.push_back(odom_frame);
 
+  if (enable_imu && odom_frame->frame_id != FrameID::IMU) {
+    std::cerr << console::yellow << "warning: odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation" << console::reset << std::endl;
+  }
+
   values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
   // Fix the first frame
@@ -120,7 +124,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
       graph
         ->emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-      if (num_integrated < 2) {
+      if (num_integrated >= 2) {
         graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
       } else {
         std::cerr << console::yellow << "warning: insufficient IMU data between LiDAR frames!! (sub_mapping)" << console::reset << std::endl;
@@ -133,6 +137,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   if (!insert_as_keyframe) {
     // Overlap-based keyframe update
     if (keyframe_update_strategy == "OVERLAP") {
+      /*
       std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> targets(keyframes.size());
       std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> deltas(keyframes.size());
       for (int i = 0; i < keyframes.size(); i++) {
@@ -141,6 +146,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       }
 
       const double overlap = odom_frame->frame->overlap_auto(targets, deltas);
+      */
+      const double overlap = odom_frame->frame->overlap_auto(voxelized_keyframes.back(), keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
       insert_as_keyframe = overlap < max_keyframe_overlap;
     }
     // Displacement-based keyframe update
@@ -200,7 +207,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   gtsam_ext::Frame::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
-  if (enable_imu) {
+  if (enable_imu && false) {
     const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
@@ -212,10 +219,13 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     auto deskewed =
       deskewing
         ->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
-    auto covs = covariance_estimation->estimate(deskewed, odom_frame->raw_frame->neighbors);
 
     auto frame = std::make_shared<gtsam_ext::FrameCPU>(deskewed);
-    frame->add_covs(covs);
+    for (int i = 0; i < frame->size(); i++) {
+      frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
+    }
+    frame->add_covs(covariance_estimation->estimate(frame->points_storage, odom_frame->raw_frame->neighbors));
+
     deskewed_frame = frame;
   }
 
@@ -289,9 +299,10 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     poses_to_merge[i] = submap->T_world_origin.inverse() * Eigen::Isometry3d(values->at<gtsam::Pose3>(X(keyframe_indices[i])).matrix());
   }
 
+  // TODO: improve merging process
 #ifdef BUILD_GTSAM_EXT_GPU
   if (enable_gpu) {
-    submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
+    //  submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
   }
 #endif
 

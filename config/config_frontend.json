@@ -18,10 +18,10 @@
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
-    "voxel_resolution": 0.15,
-    "full_connection_window_size": 5,
+    "voxel_resolution": 0.5,
+    "full_connection_window_size": 3,
     "max_num_keyframes": 15,
-    "keyframe_min_overlap": 0.0,
-    "keyframe_max_overlap": 0.5
+    "keyframe_min_overlap": 0.05,
+    "keyframe_max_overlap": 0.8
   }
 }

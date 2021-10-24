@@ -55,6 +55,7 @@ add_library(glim SHARED
   src/glim/preprocess/cloud_preprocessor.cpp
   src/glim/preprocess/downsampling.cpp
   # common process
+  src/glim/common/callbacks.cpp
   src/glim/common/imu_integration.cpp
   src/glim/common/cloud_deskewing.cpp
   src/glim/common/cloud_covariance_estimation.cpp
@@ -75,7 +76,7 @@ add_library(glim SHARED
   src/glim/backend/global_mapping_base.cpp
   src/glim/backend/async_global_mapping.cpp
   src/glim/backend/global_mapping.cpp
-  src/glim/backend/global_mapping_ct.cpp
+  # src/glim/backend/global_mapping_ct.cpp
 )
 target_include_directories(glim PUBLIC
   include

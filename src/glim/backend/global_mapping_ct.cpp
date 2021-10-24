@@ -77,7 +77,7 @@ void GlobalMappingCT::insert_submap(const SubMap::Ptr& submap) {
   if (current == 0) {
     new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
   } else {
-    new_factors->add(*create_consecutive_factors(current));
+    new_factors->add(*create_between_factors(current));
     new_factors->add(*create_matching_cost_factors(current));
   }
 
@@ -99,7 +99,7 @@ void GlobalMappingCT::optimize() {
   Callbacks::on_smoother_update_result(*isam2, result);
 }
 
-boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingCT::create_consecutive_factors(int current) const {
+boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingCT::create_between_factors(int current) const {
   auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
   if (current == 0) {
     return factors;
@@ -122,7 +122,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingCT::create_consecuti
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setMaxIterations(10);
-  // lm_params.callback = [](const auto& status, const auto& values) { std::cout << status.to_string() << std::endl; };
+  lm_params.callback = [](const auto& status, const auto& values) { std::cout << status.to_string() << std::endl; };
 
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();
