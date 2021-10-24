@@ -1,23 +1,44 @@
 {
+  /*** SubMapping ***
+  // enable_imu                     : If true, create IMU preintegration factors
+  // enable_optimization            : If false, do not submap optimization (use only odom data)
+
+  // --- Keyframe management ---
+  // max_num_keyframes              : Maximum number of keyframes
+  // keyframe_update_strategy       : "DISPLACEMENT" or "OVERLAP"
+  // keyframe_update_interval_*     : Threshold for "DISPLACEMENT" strategy
+  // max_keyframe_overlap           : Threshold for "OVERLAP" strategy
+
+  // --- Relative pose factors ---
+  // create_between_factors         : Create relative pose factors between consecutive frames (i.e., odom_factor)
+  // between_registration_type      : Registration factor used for creating relative pose factors (GICP)
+
+  // --- Registration error factors ---
+  // registration_error_factor_type : Matching cost factor used for creating registration error factors (VGICP/VGICP_GPU)
+  // keyframe_randomsampling_rate   : Random sampling rate for registration error factors (1.0 = use all points)
+  // keyframe_voxel_resolution      : Voxel resolution for registration error factors
+
+  // --- Post processing ---
+  // submap_downsample_resolution   : Resolution of voxel grid downsampling for created submaps
+  // submap_voxel_resolution        : Resolution of VGICP voxels for created submaps (used in global mapping)
+  */
   "sub_mapping": {
     "enable_imu": false,
-    "enable_optimization": false,
+    "enable_optimization": true,
     // Keyframe update strategy
-    "min_num_keyframes": 10,
     "max_num_keyframes": 20,
-    "keyframe_update_strategy": "OVERLAP",
+    "keyframe_update_strategy": "DISPLACEMENT",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
-    "min_keyframe_overlap": 0.1,
     "max_keyframe_overlap": 0.95,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",
     // Registration error factors
-    "registration_error_factor_type": "VGICP_GPU",
+    "registration_error_factor_type": "VGICP",
     "keyframe_randomsampling_rate": 0.1,
     "keyframe_voxel_resolution": 0.5,
-    // Post processing for created submaps
+    // Post processing
     "submap_downsample_resolution": 0.1,
     "submap_voxel_resolution": 0.25
   },

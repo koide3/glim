@@ -40,7 +40,6 @@ SubMapping::SubMapping() {
   keyframe_update_strategy = config.param<std::string>("sub_mapping", "keyframe_update_strategy", "OVERLAP");
   keyframe_update_interval_rot = config.param<double>("sub_mapping", "keyframe_update_interval_rot", 3.15);
   keyframe_update_interval_trans = config.param<double>("sub_mapping", "keyframe_update_interval_trans", 1.0);
-  min_keyframe_overlap = config.param<double>("sub_mapping", "min_keyframe_overlap", 0.05);
   max_keyframe_overlap = config.param<double>("sub_mapping", "max_keyframe_overlap", 0.8);
 
   create_between_factors = config.param<bool>("sub_mapping", "create_between_factors", true);
@@ -223,7 +222,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(keyframe_voxel_resolution, deskewed_frame->points, deskewed_frame->covs, deskewed_frame->size());
     keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
   } else {
-    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(keyframe_voxel_resolution, deskewed_frame);
+    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = subsampled_frame;
   }
 
@@ -244,7 +243,9 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     lm_params.callback = [](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) { Callbacks::on_optimization_status(status, values); };
   }
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
-  *values = optimizer.optimize();
+  if (enable_optimization) {
+    *values = optimizer.optimize();
+  }
 
   SubMap::Ptr submap(new SubMap);
   submap->id = 0;

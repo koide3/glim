@@ -138,7 +138,6 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   }
 
   new_frame->set_T_world_sensor(FrameID::LIDAR, Eigen::Isometry3d(values.at<gtsam::Pose3>(X(0)).matrix()));
-  Callbacks::on_new_frame(new_frame);
 
   // Deskew the input points and covs
   auto deskewed_points = factor->deskewed_source_points(values, true);
@@ -147,6 +146,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     new_frame->frame->points[i] = deskewed_points[i];
     new_frame->frame->covs[i] = deskewed_covs[i];
   }
+
+  Callbacks::on_new_frame(new_frame);
 
   // Update the keyframe list
   const Eigen::Isometry3d delta_from_last_keyframe = keyframes.back()->T_world_lidar.inverse() * new_frame->T_world_lidar;

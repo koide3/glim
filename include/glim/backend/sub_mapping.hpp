@@ -48,7 +48,6 @@ private:
   double keyframe_update_interval_rot;
   double keyframe_update_interval_trans;
   double max_keyframe_overlap;
-  double min_keyframe_overlap;
 
   bool create_between_factors;
   std::string between_registration_type;

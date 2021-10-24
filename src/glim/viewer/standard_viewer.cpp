@@ -153,7 +153,7 @@ public:
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
 
-      trajectory->add_odom(new_frame->stamp, new_frame->T_world_imu);
+      trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor());
       Eigen::Isometry3f pose = resolve_pose(new_frame);
 
       if (track) {
