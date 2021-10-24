@@ -40,6 +40,8 @@ public:
 
   Eigen::Vector3d odom2world(const Eigen::Vector3d& point) const { return T_world_odom * point; }
 
+  const Eigen::Isometry3d get_T_world_odom() const { return T_world_odom; }
+
 private:
   std::vector<double> odom_stamps;
   std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> T_odom_sensor;

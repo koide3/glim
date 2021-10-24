@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <glim/util/config.hpp>
+#include <glim/util/console_colors.hpp>
 
 namespace glim {
 
@@ -20,6 +21,10 @@ NaiveInitialStateEstimation::NaiveInitialStateEstimation() : stamp(0.0), sum_acc
 NaiveInitialStateEstimation ::~NaiveInitialStateEstimation() {}
 
 void NaiveInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
+  if (linear_acc.norm() < 5.0 || linear_acc.norm() > 15.0) {
+    std::cerr << console::yellow << "warning: too large or small acc found (" << linear_acc.norm() << "[m/s^2])" << console::reset << std::endl;
+  }
+
   stamp = stamp;
   sum_acc += linear_acc;
 }

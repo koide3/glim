@@ -16,6 +16,7 @@
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/console_colors.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -88,9 +89,12 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
   values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
+  // Fix the first frame
   if (current == 0) {
     graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values->at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-  } else if (create_between_factors) {
+  }
+  // Create a relative pose factor between consecutive frames
+  else if (create_between_factors) {
     auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), odom_frames[last]->frame, odom_frames[current]->frame);
     auto linearized = factor->linearize(*values);
     auto H = linearized->hessianBlockDiagonal()[X(current)];
@@ -99,6 +103,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
   }
 
+  // Create an IMU preintegration factor
   if (enable_imu) {
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
@@ -118,7 +123,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       if (num_integrated < 2) {
         graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
       } else {
-        std::cerr << "warning: insufficient IMU data between LiDAR frames!! (sub_mapping)" << std::endl;
+        std::cerr << console::yellow << "warning: insufficient IMU data between LiDAR frames!! (sub_mapping)" << console::reset << std::endl;
         graph->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       }
     }
@@ -146,14 +151,16 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
       insert_as_keyframe = delta_trans > keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot;
     } else {
-      std::cerr << "warning: unknown keyframe update strategy " << keyframe_update_strategy << std::endl;
+      std::cerr << console::yellow << "warning: unknown keyframe update strategy " << console::underline << keyframe_update_strategy << console::reset << std::endl;
     }
   }
 
+  // Create a new keyframe
   if (insert_as_keyframe) {
     insert_keyframe(current, odom_frame);
     Callbacks::on_new_keyframe(current, keyframes.back());
 
+    // Create registration error factors (fully connected)
     for (int i = 0; i < keyframes.size() - 1; i++) {
       if (registration_error_factor_type == "VGICP") {
         graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelized_keyframes[i], keyframes.back()->frame);
@@ -168,7 +175,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       }
 #endif
       else {
-        std::cerr << "warning: unknown registration error factor type " << registration_error_factor_type << std::endl;
+        std::cerr << console::yellow << "warning: unknown registration error factor type " << console::underline << registration_error_factor_type << console::yellow << std::endl;
       }
     }
   }
@@ -212,6 +219,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     deskewed_frame = frame;
   }
 
+  // Random sampling for registration error factors
   gtsam_ext::Frame::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, keyframe_randomsampling_rate, mt);
 
   gtsam_ext::VoxelizedFrame::Ptr voxelized_keyframe;
@@ -236,6 +244,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     return nullptr;
   }
 
+  // Optimization
   Callbacks::on_optimize_submap(*graph, *values);
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setMaxIterations(20);
@@ -247,6 +256,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     *values = optimizer.optimize();
   }
 
+  // Create a submap by merging optimized frames
   SubMap::Ptr submap(new SubMap);
   submap->id = 0;
 
