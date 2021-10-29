@@ -3,6 +3,10 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 
+#include <gtsam_ext/types/frame_cpu.hpp>
+
+#include <glim/util/console_colors.hpp>
+
 namespace glim {
 
 void SubMap::drop_odom_frames() {
@@ -41,6 +45,89 @@ void SubMap::save(const std::string& path) {
   }
 
   frame->save_compact(path);
+}
+
+namespace {
+template <int ROWS, int COLS>
+Eigen::Matrix<double, ROWS, COLS> read_matrix(std::ifstream& ifs) {
+  Eigen::Matrix<double, ROWS, COLS> m;
+  for (int i = 0; i < ROWS; i++) {
+    for (int j = 0; j < COLS; j++) {
+      ifs >> m(i, j);
+    }
+  }
+  return m;
+}
+}  // namespace
+
+SubMap::Ptr SubMap::load(const std::string& path) {
+  std::ifstream ifs(path + "/data.txt");
+  if (!ifs) {
+    std::cerr << console::red << "error: failed to open " << path + "/data.txt" << console::reset << std::endl;
+    return nullptr;
+  }
+
+  SubMap::Ptr submap(new SubMap);
+
+  std::string token;
+  ifs >> token >> submap->id;
+
+  ifs >> token;
+  submap->T_world_origin.matrix() = read_matrix<4, 4>(ifs);
+  ifs >> token;
+  submap->T_origin_endpoint_L.matrix() = read_matrix<4, 4>(ifs);
+  ifs >> token;
+  submap->T_origin_endpoint_R.matrix() = read_matrix<4, 4>(ifs);
+
+  ifs >> token;
+  Eigen::Isometry3d T_lidar_imu(read_matrix<4, 4>(ifs));
+  ifs >> token;
+  Eigen::Matrix<double, 6, 1> imu_bias = read_matrix<6, 1>(ifs);
+
+  int frame_id;
+  ifs >> token >> frame_id;
+
+  int num_frames;
+  ifs >> token >> num_frames;
+
+  for (int i = 0; i < num_frames; i++) {
+    int id;
+    double stamp;
+    ifs >> token >> token >> id;
+    ifs >> token >> stamp;
+
+    ifs >> token;
+    Eigen::Isometry3d T_odom_lidar(read_matrix<4, 4>(ifs));
+
+    ifs >> token;
+    Eigen::Isometry3d T_world_lidar(read_matrix<4, 4>(ifs));
+
+    ifs >> token;
+    Eigen::Vector3d v_world_imu = read_matrix<3, 1>(ifs);
+
+    EstimationFrame::Ptr frame(new EstimationFrame);
+    frame->id = id;
+    frame->stamp = stamp;
+    frame->T_lidar_imu = T_lidar_imu;
+    frame->T_world_lidar = T_world_lidar;
+    frame->T_world_imu = T_world_lidar * T_lidar_imu;
+
+    frame->v_world_imu = v_world_imu;
+    frame->imu_bias = imu_bias;
+    frame->frame_id = static_cast<FrameID>(frame_id);
+
+    EstimationFrame::Ptr odom_frame(new EstimationFrame);
+    *odom_frame = *frame;
+    odom_frame->T_world_lidar = T_odom_lidar;
+    odom_frame->T_world_imu = T_odom_lidar * T_lidar_imu;
+
+    submap->frames.push_back(frame);
+    submap->odom_frames.push_back(odom_frame);
+  }
+
+  submap->frame = gtsam_ext::FrameCPU::load(path);
+
+  return submap;
 }
 
 }  // namespace glim

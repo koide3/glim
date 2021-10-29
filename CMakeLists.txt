@@ -30,14 +30,7 @@ endif()
 
 # GPU-related
 if(BUILD_WITH_CUDA)
-  find_package(CUDA REQUIRED)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
-
-  # set(CUDA_HOST_COMPILER clang++)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-c99-extensions")
-  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --std=c++17 --expt-relaxed-constexpr")
-  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_75")
-  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode=arch=compute_75,code=sm_75")
 endif()
 
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -70,13 +63,11 @@ add_library(glim SHARED
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_map.cpp
   src/glim/backend/sub_mapping_base.cpp
-  src/glim/backend/async_sub_mapping.cpp
-  src/glim/backend/sub_mapping.cpp
-  src/glim/backend/sub_mapping_ct.cpp
   src/glim/backend/global_mapping_base.cpp
+  src/glim/backend/async_sub_mapping.cpp
   src/glim/backend/async_global_mapping.cpp
+  src/glim/backend/sub_mapping.cpp
   src/glim/backend/global_mapping.cpp
-  # src/glim/backend/global_mapping_ct.cpp
 )
 target_include_directories(glim PUBLIC
   include
@@ -116,7 +107,6 @@ if(BUILD_WITH_VIEWER)
 
   install(TARGETS glim_vis)
 endif()
-
 
 ###########
 ## ament ##

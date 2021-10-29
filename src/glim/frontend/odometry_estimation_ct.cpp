@@ -13,6 +13,7 @@
 
 #include <glim/util/easy_profiler.hpp>
 #include <glim/util/config.hpp>
+#include <glim/util/console_colors.hpp>
 #include <glim/frontend/callbacks.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 
@@ -103,7 +104,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   gtsam::Values values;
   values.insert(X(0), gtsam::Pose3(predicted_T_world_lidar_begin));
-  values.insert(X(1), gtsam::Pose3(predicted_T_world_lidar_end));
+  values.insert(X(1), gtsam::Pose3(predicted_T_world_lidar_begin));
 
   // Create CT-GICP factor
   gtsam::NonlinearFactorGraph graph;
@@ -114,20 +115,25 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   // LM configuration
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
-  lm_params.setlambdaInitial(1e-12);
+  lm_params.setlambdaInitial(1e-10);
   lm_params.setAbsoluteErrorTol(1e-2);
   // lm_params.callback = [&](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values_) { std::cout << status.to_string() << std::endl; };
 
-  // First optimization step with a large stiffness
-  graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_first));
-  lm_params.setMaxIterations(lm_max_iterations_first);
-  values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+  try {
+    // First optimization step with a large stiffness
+    // graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_first));
+    lm_params.setMaxIterations(lm_max_iterations_first);
+    values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
-  // Second optimization step with a more elastic setting
-  graph.erase(graph.end() - 1);
-  graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_second));
-  lm_params.setMaxIterations(lm_max_iterations_second);
-  values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+    // Second optimization step with a more elastic setting
+    // graph.erase(graph.end() - 1);
+    // graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_second));
+    lm_params.setMaxIterations(lm_max_iterations_second);
+    values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+  } catch (std::exception& e) {
+    std::cerr << console::bold_red << "error: an exception was caught during odometry estimation" << console::reset << std::endl;
+    std::cerr << e.what() << std::endl;
+  }
 
   // Calculate the linear and angular velocity and record them for the estimation of successive frames
   const gtsam::Pose3 T_last_current = values.at<gtsam::Pose3>(X(0)).inverse() * values.at<gtsam::Pose3>(X(1));
@@ -154,7 +160,12 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   const double delta_trans = delta_from_last_keyframe.translation().norm();
   const double delta_angle = Eigen::AngleAxisd(delta_from_last_keyframe.linear()).angle();
 
-  if (delta_trans > keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot) {
+  std::vector<double> dists(raw_frame->size());
+  std::transform(raw_frame->points.begin(), raw_frame->points.end(), dists.begin(), [](const Eigen::Vector4d& p) { return p.head<3>().norm(); });
+  std::nth_element(dists.begin(), dists.begin() + dists.size() / 2, dists.end());
+  const double interval_trans_p = std::min(dists[dists.size() / 2] / 20.0, 1.0);
+
+  if (delta_trans > interval_trans_p * keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot) {
     keyframes.push_back(new_frame);
 
     // Create the target map in background

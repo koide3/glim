@@ -3,6 +3,7 @@
   // SE3 poses must be written in the TUM format [x, y, z, qx, qy, qz, qw]
   // Livox: [0, 0, 0, 0, 0, 0, 1]
   // Realsense L515: [-0.012, 0.016, 0.001, 0, 0, 0, 1]
+  // Newer college: [-0.006, 0.012, 0.029, 0.0, 0.0, 1.0, 0.0]
   // rooftop: [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
   //
   // "T_lidar_imu" is the transformation that transforms points in "imu" frame
@@ -10,12 +11,12 @@
   */
   "sensors": {
     "T_lidar_imu": [
-      0.0,
-      0.0,
+      -0.006,
+      0.012,
+      0.029,
       0.0,
       0.0,
       1.0,
-      0.0,
       0.0
     ],
     "imu_acc_noise": 0.01,

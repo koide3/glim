@@ -1,5 +1,7 @@
 #include <glim/backend/global_mapping.hpp>
 
+#include <boost/filesystem.hpp>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/navigation/ImuBias.h>
@@ -41,6 +43,7 @@ GlobalMapping::GlobalMapping() {
   enable_between_factors = config.param<bool>("global_mapping", "create_between_factors", false);
   between_registration_type = config.param<std::string>("global_mapping", "between_registration_type", "GICP");
   registration_error_factor_type = config.param<std::string>("global_mapping", "registration_error_factor_type", "VGICP");
+  submap_voxel_resolution = config.param<double>("global_mapping", "submap_voxel_resolution", 1.0);
   randomsampling_rate = config.param<double>("global_mapping", "randomsampling_rate", 1.0);
   max_implicit_loop_distance = config.param<double>("global_mapping", "max_implicit_loop_distance", 100.0);
   min_implicit_loop_overlap = config.param<double>("global_mapping", "min_implicit_loop_overlap", 0.1);
@@ -107,7 +110,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   Callbacks::on_insert_submap(submap);
 
   if (current == 0) {
-    new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+    new_factors->emplace_shared<gtsam_ext::PriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
   } else {
     new_factors->add(*create_between_factors(current));
     new_factors->add(*create_matching_cost_factors(current));
@@ -166,10 +169,15 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   }
 
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
-  auto result = isam2->update(*new_factors, *new_values);
+  try {
+    auto result = isam2->update(*new_factors, *new_values);
+    Callbacks::on_smoother_update_result(*isam2, result);
+  } catch (std::exception& e) {
+    std::cerr << console::bold_red << "error: an exception was caught during global map optimization!!" << std::endl;
+    std::cerr << e.what() << std::endl;
+  }
   new_values.reset(new gtsam::Values);
   new_factors.reset(new gtsam::NonlinearFactorGraph);
-  Callbacks::on_smoother_update_result(*isam2, result);
 
   update_submaps();
   Callbacks::on_update_submaps(submaps);
@@ -187,9 +195,9 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
 
   gtsam_ext::VoxelizedFrame::Ptr voxelized_submap;
   if (enable_gpu) {
-    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(1.0, *submap->frame, false);
+    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame, false);
   } else {
-    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(1.0, *submap->frame);
+    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
   }
 
   submaps.push_back(submap);
@@ -201,7 +209,11 @@ void GlobalMapping::optimize() {
   if (isam2->empty()) {
     return;
   }
-  auto result = isam2->update();
+
+  gtsam::NonlinearFactorGraph new_factors;
+  gtsam::Values new_values;
+  Callbacks::on_smoother_update(*isam2, new_factors, new_values);
+  auto result = isam2->update(new_factors, new_values);
   Callbacks::on_smoother_update_result(*isam2, result);
 }
 
@@ -222,8 +234,10 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(0), X(1), submaps[last]->frame, submaps[current]->frame);
+  factor->set_num_threads(4);
   graph.add(factor);
 
+  notify(INFO, "--- LM optimization ---");
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setMaxIterations(10);
@@ -258,16 +272,22 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     }
 
     const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * current_submap->T_world_origin;
-    const double overlap = current_submap->frame->overlap_gpu(voxelized_submaps[i], delta);
+    const double overlap = current_submap->frame->overlap_auto(voxelized_submaps[i], delta);
 
     if (overlap < min_implicit_loop_overlap) {
       continue;
     }
 
-    const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
-    const auto& stream = stream_buffer.first;
-    const auto& buffer = stream_buffer.second;
-    factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current], stream, buffer);
+    if (registration_error_factor_type == "VGICP") {
+      factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current]);
+    } else if (registration_error_factor_type == "VGICP_GPU") {
+      const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
+      const auto& stream = stream_buffer.first;
+      const auto& buffer = stream_buffer.second;
+      factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current], stream, buffer);
+    } else {
+      std::cerr << console::yellow << "warning: Unknown registration error type " << console::underline << registration_error_factor_type << console::reset << std::endl;
+    }
   }
 
   return factors;
@@ -276,6 +296,53 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
 void GlobalMapping::update_submaps() {
   for (int i = 0; i < submaps.size(); i++) {
     submaps[i]->T_world_origin = Eigen::Isometry3d(isam2->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
+  }
+}
+
+void GlobalMapping::save(const std::string& path) {
+  boost::filesystem::create_directories(path);
+  std::ofstream ofs(path + "/graph.txt");
+  ofs << "num_submaps: " << submaps.size() << std::endl;
+  ofs << "num_all_frames: " << std::accumulate(submaps.begin(), submaps.end(), 0, [](int sum, const SubMap::ConstPtr& submap) { return sum + submap->frames.size(); }) << std::endl;
+
+  ofs << "num_factors: " << isam2->getFactorsUnsafe().size() << std::endl;
+  for (const auto& factor : isam2->getFactorsUnsafe()) {
+    if (factor->keys().size() != 2) {
+      continue;
+    }
+
+    gtsam::Symbol symbol0(factor->keys()[0]);
+    gtsam::Symbol symbol1(factor->keys()[1]);
+    if (symbol0.chr() != 'x' || symbol1.chr() != 'x') {
+      continue;
+    }
+
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factor)) {
+      ofs << "between " << symbol0.index() << " " << symbol1.index() << std::endl;
+    } else {
+      ofs << "matching_cost " << symbol0.index() << " " << symbol1.index() << std::endl;
+    }
+  }
+
+  std::ofstream odom_lidar_ofs(path + "/odom_lidar.txt");
+  std::ofstream traj_lidar_ofs(path + "/traj_lidar.txt");
+
+  const auto write_tum_frame = [](std::ofstream& ofs, const double stamp, const Eigen::Isometry3d& pose) {
+    const Eigen::Quaterniond quat(pose.linear());
+    const Eigen::Vector3d trans(pose.translation());
+    ofs << boost::format("%.9f %.6f %.6f %.6f %.6f %.6f %.6f %.6f") % stamp % trans.x() % trans.y() % trans.z() % quat.x() % quat.y() % quat.z() % quat.w() << std::endl;
+  };
+
+  for (int i = 0; i < submaps.size(); i++) {
+    for (const auto& frame : submaps[i]->odom_frames) {
+      write_tum_frame(odom_lidar_ofs, frame->stamp, frame->T_world_lidar);
+    }
+
+    for (const auto& frame : submaps[i]->frames) {
+      write_tum_frame(traj_lidar_ofs, frame->stamp, frame->T_world_lidar);
+    }
+
+    submaps[i]->save((boost::format("%s/%06d") % path % i).str());
   }
 }
 

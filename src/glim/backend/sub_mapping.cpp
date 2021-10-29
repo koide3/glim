@@ -104,7 +104,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     auto H = linearized->hessianBlockDiagonal()[X(current)];
 
     const Eigen::Isometry3d delta = odom_frames[last]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
-    graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
+    // raph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
+    graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
   }
 
   // Create an IMU preintegration factor
@@ -144,7 +145,6 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
         targets[i] = voxelized_keyframes[i];
         deltas[i] = keyframes[i]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
       }
-
       const double overlap = odom_frame->frame->overlap_auto(targets, deltas);
       */
       const double overlap = odom_frame->frame->overlap_auto(voxelized_keyframes.back(), keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
@@ -237,7 +237,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   *keyframe = *odom_frame;
 
   if (enable_gpu) {
-    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(keyframe_voxel_resolution, deskewed_frame->points, deskewed_frame->covs, deskewed_frame->size());
+    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
   } else {
     voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(keyframe_voxel_resolution, *deskewed_frame);
@@ -263,7 +263,13 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   }
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
   if (enable_optimization) {
-    *values = optimizer.optimize();
+    try {
+      gtsam::Values optimized = optimizer.optimize();
+      *values = optimized;
+    } catch (std::exception& e) {
+      std::cerr << console::bold_red << "error: an exception was caught during sub map optimization" << console::reset << std::endl;
+      std::cerr << e.what() << std::endl;
+    }
   }
 
   // Create a submap by merging optimized frames
@@ -302,7 +308,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   // TODO: improve merging process
 #ifdef BUILD_GTSAM_EXT_GPU
   if (enable_gpu) {
-    //  submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
+    // submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
   }
 #endif
 

@@ -8,7 +8,6 @@ namespace glim {
 template <typename T, typename Alloc = std::allocator<T>>
 class ConcurrentVector {
 public:
-
   bool empty() const {
     std::lock_guard<std::mutex> lock(mutex);
     return values.empty();
@@ -17,6 +16,11 @@ public:
   int size() const {
     std::lock_guard<std::mutex> lock(mutex);
     return values.size();
+  }
+
+  void reserve(int n) {
+    std::lock_guard<std::mutex> lock(mutex);
+    values.reserve(n);
   }
 
   void push_back(const T& value) {
@@ -47,6 +51,19 @@ public:
     std::vector<T, Alloc> buffer;
     std::lock_guard<std::mutex> lock(mutex);
     buffer.swap(values);
+    return buffer;
+  }
+
+  std::vector<T, Alloc> get_and_clear(int num_max) {
+    std::vector<T, Alloc> buffer;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (values.size() <= num_max) {
+      buffer.swap(values);
+    } else {
+      buffer.assign(values.begin(), values.begin() + num_max);
+      values.erase(values.begin(), values.begin() + num_max);
+    }
+
     return buffer;
   }
 

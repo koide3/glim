@@ -19,6 +19,7 @@ public:
   void drop_odom_frames();
 
   void save(const std::string& path);
+  static SubMap::Ptr load(const std::string& path);
 
 public:
   int id;

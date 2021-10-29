@@ -40,18 +40,19 @@
     "keyframe_voxel_resolution": 0.5,
     // Post processing
     "submap_downsample_resolution": 0.1,
-    "submap_voxel_resolution": 0.25
+    "submap_voxel_resolution": 0.5
   },
   "global_mapping": {
     "enable_imu": false,
-    "create_between_factors": false,
+    "create_between_factors": true,
     "between_registration_type": "GICP",
-    "registration_error_factor_type": "VGICP_GPU",
-    "randomsampling_rate": 1.0,
+    "registration_error_factor_type": "VGICP",
+    "submap_voxel_resolution": 2.0,
+    "randomsampling_rate": 0.1,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
     "max_implicit_loop_distance": 100.0,
-    "min_implicit_loop_overlap": 0.1
+    "min_implicit_loop_overlap": 0.2
   }
 }

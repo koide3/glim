@@ -30,6 +30,8 @@ public:
 
   virtual void optimize() override;
 
+  virtual void save(const std::string& path) override;
+
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);
 
@@ -47,6 +49,7 @@ private:
   std::string between_registration_type;
 
   std::string registration_error_factor_type;
+  double submap_voxel_resolution;
   double randomsampling_rate;
   double max_implicit_loop_distance;
   double min_implicit_loop_overlap;

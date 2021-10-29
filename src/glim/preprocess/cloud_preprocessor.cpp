@@ -4,6 +4,7 @@
 #include <gtsam_ext/ann/kdtree.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/console_colors.hpp>
 #include <glim/preprocess/downsampling.hpp>
 
 namespace glim {
@@ -64,6 +65,11 @@ PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<doub
 
   for (int i = 0; i < points.size(); i++) {
     const double dist = points[i].norm();
+    if (!std::isfinite(dist)) {
+      std::cout << console::yellow << "warning: an invalid point found!! " << points[i].transpose() << console::reset << std::endl;
+      continue;
+    }
+
     if (dist < distance_near_thresh || dist > distance_far_thresh) {
       continue;
     }

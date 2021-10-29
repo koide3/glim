@@ -43,6 +43,7 @@ int AsyncGlobalMapping::output_queue_size() const {
 }
 
 void AsyncGlobalMapping::save(const std::string& path) {
+  std::cout << "saving to " << path << "..." << std::endl;
   global_mapping->save(path);
 }
 

@@ -12,6 +12,8 @@
 #include <glim/util/trajectory_manager.hpp>
 
 #include <glk/colormap.hpp>
+#include <glk/texture.hpp>
+#include <glk/texture_opencv.hpp>
 #include <glk/thin_lines.hpp>
 #include <glk/normal_distributions.hpp>
 #include <glk/pointcloud_buffer.hpp>
@@ -23,6 +25,7 @@ namespace glim {
 class StandardViewer::Impl {
 public:
   Impl() {
+    viewer_started = false;
     kill_switch = false;
     request_to_terminate = false;
 
@@ -55,6 +58,8 @@ public:
 
     viewer->add_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
     viewer->register_ui_callback("selection", [this] { drawing_selection(); });
+
+    viewer_started = true;
 
     while (!kill_switch) {
       if (!viewer->spin_once()) {
@@ -125,6 +130,7 @@ public:
 
     CommonCallbacks::on_notification.add(std::bind(&Impl::common_notification, this, _1, _2));
 
+    OdometryEstimationCallbacks::on_insert_image.add(std::bind(&Impl::frontend_insert_image, this, _1, _2));
     OdometryEstimationCallbacks::on_new_frame.add(std::bind(&Impl::frontend_new_frame, this, _1));
     OdometryEstimationCallbacks::on_update_keyframes.add(std::bind(&Impl::frontend_on_update_keyframes, this, _1));
     OdometryEstimationCallbacks::on_marginalized_frames.add(std::bind(&Impl::frontend_on_marginalized_frames, this, _1));
@@ -153,6 +159,14 @@ public:
 
   void common_notification(NotificationLevel level, const std::string& message) {
     invoke([this, level, message] { guik::LightViewer::instance()->append_text(message); });
+  }
+
+  void frontend_insert_image(const double stamp, const cv::Mat& image) {
+    invoke([this, image] {
+      auto viewer = guik::LightViewer::instance();
+      const auto texture = glk::create_texture(image);
+      viewer->update_image("image", texture);
+    });
   }
 
   void frontend_new_frame(const EstimationFrame::ConstPtr& new_frame) {
@@ -351,7 +365,12 @@ public:
 
     invoke([this, latest_submap, submap_ids, submap_poses] {
       auto viewer = guik::LightViewer::instance();
+
+      Eigen::Vector2f z_range = Eigen::Vector2f(0.0f, 0.0f);
       for (int i = 0; i < submap_ids.size(); i++) {
+        z_range[0] = std::min<float>(z_range[0], submap_poses[i].translation().z());
+        z_range[1] = std::max<float>(z_range[1], submap_poses[i].translation().z());
+
         auto drawable = viewer->find_drawable("submap_" + std::to_string(submap_ids[i]));
         if (drawable.first) {
           drawable.first->add("model_matrix", submap_poses[i].matrix());
@@ -372,6 +391,7 @@ public:
       }
 
       viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(factor_lines), guik::FlatGreen());
+      viewer->shader_setting().add<Eigen::Vector2f>("z_range", z_range + Eigen::Vector2f(-2.0f, 4.0f));
     });
   }
 
@@ -400,6 +420,7 @@ public:
   }
 
 public:
+  std::atomic_bool viewer_started;
   std::atomic_bool request_to_terminate;
   std::atomic_bool kill_switch;
   std::thread thread;
