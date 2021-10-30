@@ -147,6 +147,7 @@ template int Config::param(const std::string&, const std::string&, const int&) c
 template float Config::param(const std::string&, const std::string&, const float&) const;
 template double Config::param(const std::string&, const std::string&, const double&) const;
 template std::string Config::param(const std::string&, const std::string&, const std::string&) const;
+template std::vector<int> Config::param(const std::string&, const std::string&, const std::vector<int>&) const;
 template std::vector<double> Config::param(const std::string&, const std::string&, const std::vector<double>&) const;
 
 template Eigen::Vector2d Config::param(const std::string&, const std::string&, const Eigen::Vector2d&) const;
@@ -160,6 +161,7 @@ template bool Config::override_param(const std::string&, const std::string&, con
 template bool Config::override_param(const std::string&, const std::string&, const float&);
 template bool Config::override_param(const std::string&, const std::string&, const double&);
 template bool Config::override_param(const std::string&, const std::string&, const std::string&);
+template bool Config::override_param(const std::string&, const std::string&, const std::vector<int>&);
 template bool Config::override_param(const std::string&, const std::string&, const std::vector<double>&);
 
 template bool Config::override_param(const std::string&, const std::string&, const Eigen::Vector2d&);
