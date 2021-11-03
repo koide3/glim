@@ -5,19 +5,20 @@
   // Realsense L515: [-0.012, 0.016, 0.001, 0, 0, 0, 1]
   // Newer college: [-0.006, 0.012, 0.029, 0.0, 0.0, 1.0, 0.0]
   // rooftop: [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+  // hilti : [-0.022, 0.013, 0.019, 0.0, 0.0, 0.0, 1.0]
   //
   // "T_lidar_imu" is the transformation that transforms points in "imu" frame
   // into "lidar_frame" (p_lidar = T_lidar_imu * p_imu)
   */
   "sensors": {
     "T_lidar_imu": [
-      -0.006,
-      0.012,
-      0.029,
+      -0.022,
+      0.013,
+      0.019,
       0.0,
       0.0,
-      1.0,
-      0.0
+      0.0,
+      1.000
     ],
     "imu_acc_noise": 0.01,
     "imu_gyro_noise": 0.01,

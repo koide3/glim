@@ -6,9 +6,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
-option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
 option(BUILD_WITH_CUDA "Build with GPU support" ON)
 option(BUILD_WITH_VIEWER "Build with visualizer" ON)
+option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
 
 if(BUILD_WITH_MARCH_NATIVE)
   add_definitions(-march=native)
@@ -106,6 +106,18 @@ if(BUILD_WITH_VIEWER)
   )
 
   install(TARGETS glim_vis)
+
+
+  add_executable(generate_pointcloud_map
+    src/glim/apps/generate_pointcloud_map.cpp
+  )
+  target_include_directories(generate_pointcloud_map PUBLIC
+    ${Iridescence_INCLUDE_DIRS}
+  )
+  target_link_libraries(generate_pointcloud_map
+    glim
+    ${Iridescence_LIBRARIES}
+  )
 endif()
 
 ###########
