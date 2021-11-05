@@ -33,7 +33,10 @@ using gtsam::symbol_shorthand::X;
 
 struct GlobalMap {
 public:
-  static std::shared_ptr<GlobalMap> load(const std::string& path) {
+  static std::shared_ptr<GlobalMap> load(guik::ProgressInterface& progress, const std::string& path) {
+    progress.set_title("Load map");
+    progress.set_text("Loading graph");
+
     std::ifstream ifs(path + "/graph.txt");
     if (!ifs) {
       std::cerr << console::bold_red << "error: failed to open " << path + "/graph.txt" << console::reset << std::endl;
@@ -60,7 +63,12 @@ public:
       }
     }
 
+    progress.set_text("Loading submaps");
+    progress.set_maximum(num_submaps);
+
     for (int i = 0; i < num_submaps; i++) {
+      progress.increment();
+
       const auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
       if (submap == nullptr) {
         std::cerr << console::bold_red << "error: failed to load " << boost::format("%s/%06d") % path % i << console::reset << std::endl;
@@ -79,6 +87,8 @@ public:
 
     matching_cost_factors.clear();
     for (int i = 0; i < submaps.size(); i++) {
+      progress.increment();
+
       for (int j = i + 1; j < submaps.size(); j++) {
         const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * submaps[j]->T_world_origin;
         const double overlap = voxelized_submaps[j]->overlap_auto(voxelized_submaps[i], delta);
@@ -103,7 +113,10 @@ public:
     progress.set_maximum(matching_cost_factors.size());
 
     gtsam::NonlinearFactorGraph graph;
-    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values.at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values.at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e12));
+
+    Eigen::VectorXd sum_b_cpu = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd sum_b_gpu = Eigen::VectorXd::Zero(6);
 
     std::unique_ptr<gtsam_ext::StreamTempBufferRoundRobin> stream_buffer_roundrobin(new gtsam_ext::StreamTempBufferRoundRobin(64));
     for (const auto& factor : matching_cost_factors) {
@@ -112,8 +125,41 @@ public:
       const auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
-      graph
-        .emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(factor.first), X(factor.second), voxelized_submaps[factor.first], voxelized_submaps[factor.second], stream, buffer);
+
+      // graph
+      // .emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(factor.first), X(factor.second), voxelized_submaps[factor.first], voxelized_submaps[factor.second], stream, buffer);
+
+      auto f = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(
+        X(factor.first),
+        X(factor.second),
+        voxelized_submaps[factor.first],
+        voxelized_submaps[factor.second],
+        stream,
+        buffer);
+
+      auto f_cpu = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactor>(X(factor.first), X(factor.second), voxelized_submaps[factor.first], voxelized_submaps[factor.second]);
+      f_cpu->set_num_threads(14);
+
+      if (factor.first == 1 || factor.second == 1) {
+        auto linearized_gpu = f->linearize(values);
+        auto linearized_cpu = f_cpu->linearize(values);
+
+        Eigen::VectorXd b_gpu;
+        Eigen::VectorXd b_cpu;
+
+        if (factor.first == 1) {
+          b_gpu = linearized_gpu->augmentedInformation().block<6, 1>(0, 12).transpose();
+          b_cpu = linearized_cpu->augmentedInformation().block<6, 1>(0, 12).transpose();
+        } else {
+          b_gpu = linearized_gpu->augmentedInformation().block<6, 1>(6, 12).transpose();
+          b_cpu = linearized_cpu->augmentedInformation().block<6, 1>(6, 12).transpose();
+        }
+
+        sum_b_cpu += b_cpu;
+        sum_b_gpu += b_gpu;
+      }
+
+      graph.add(f);
     }
 
     progress.set_text("Optimizing");
@@ -160,9 +206,8 @@ public:
 
 class GlobalMapViewer {
 public:
-  GlobalMapViewer(const std::shared_ptr<GlobalMap>& global_map) : global_map(global_map) {
+  GlobalMapViewer() {
     auto viewer = guik::LightViewer::instance();
-    update_viewer();
 
     progress.reset(new guik::ProgressModal("progress"));
 
@@ -170,6 +215,15 @@ public:
   }
 
   void ui_callback() {
+    if (ImGui::Button("Load map")) {
+      guik::RecentFiles recent_files("input_dump_directory");
+      const std::string input_path = pfd::select_folder("Select dump directory", recent_files.most_recent()).result();
+      if (input_path.size()) {
+        recent_files.push(input_path);
+        progress->open<std::shared_ptr<GlobalMap>>("load_map", [input_path](guik::ProgressInterface& progress) { return GlobalMap::load(progress, input_path); });
+      }
+    }
+
     if (ImGui::Button("Recreate factors")) {
       progress->open<bool>("recreate_factors", [this](guik::ProgressInterface& progress) {
         global_map->recreate_factors(progress);
@@ -182,6 +236,12 @@ public:
         global_map->optimize(progress);
         return true;
       });
+    }
+
+    auto global_map = progress->run<std::shared_ptr<GlobalMap>>("load_map");
+    if (global_map && global_map.value()) {
+      this->global_map = *global_map;
+      update_viewer();
     }
 
     if (progress->run<bool>("recreate_factors") || progress->run<bool>("optimize")) {
@@ -198,6 +258,10 @@ public:
       } else {
         auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
         viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, guik::Rainbow(submap->T_world_origin.cast<float>()));
+
+        if (submap->id == 43) {
+          viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, guik::FlatOrange(submap->T_world_origin.cast<float>()).add("point_scale", 3.0f));
+        }
       }
 
       viewer->update_drawable(
@@ -223,31 +287,8 @@ private:
 }  // namespace glim
 
 int main(int argc, char** argv) {
-  guik::RecentFiles recent_files("input_dump_directory");
-  const std::string input_path = pfd::select_folder("Select dump directory", recent_files.most_recent()).result();
-  if (input_path.empty()) {
-    return 1;
-  }
-  recent_files.push(input_path);
-
-  auto global_map = glim::GlobalMap::load(input_path);
-  if (!global_map) {
-    return 1;
-  }
-
-  glim::GlobalMapViewer viewer(global_map);
+  glim::GlobalMapViewer viewer;
   guik::LightViewer::instance()->spin();
-
-  /*
-  global_map->optimize();
-
-  guik::RecentFiles recent_files2("output_dump_directory");
-  const std::string output_path = pfd::save_file("Select dump dst path", recent_files2.most_recent()).result();
-  if (output_path.size()) {
-    recent_files2.push(output_path);
-    global_map->save_pointcloud(output_path);
-  }
-  */
 
   return 0;
 }

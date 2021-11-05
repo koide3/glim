@@ -108,13 +108,13 @@ if(BUILD_WITH_VIEWER)
   install(TARGETS glim_vis)
 
 
-  add_executable(generate_pointcloud_map
-    src/glim/apps/generate_pointcloud_map.cpp
+  add_executable(offline_viewer
+    src/glim/apps/offline_viewer.cpp
   )
-  target_include_directories(generate_pointcloud_map PUBLIC
+  target_include_directories(offline_viewer PUBLIC
     ${Iridescence_INCLUDE_DIRS}
   )
-  target_link_libraries(generate_pointcloud_map
+  target_link_libraries(offline_viewer
     glim
     ${Iridescence_LIBRARIES}
   )
