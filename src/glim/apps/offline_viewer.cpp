@@ -126,9 +126,6 @@ public:
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
 
-      // graph
-      // .emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(factor.first), X(factor.second), voxelized_submaps[factor.first], voxelized_submaps[factor.second], stream, buffer);
-
       auto f = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(
         X(factor.first),
         X(factor.second),
@@ -136,28 +133,6 @@ public:
         voxelized_submaps[factor.second],
         stream,
         buffer);
-
-      auto f_cpu = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactor>(X(factor.first), X(factor.second), voxelized_submaps[factor.first], voxelized_submaps[factor.second]);
-      f_cpu->set_num_threads(14);
-
-      if (factor.first == 1 || factor.second == 1) {
-        auto linearized_gpu = f->linearize(values);
-        auto linearized_cpu = f_cpu->linearize(values);
-
-        Eigen::VectorXd b_gpu;
-        Eigen::VectorXd b_cpu;
-
-        if (factor.first == 1) {
-          b_gpu = linearized_gpu->augmentedInformation().block<6, 1>(0, 12).transpose();
-          b_cpu = linearized_cpu->augmentedInformation().block<6, 1>(0, 12).transpose();
-        } else {
-          b_gpu = linearized_gpu->augmentedInformation().block<6, 1>(6, 12).transpose();
-          b_cpu = linearized_cpu->augmentedInformation().block<6, 1>(6, 12).transpose();
-        }
-
-        sum_b_cpu += b_cpu;
-        sum_b_gpu += b_gpu;
-      }
 
       graph.add(f);
     }
@@ -250,18 +225,19 @@ public:
   }
 
   void update_viewer() {
+    Eigen::Vector2f z_range(0.0f, 0.0f);
+
     auto viewer = guik::LightViewer::instance();
     for (const auto& submap : global_map->submaps) {
+      z_range[0] = std::min<float>(z_range[0], submap->T_world_origin.translation().z());
+      z_range[1] = std::max<float>(z_range[1], submap->T_world_origin.translation().z());
+
       auto drawable = viewer->find_drawable("submap_" + std::to_string(submap->id));
       if (drawable.first) {
         drawable.first->add("model_matrix", submap->T_world_origin.cast<float>().matrix());
       } else {
         auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
         viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, guik::Rainbow(submap->T_world_origin.cast<float>()));
-
-        if (submap->id == 43) {
-          viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, guik::FlatOrange(submap->T_world_origin.cast<float>()).add("point_scale", 3.0f));
-        }
       }
 
       viewer->update_drawable(
@@ -276,6 +252,9 @@ public:
       factor_lines.push_back(global_map->submaps[factor.second]->T_world_origin.translation().cast<float>());
     }
     viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(factor_lines), guik::FlatGreen());
+
+    z_range += Eigen::Vector2f(-2.0f, 5.0f);
+    viewer->shader_setting().add("z_range", z_range);
   }
 
 private:
