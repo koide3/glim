@@ -149,6 +149,7 @@ template double Config::param(const std::string&, const std::string&, const doub
 template std::string Config::param(const std::string&, const std::string&, const std::string&) const;
 template std::vector<int> Config::param(const std::string&, const std::string&, const std::vector<int>&) const;
 template std::vector<double> Config::param(const std::string&, const std::string&, const std::vector<double>&) const;
+template std::vector<std::string> Config::param(const std::string&, const std::string&, const std::vector<std::string>&) const;
 
 template Eigen::Vector2d Config::param(const std::string&, const std::string&, const Eigen::Vector2d&) const;
 template Eigen::Vector3d Config::param(const std::string&, const std::string&, const Eigen::Vector3d&) const;
