@@ -87,6 +87,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
     if (init_state == nullptr) {
       return nullptr;
     }
+    init_estimation.reset();
 
     // Initialize the first frame
     EstimationFrame::Ptr new_frame(new EstimationFrame);
