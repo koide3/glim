@@ -6,22 +6,30 @@
 
 namespace glim {
 
+/**
+ * @brief Preprocessed point cloud
+ *
+ */
 struct PreprocessedFrame {
 public:
   using Ptr = std::shared_ptr<PreprocessedFrame>;
   using ConstPtr = std::shared_ptr<const PreprocessedFrame>;
 
+  /**
+   * @brief Number of points
+   * @return Number of points
+   */
   int size() const { return points.size(); }
 
 public:
-  double stamp;
-  double scan_end_time;
+  double stamp;          // Timestamp at the beginning of the scan
+  double scan_end_time;  // Timestamp at the end of the scan
 
-  std::vector<double> times;
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;
+  std::vector<double> times;                                                       // Point timestamps w.r.t. the first pt
+  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;  // Points (homogeneous coordinates)
 
-  int k_neighbors;
-  std::vector<int> neighbors;
+  int k_neighbors;             // Number of neighbors of each point
+  std::vector<int> neighbors;  // k-nearest neighbors of each point
 };
 
 }  // namespace glim

@@ -8,16 +8,35 @@
 
 namespace glim {
 
+/**
+ * @brief Point cloud preprocessor
+ *
+ */
 class CloudPreprocessor {
 public:
   using Points = std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>;
 
+  /**
+   * @brief Construct a new Cloud Preprocessor object
+   */
   CloudPreprocessor();
+
+  /**
+   * @brief Destroy the Cloud Preprocessor object
+   */
   virtual ~CloudPreprocessor();
 
+  /**
+   * @brief Preprocess a raw point cloud
+   *
+   * @param stamp     Timestamp
+   * @param times     Timestamps of input points (w.r.t. the first point)
+   * @param points    Points (homogeneous coordinates)
+   * @return PreprocessedFrame::Ptr  Preprocessed point cloud
+   */
   virtual PreprocessedFrame::Ptr preprocess(double stamp, const std::vector<double>& times, const Points& points) const;
 
-public:
+private:
   PreprocessedFrame::Ptr sort_by_time(const std::vector<double>& times, const Points& points) const;
   PreprocessedFrame::Ptr distance_filter(const std::vector<double>& times, const Points& points) const;
   std::vector<int> find_neighbors(const Points& points, int k) const;

@@ -11,12 +11,20 @@ namespace glim {
 
 enum class FrameID { WORLD, LIDAR, IMU };
 
+/**
+ * @brief Odometry estimation frame
+ *
+ */
 struct EstimationFrame {
   using Ptr = std::shared_ptr<EstimationFrame>;
   using ConstPtr = std::shared_ptr<const EstimationFrame>;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  /**
+   * @brief Make a clone of the estimation frame instance but without points data
+   * @return EstimationFrame::Ptr   Cloned frame without points
+   */
   EstimationFrame::Ptr clone_wo_points() const {
     EstimationFrame::Ptr cloned(new EstimationFrame);
     *cloned = *this;
@@ -25,8 +33,17 @@ struct EstimationFrame {
     return cloned;
   }
 
+  /**
+   * @brief  Cast Frame to VoxelizedFrame
+   * @note   TODO: Check if it's valid operation
+   * @return gtsam_ext::VoxelizedFrame::ConstPtr
+   */
   gtsam_ext::VoxelizedFrame::ConstPtr voxelized_frame() const { return std::dynamic_pointer_cast<const gtsam_ext::VoxelizedFrame>(frame); }
 
+  /**
+   * @brief Get the sensor pose according to frame_id
+   * @return const Eigen::Isometry3d  Sensor pose
+   */
   const Eigen::Isometry3d T_world_sensor() const {
     switch (frame_id) {
       case FrameID::WORLD:
@@ -38,6 +55,11 @@ struct EstimationFrame {
     }
   }
 
+  /**
+   * @brief Set the sensor pose
+   * @param frame_id  Sensor coodinate frame
+   * @param T         Sensor pose
+   */
   void set_T_world_sensor(FrameID frame_id, const Eigen::Isometry3d& T) {
     switch (frame_id) {
       default:
@@ -57,19 +79,20 @@ struct EstimationFrame {
     }
   }
 
-  long id;
-  double stamp;
+public:
+  long id;       // Frame ID
+  double stamp;  // Timestamp
 
-  Eigen::Isometry3d T_lidar_imu;
-  Eigen::Isometry3d T_world_lidar;
-  Eigen::Isometry3d T_world_imu;
+  Eigen::Isometry3d T_lidar_imu;    // LiDAR-IMU transformation
+  Eigen::Isometry3d T_world_lidar;  // LiDAR pose in the world space
+  Eigen::Isometry3d T_world_imu;    // IMU pose in the world space
 
-  Eigen::Vector3d v_world_imu;
-  Eigen::Matrix<double, 6, 1> imu_bias;
+  Eigen::Vector3d v_world_imu;           // IMU velocity in the world frame
+  Eigen::Matrix<double, 6, 1> imu_bias;  // IMU bias
 
-  PreprocessedFrame::ConstPtr raw_frame;
+  PreprocessedFrame::ConstPtr raw_frame;  // Raw input point cloud
 
-  FrameID frame_id;  // "lidar" or "imu"
-  gtsam_ext::Frame::ConstPtr frame;
+  FrameID frame_id;                  // Coordinate frame of $frame
+  gtsam_ext::Frame::ConstPtr frame;  // Deskewed points for state estimation
 };
 }  // namespace glim

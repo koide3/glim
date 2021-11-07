@@ -5,6 +5,12 @@
 
 namespace glim {
 
+/**
+ * @brief Simple thread-safe vector with mutex-lock
+ *
+ * @tparam T      Data type
+ * @tparam Alloc  Allocator
+ */
 template <typename T, typename Alloc = std::allocator<T>>
 class ConcurrentVector {
 public:
@@ -38,8 +44,12 @@ public:
     return values.back();
   }
 
+  /**
+   * @brief Insert new_values at the end of the container
+   * @param new_values  Values to be inserted
+   */
   void insert(const std::vector<T, Alloc>& new_values) {
-    if(new_values.empty()) {
+    if (new_values.empty()) {
       return;
     }
 
@@ -47,6 +57,10 @@ public:
     values.insert(values.end(), new_values.begin(), new_values.end());
   }
 
+  /**
+   * @brief Get all the data and clear the container
+   * @return std::vector<T, Alloc>   All data
+   */
   std::vector<T, Alloc> get_all_and_clear() {
     std::vector<T, Alloc> buffer;
     std::lock_guard<std::mutex> lock(mutex);
@@ -54,6 +68,11 @@ public:
     return buffer;
   }
 
+  /**
+   * @brief Get up to N data and erase them from the container
+   * @param num_max   Maximum number of data
+   * @return std::vector<T, Alloc>  Up to num_max data
+   */
   std::vector<T, Alloc> get_and_clear(int num_max) {
     std::vector<T, Alloc> buffer;
     std::lock_guard<std::mutex> lock(mutex);

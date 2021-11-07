@@ -23,6 +23,10 @@ class IMUIntegration;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
 
+/**
+ * @brief GPU-based tightly coupled LiDAR-IMU frontend
+ *
+ */
 class OdometryEstimation : public OdometryEstimationBase {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
