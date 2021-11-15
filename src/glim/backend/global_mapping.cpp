@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <gtsam/base/serialization.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/navigation/ImuBias.h>
@@ -147,7 +148,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
     new_values->insert(B(current * 2 + 1), imu_biasR);
 
     new_factors->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(current), E(current * 2 + 1), gtsam::Pose3(submap->T_origin_endpoint_R.matrix()), prior_noise6);
-    new_factors->emplace_shared<gtsam::RotateVector3Factor>(X(current), V(current * 2 + 1), v_origin_imuR, prior_noise3);
+    new_factors->emplace_shared<gtsam_ext::RotateVector3Factor>(X(current), V(current * 2 + 1), v_origin_imuR, prior_noise3);
     new_factors->emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(current * 2 + 1), imu_biasR, prior_noise6);
 
     if (current != 0) {
@@ -215,6 +216,9 @@ void GlobalMapping::optimize() {
   Callbacks::on_smoother_update(*isam2, new_factors, new_values);
   auto result = isam2->update(new_factors, new_values);
   Callbacks::on_smoother_update_result(*isam2, result);
+
+  update_submaps();
+  Callbacks::on_update_submaps(submaps);
 }
 
 boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_factors(int current) const {
@@ -301,27 +305,42 @@ void GlobalMapping::update_submaps() {
 
 void GlobalMapping::save(const std::string& path) {
   boost::filesystem::create_directories(path);
+
+  gtsam::NonlinearFactorGraph serializable_factors;
+  gtsam::NonlinearFactorGraph matching_cost_factors;
+  for (const auto& factor : isam2->getFactorsUnsafe()) {
+    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedMatchingCostFactor>(factor)) {
+      matching_cost_factors.push_back(factor);
+      continue;
+    }
+    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
+      matching_cost_factors.push_back(factor);
+      continue;
+    }
+    serializable_factors.push_back(factor);
+  }
+  gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
+  gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
+
   std::ofstream ofs(path + "/graph.txt");
   ofs << "num_submaps: " << submaps.size() << std::endl;
   ofs << "num_all_frames: " << std::accumulate(submaps.begin(), submaps.end(), 0, [](int sum, const SubMap::ConstPtr& submap) { return sum + submap->frames.size(); }) << std::endl;
 
-  ofs << "num_factors: " << isam2->getFactorsUnsafe().size() << std::endl;
-  for (const auto& factor : isam2->getFactorsUnsafe()) {
-    if (factor->keys().size() != 2) {
-      continue;
+  ofs << "num_matching_cost_factors: " << matching_cost_factors.size() << std::endl;
+  for (const auto& factor : matching_cost_factors) {
+    std::string type;
+
+    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedGICPFactor>(factor)) {
+      type = "gicp";
+    } else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactor>(factor)) {
+      type = "vgicp";
+    } else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
+      type = "vgicp_gpu";
     }
 
     gtsam::Symbol symbol0(factor->keys()[0]);
     gtsam::Symbol symbol1(factor->keys()[1]);
-    if (symbol0.chr() != 'x' || symbol1.chr() != 'x') {
-      continue;
-    }
-
-    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factor)) {
-      ofs << "between " << symbol0.index() << " " << symbol1.index() << std::endl;
-    } else {
-      ofs << "matching_cost " << symbol0.index() << " " << symbol1.index() << std::endl;
-    }
+    ofs << "matching_cost " << type << " " << symbol0.index() << " " << symbol1.index() << std::endl;
   }
 
   std::ofstream odom_lidar_ofs(path + "/odom_lidar.txt");
@@ -344,6 +363,74 @@ void GlobalMapping::save(const std::string& path) {
 
     submaps[i]->save((boost::format("%s/%06d") % path % i).str());
   }
+}
+
+bool GlobalMapping::load(const std::string& path) {
+  std::ifstream ifs(path + "/graph.txt");
+  if (!ifs) {
+    std::cerr << console::bold_red << "error: failed to open " << path + "/graph.txt" << console::reset << std::endl;
+    return false;
+  }
+
+  std::string token;
+  int num_submaps, num_all_frames, num_matching_cost_factors;
+
+  ifs >> token >> num_submaps;
+  ifs >> token >> num_all_frames;
+  ifs >> token >> num_matching_cost_factors;
+
+  std::vector<std::tuple<std::string, int, int>> matching_cost_factors(num_matching_cost_factors);
+  for (int i = 0; i < num_matching_cost_factors; i++) {
+    auto& factor = matching_cost_factors[i];
+    ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
+  }
+
+  submaps.resize(num_submaps);
+  subsampled_submaps.resize(num_submaps);
+  voxelized_submaps.resize(num_submaps);
+  for (int i = 0; i < num_submaps; i++) {
+    auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
+    if (!submap) {
+      return false;
+    }
+    submaps[i] = submap;
+    subsampled_submaps[i] = submap->frame;
+    voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame);
+
+    Callbacks::on_insert_submap(submap);
+  }
+
+  gtsam::Values values;
+  gtsam::NonlinearFactorGraph graph;
+
+  gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
+  gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
+
+  for (const auto& factor : matching_cost_factors) {
+    const auto type = std::get<0>(factor);
+    const auto first = std::get<1>(factor);
+    const auto second = std::get<2>(factor);
+
+    if (type == "vgicp") {
+      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(first), X(second), voxelized_submaps[first], subsampled_submaps[second]);
+    } else if (type == "vgicp_gpu") {
+      const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
+      const auto& stream = stream_buffer.first;
+      const auto& buffer = stream_buffer.second;
+      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), voxelized_submaps[first], subsampled_submaps[second], stream, buffer);
+    } else {
+      std::cerr << console::yellow << "warning: unsupported matching cost factor type " << type << console::reset << std::endl;
+    }
+  }
+
+  Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
+  auto result = isam2->update(graph, values);
+  Callbacks::on_smoother_update_result(*isam2, result);
+
+  update_submaps();
+  Callbacks::on_update_submaps(submaps);
+
+  return true;
 }
 
 }  // namespace glim

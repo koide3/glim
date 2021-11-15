@@ -23,10 +23,10 @@
   // submap_voxel_resolution        : Resolution of VGICP voxels for created submaps (used in global mapping)
   */
   "sub_mapping": {
-    "enable_imu": false,
+    "enable_imu": true,
     "enable_optimization": true,
     // Keyframe update strategy
-    "max_num_keyframes": 20,
+    "max_num_keyframes": 5,
     "keyframe_update_strategy": "DISPLACEMENT",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
@@ -43,7 +43,7 @@
     "submap_voxel_resolution": 0.5
   },
   "global_mapping": {
-    "enable_imu": false,
+    "enable_imu": true,
     "create_between_factors": true,
     "between_registration_type": "GICP",
     "registration_error_factor_type": "VGICP",

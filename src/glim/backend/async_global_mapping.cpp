@@ -1,8 +1,13 @@
 #include <glim/backend/async_global_mapping.hpp>
 
+#include <glim/backend/callbacks.hpp>
+
 namespace glim {
 
 AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping) : global_mapping(global_mapping) {
+  request_to_optimize = false;
+  GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
+
   kill_switch = false;
   end_of_sequence = false;
   thread = std::thread([this] { run(); });
@@ -60,11 +65,13 @@ void AsyncGlobalMapping::run() {
         break;
       }
 
-      if (std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(5)) {
+      if (request_to_optimize || std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(5)) {
+        request_to_optimize = false;
         global_mapping->optimize();
         last_optimization_time = std::chrono::high_resolution_clock::now();
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 

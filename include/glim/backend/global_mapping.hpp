@@ -31,6 +31,7 @@ public:
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;
+  bool load(const std::string& path);
 
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);

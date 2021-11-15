@@ -16,7 +16,7 @@ if(BUILD_WITH_MARCH_NATIVE)
   set(CMAKE_CXX_FLAGS "-march=native ${CMAKE_CXX_FLAGS}")
 endif()
 
-find_package(Boost REQUIRED timer)
+find_package(Boost REQUIRED timer serialization)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(GTSAM REQUIRED)
@@ -44,6 +44,7 @@ add_subdirectory(thirdparty/gtsam_ext)
 add_library(glim SHARED
   # util
   src/glim/util/config.cpp
+  src/glim/util/export_factors.cpp
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
   src/glim/preprocess/downsampling.cpp
@@ -91,6 +92,8 @@ install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 if(BUILD_WITH_VIEWER)
   add_library(glim_vis SHARED
     src/glim/viewer/standard_viewer.cpp
+    src/glim/viewer/interactive_viewer.cpp
+    src/glim/viewer/interactive/manual_loop_close_modal.cpp
   )
   target_include_directories(glim_vis PUBLIC
     include
@@ -107,7 +110,6 @@ if(BUILD_WITH_VIEWER)
 
   install(TARGETS glim_vis)
 
-
   add_executable(offline_viewer
     src/glim/apps/offline_viewer.cpp
   )
@@ -118,7 +120,20 @@ if(BUILD_WITH_VIEWER)
     glim
     ${Iridescence_LIBRARIES}
   )
-endif()
+
+  add_executable(gtsam_test
+    src/glim/apps/gtsam_test.cpp
+  )
+  target_include_directories(gtsam_test PUBLIC
+    ${Iridescence_INCLUDE_DIRS}
+  )
+  target_link_libraries(gtsam_test
+    glim
+    glim_vis
+    ${Boost_LIBRARIES}
+    ${Iridescence_LIBRARIES}
+  )
+  endif()
 
 ###########
 ## ament ##

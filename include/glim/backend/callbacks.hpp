@@ -125,5 +125,11 @@ struct GlobalMappingCallbacks {
    * @param result  iSAM2 result
    */
   static CallbackSlot<void(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result)> on_smoother_update_result;
+
+  /**
+   * @brief Request the global mapping module to perform optimization
+   * @note  This is a special inverse-direction callback slot
+   */
+  static CallbackSlot<void()> request_to_optimize;
 };
 }

@@ -21,4 +21,6 @@ CallbackSlot<void(const std::vector<SubMap::Ptr>& submaps)> GlobalMappingCallbac
 
 CallbackSlot<void(gtsam_ext::ISAM2Ext&, gtsam::NonlinearFactorGraph&, gtsam::Values&)> GlobalMappingCallbacks::on_smoother_update;
 CallbackSlot<void(gtsam_ext::ISAM2Ext&, const gtsam_ext::ISAM2ResultExt& result)> GlobalMappingCallbacks::on_smoother_update_result;
+
+CallbackSlot<void()> GlobalMappingCallbacks::request_to_optimize;
 }  // namespace glim

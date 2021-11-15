@@ -82,6 +82,8 @@ private:
   ConcurrentVector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>> input_imu_queue;
   ConcurrentVector<SubMap::Ptr> input_submap_queue;
 
+  std::atomic_bool request_to_optimize;
+
   std::shared_ptr<glim::GlobalMappingBase> global_mapping;
 };
 
