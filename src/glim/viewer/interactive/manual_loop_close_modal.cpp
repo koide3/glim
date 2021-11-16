@@ -98,7 +98,6 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
       model_control->set_model_matrix((*align_result)->cast<float>().matrix());
     }
 
-    ImGui::SameLine();
     if (ImGui::Button("Create Factor")) {
       factor = create_factor();
       ImGui::CloseCurrentPopup();
@@ -106,7 +105,6 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
       source = nullptr;
     }
 
-    ImGui::SameLine();
     if (ImGui::Button("Cancel")) {
       ImGui::CloseCurrentPopup();
       target = nullptr;

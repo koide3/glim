@@ -423,7 +423,7 @@ bool GlobalMapping::load(const std::string& path) {
     }
   }
 
-  Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
+  Callbacks::on_smoother_update(*isam2, graph, values);
   auto result = isam2->update(graph, values);
   Callbacks::on_smoother_update_result(*isam2, result);
 

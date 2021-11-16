@@ -94,6 +94,7 @@ if(BUILD_WITH_VIEWER)
     src/glim/viewer/standard_viewer.cpp
     src/glim/viewer/interactive_viewer.cpp
     src/glim/viewer/interactive/manual_loop_close_modal.cpp
+    src/glim/viewer/interactive/bundle_adjustment_modal.cpp
   )
   target_include_directories(glim_vis PUBLIC
     include
