@@ -52,7 +52,9 @@ void OfflineViewer::main_menu() {
       }
 
       if (ImGui::MenuItem("Quit")) {
-        request_to_terminate = true;
+        if (pfd::message("Warning", "Quit?").result() == pfd::button::ok) {
+          request_to_terminate = true;
+        }
       }
 
       ImGui::EndMenu();
