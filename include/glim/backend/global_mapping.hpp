@@ -31,6 +31,8 @@ public:
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;
+  virtual std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points() override;
+
   bool load(const std::string& path);
 
 private:

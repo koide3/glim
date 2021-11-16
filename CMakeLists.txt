@@ -95,6 +95,7 @@ if(BUILD_WITH_VIEWER)
     src/glim/viewer/interactive_viewer.cpp
     src/glim/viewer/interactive/manual_loop_close_modal.cpp
     src/glim/viewer/interactive/bundle_adjustment_modal.cpp
+    src/glim/viewer/offline_viewer.cpp
   )
   target_include_directories(glim_vis PUBLIC
     include
@@ -110,31 +111,7 @@ if(BUILD_WITH_VIEWER)
   )
 
   install(TARGETS glim_vis)
-
-  add_executable(offline_viewer
-    src/glim/apps/offline_viewer.cpp
-  )
-  target_include_directories(offline_viewer PUBLIC
-    ${Iridescence_INCLUDE_DIRS}
-  )
-  target_link_libraries(offline_viewer
-    glim
-    ${Iridescence_LIBRARIES}
-  )
-
-  add_executable(gtsam_test
-    src/glim/apps/gtsam_test.cpp
-  )
-  target_include_directories(gtsam_test PUBLIC
-    ${Iridescence_INCLUDE_DIRS}
-  )
-  target_link_libraries(gtsam_test
-    glim
-    glim_vis
-    ${Boost_LIBRARIES}
-    ${Iridescence_LIBRARIES}
-  )
-  endif()
+endif()
 
 ###########
 ## ament ##

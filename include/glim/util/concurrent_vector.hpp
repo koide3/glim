@@ -34,6 +34,11 @@ public:
     values.push_back(value);
   }
 
+  void clear() {
+    std::lock_guard<std::mutex> lock(mutex);
+    values.clear();
+  }
+
   T front() const {
     std::lock_guard<std::mutex> lock(mutex);
     return values.front();

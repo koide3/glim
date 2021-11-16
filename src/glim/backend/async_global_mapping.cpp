@@ -5,6 +5,7 @@
 namespace glim {
 
 AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping) : global_mapping(global_mapping) {
+  saving = false;
   request_to_optimize = false;
   GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
 
@@ -49,13 +50,30 @@ int AsyncGlobalMapping::output_queue_size() const {
 
 void AsyncGlobalMapping::save(const std::string& path) {
   std::cout << "saving to " << path << "..." << std::endl;
+  saving = true;
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   global_mapping->save(path);
+  saving = false;
+  std::cout << "saved" << std::endl;
+}
+
+std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> AsyncGlobalMapping::export_points() {
+  saving = true;
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  auto points = global_mapping->export_points();
+  saving = false;
+
+  return points;
 }
 
 void AsyncGlobalMapping::run() {
   auto last_optimization_time = std::chrono::high_resolution_clock::now();
 
   while (!kill_switch) {
+    while (saving) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
     auto images = input_image_queue.get_all_and_clear();
     auto imu_frames = input_imu_queue.get_all_and_clear();
     auto submaps = input_submap_queue.get_all_and_clear();

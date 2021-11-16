@@ -365,6 +365,24 @@ void GlobalMapping::save(const std::string& path) {
   }
 }
 
+std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> GlobalMapping::export_points() {
+  int num_all_points = 0;
+  for (const auto& submap : submaps) {
+    num_all_points += submap->frame->size();
+  }
+
+  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> all_points;
+  all_points.reserve(num_all_points);
+
+  for (const auto& submap : submaps) {
+    std::transform(submap->frame->points, submap->frame->points + submap->frame->size(), std::back_inserter(all_points), [&](const Eigen::Vector4d& p) {
+      return submap->T_world_origin * p;
+    });
+  }
+
+  return all_points;
+}
+
 bool GlobalMapping::load(const std::string& path) {
   std::ifstream ifs(path + "/graph.txt");
   if (!ifs) {

@@ -70,12 +70,15 @@ public:
    */
   void save(const std::string& path);
 
+  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points();
+
 private:
   void run();
 
 private:
   std::atomic_bool kill_switch;      // Flag to stop the thread immediately (Hard kill switch)
   std::atomic_bool end_of_sequence;  // Flag to stop the thread when the input queues become empty (Soft kill switch)
+  std::atomic_bool saving;
   std::thread thread;
 
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;

@@ -47,5 +47,12 @@ public:
    * @param path  Save path
    */
   virtual void save(const std::string& path) {}
+
+  /**
+   * @brief Export all the submap points
+   */
+  virtual std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points() {
+    return std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>();
+  }
 };
 }
