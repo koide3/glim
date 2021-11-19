@@ -207,7 +207,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   gtsam_ext::Frame::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
-  if (enable_imu && false) {
+  if (enable_imu) {
     const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
@@ -236,10 +236,13 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   EstimationFrame::Ptr keyframe(new EstimationFrame);
   *keyframe = *odom_frame;
 
+#ifdef BUILD_GTSAM_EXT_GPU
   if (enable_gpu) {
     voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
-  } else {
+  }
+#endif
+  if (!voxelized_keyframe) {
     voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = subsampled_frame;
   }

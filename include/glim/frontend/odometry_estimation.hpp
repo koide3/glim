@@ -39,14 +39,14 @@ public:
   virtual std::vector<EstimationFrame::ConstPtr> get_remaining_frames() override;
 
 private:
-  void fallback_smoother();
-  void update_frames(int current);
-  void update_keyframes(int current);
   gtsam::NonlinearFactorGraph create_matching_cost_factors(int current);
 
-private:
-  std::string factor_type;
+  void fallback_smoother();
+  void update_frames(int current);
+  void update_keyframes_overlap(int current);
+  void update_keyframes_entropy(const gtsam::NonlinearFactorGraph& matching_cost_factors, int current);
 
+private:
   double voxel_resolution;
   int max_num_keyframes;
   int full_connection_window_size;
@@ -64,6 +64,9 @@ private:
   int marginalized_cursor;
   std::vector<EstimationFrame::Ptr> frames;
   std::vector<boost::shared_ptr<gtsam::ImuFactor>> imu_factors;
+
+  int entropy_num_frames;
+  double entropy_running_average;
 
   std::vector<EstimationFrame::ConstPtr> keyframes;
 

@@ -26,7 +26,7 @@
     "enable_imu": true,
     "enable_optimization": true,
     // Keyframe update strategy
-    "max_num_keyframes": 5,
+    "max_num_keyframes": 15,
     "keyframe_update_strategy": "DISPLACEMENT",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,

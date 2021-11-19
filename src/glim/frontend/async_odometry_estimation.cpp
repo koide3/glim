@@ -48,10 +48,17 @@ void AsyncOdometryEstimation::get_results(std::vector<EstimationFrame::ConstPtr>
 }
 
 void AsyncOdometryEstimation::run() {
+  double last_imu_time = 0.0;
+  std::deque<std::pair<double, cv::Mat>> images;
+  std::deque<PreprocessedFrame::Ptr> raw_frames;
+
   while (!kill_switch) {
-    auto images = input_image_queue.get_all_and_clear();
     auto imu_frames = input_imu_queue.get_all_and_clear();
-    auto raw_frames = input_frame_queue.get_all_and_clear();
+    auto new_images = input_image_queue.get_all_and_clear();
+    auto new_raw_frames = input_frame_queue.get_all_and_clear();
+
+    images.insert(images.end(), new_images.begin(), new_images.end());
+    raw_frames.insert(raw_frames.end(), new_raw_frames.begin(), new_raw_frames.end());
 
     if(images.empty() && imu_frames.empty() && raw_frames.empty()) {
       if(end_of_sequence) {
@@ -62,23 +69,29 @@ void AsyncOdometryEstimation::run() {
       continue;
     }
 
-    for (const auto& image : images) {
-      odometry_estimation->insert_image(image.first, image.second);
-    }
-
     for (const auto& imu : imu_frames) {
       const double stamp = imu[0];
       const Eigen::Vector3d linear_acc = imu.block<3, 1>(1, 0);
       const Eigen::Vector3d angular_vel = imu.block<3, 1>(4, 0);
       odometry_estimation->insert_imu(stamp, linear_acc, angular_vel);
+
+      last_imu_time = stamp;
     }
 
-    for (const auto& frame : raw_frames) {
+    while (!images.empty() && images.front().first < last_imu_time) {
+      const auto image = images.front();
+      odometry_estimation->insert_image(image.first, image.second);
+      images.pop_front();
+    }
+
+    while (!raw_frames.empty() && raw_frames.front()->scan_end_time < last_imu_time) {
+      const auto& frame = raw_frames.front();
       std::vector<EstimationFrame::ConstPtr> marginalized;
       auto state = odometry_estimation->insert_frame(frame, marginalized);
 
       output_estimation_results.push_back(state);
       output_marginalized_frames.insert(marginalized);
+      raw_frames.pop_front();
     }
   }
 

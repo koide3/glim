@@ -51,6 +51,12 @@ GlobalMapping::GlobalMapping() {
 
   enable_gpu = registration_error_factor_type.find("GPU") != std::string::npos;
 
+#ifndef BUILD_GTSAM_EXT_GPU
+  if (enable_gpu) {
+    std::cerr << console::bold_red << "error: GPU-based factors cannot be used because GLIM is built without GPU option!!" << console::reset << std::endl;
+  }
+#endif
+
   imu_integration.reset(new IMUIntegration);
 
   new_values.reset(new gtsam::Values);
@@ -160,7 +166,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
       imu_integration->erase_imu_data(imu_read_cursor);
 
       if (num_integrated < 2) {
-        std::cerr << "warning: insufficient IMU data between submaps (global_mapping)!!" << std::endl;
+        std::cerr << "warning: fficient IMU data between submaps (global_mapping)!!" << std::endl;
         new_factors->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last * 2 + 1), V(current * 2), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       } else {
         new_factors
@@ -185,19 +191,21 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 }
 
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
+  gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, randomsampling_rate, mt);
+  gtsam_ext::VoxelizedFrame::Ptr voxelized_submap;
+
+#ifdef BUILD_GTSAM_EXT_GPU
   if (enable_gpu && !submap->frame->points_gpu) {
     submap->frame = std::make_shared<gtsam_ext::FrameGPU>(*submap->frame);
   }
 
-  gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, randomsampling_rate, mt);
   if (enable_gpu) {
     subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap, true);
-  }
-
-  gtsam_ext::VoxelizedFrame::Ptr voxelized_submap;
-  if (enable_gpu) {
     voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame, false);
-  } else {
+  }
+#endif
+
+  if (!voxelized_submap) {
     voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
   }
 
@@ -284,12 +292,16 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
 
     if (registration_error_factor_type == "VGICP") {
       factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current]);
-    } else if (registration_error_factor_type == "VGICP_GPU") {
+    }
+#ifdef BUILD_GTSAM_EXT_GPU
+    else if (registration_error_factor_type == "VGICP_GPU") {
       const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
       factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current], stream, buffer);
-    } else {
+    }
+#endif
+    else {
       std::cerr << console::yellow << "warning: Unknown registration error type " << console::underline << registration_error_factor_type << console::reset << std::endl;
     }
   }
@@ -313,10 +325,12 @@ void GlobalMapping::save(const std::string& path) {
       matching_cost_factors.push_back(factor);
       continue;
     }
+#ifdef BUILD_GTSAM_EXT_GPU
     if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
       matching_cost_factors.push_back(factor);
       continue;
     }
+#endif
     serializable_factors.push_back(factor);
   }
   gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
@@ -334,9 +348,12 @@ void GlobalMapping::save(const std::string& path) {
       type = "gicp";
     } else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactor>(factor)) {
       type = "vgicp";
-    } else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
+    }
+#ifdef BUILD_GTSAM_EXT_GPU
+    else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
       type = "vgicp_gpu";
     }
+#endif
 
     gtsam::Symbol symbol0(factor->keys()[0]);
     gtsam::Symbol symbol1(factor->keys()[1]);
@@ -413,7 +430,12 @@ bool GlobalMapping::load(const std::string& path) {
     }
     submaps[i] = submap;
     subsampled_submaps[i] = submap->frame;
+
+#ifdef BUILD_GTSAM_EXT_GPU
     voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame);
+#else
+    voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
+#endif
 
     Callbacks::on_insert_submap(submap);
   }
@@ -431,12 +453,16 @@ bool GlobalMapping::load(const std::string& path) {
 
     if (type == "vgicp") {
       graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(first), X(second), voxelized_submaps[first], subsampled_submaps[second]);
-    } else if (type == "vgicp_gpu") {
+    }
+#ifdef BUILD_GTSAM_EXT_GPU
+    else if (type == "vgicp_gpu") {
       const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
       graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), voxelized_submaps[first], subsampled_submaps[second], stream, buffer);
-    } else {
+    }
+#endif
+    else {
       std::cerr << console::yellow << "warning: unsupported matching cost factor type " << type << console::reset << std::endl;
     }
   }

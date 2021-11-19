@@ -24,6 +24,16 @@ public:
     std::vector<double>& pred_times,
     std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& pred_poses);
 
+  int integrate_imu(
+    double start_time,
+    double end_time,
+    const gtsam::NavState& state,
+    const gtsam::imuBias::ConstantBias& bias,
+    std::vector<double>& pred_times,
+    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& pred_poses,
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& pred_vels,
+    std::vector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& measurements);
+
   void erase_imu_data(int last);
 
   const gtsam::PreintegratedImuMeasurements& integrated_measurements() const;

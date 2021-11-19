@@ -12,8 +12,10 @@
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
 #include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_ext.hpp>
+#include <gtsam_ext/cuda/nonlinear_factor_set_gpu.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/console_colors.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -31,8 +33,6 @@ using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 OdometryEstimation::OdometryEstimation() {
   Config config(GlobalConfig::get_config_path("config_frontend"));
 
-  factor_type = config.param<std::string>("odometry_estimation", "factor_type", "VGICP_GPU");
-
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
   max_num_keyframes = config.param<int>("odometry_estimation", "max_num_keyframes", 10);
   full_connection_window_size = config.param<int>("odometry_estimation", "full_connection_window_size", 3);
@@ -46,6 +46,9 @@ OdometryEstimation::OdometryEstimation() {
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
   init_estimation.reset(new NaiveInitialStateEstimation);
+
+  entropy_num_frames = 0;
+  entropy_running_average = 0.0;
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
@@ -179,7 +182,9 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
     imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
     new_factors.add(imu_factor);
   } else {
-    std::cerr << "warning: insufficient number of IMU data between LiDAR scans!! (odometry_estimation)" << std::endl;
+    std::cerr << console::yellow << "warning: insufficient number of IMU data between LiDAR scans!! (odometry_estimation)" << console::reset << std::endl;
+    std::cerr << console::yellow << boost::format("       : t_last=%.6f t_current=%.6f num_imu=%d") % last_stamp % raw_frame->stamp % num_imu_integrated << console::reset
+              << std::endl;
     new_factors.add(gtsam::BetweenFactor<gtsam::Vector3>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Sigma(3, 1.0)));
   }
 
@@ -216,7 +221,8 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
   imu_factors.push_back(imu_factor);
 
   // Create matching cost factors
-  new_factors.add(create_matching_cost_factors(current));
+  auto matching_cost_factors = create_matching_cost_factors(current);
+  new_factors.add(matching_cost_factors);
 
   // Update smoother
   Callbacks::on_smoother_update(*smoother, new_factors, new_values);
@@ -238,7 +244,8 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
   // Update frames and keyframes
   update_frames(current);
-  update_keyframes(current);
+  update_keyframes_overlap(current);
+  // update_keyframes_entropy(matching_cost_factors, current);
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
   Callbacks::on_update_frames(active_frames);
@@ -258,16 +265,80 @@ std::vector<EstimationFrame::ConstPtr> OdometryEstimation::get_remaining_frames(
   return marginalized_frames;
 }
 
+gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int current) {
+  const auto create_binary_factor = [this](
+                                      gtsam::Key target_key,
+                                      gtsam::Key source_key,
+                                      const gtsam_ext::VoxelizedFrame::ConstPtr& target,
+                                      const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
+    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
+    const auto& stream = stream_buffer.first;
+    const auto& buffer = stream_buffer.second;
+    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, target, source, stream, buffer);
+  };
+
+  const auto create_unary_factor = [this](
+                                     const gtsam::Pose3& fixed_target_pose,
+                                     gtsam::Key source_key,
+                                     const gtsam_ext::VoxelizedFrame::ConstPtr& target,
+                                     const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
+    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
+    const auto& stream = stream_buffer.first;
+    const auto& buffer = stream_buffer.second;
+    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, target, source, stream, buffer);
+  };
+
+  gtsam::NonlinearFactorGraph factors;
+  if (current == 0 || !enable_matching_cost_factors) {
+    return factors;
+  }
+
+  // There must be at least one factor between consecutive frames
+  for (int target = current - full_connection_window_size; target < current; target++) {
+    if (target < 0) {
+      continue;
+    }
+
+    factors.add(create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame));
+  }
+
+  for (const auto& keyframe : keyframes) {
+    if (keyframe->id >= current - full_connection_window_size) {
+      // There already exists a factor
+      continue;
+    }
+
+    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
+    const auto& stream = stream_buffer.first;
+    const auto& buffer = stream_buffer.second;
+
+    double span = frames[current]->stamp - keyframe->stamp;
+    if (span > smoother_lag - 0.1) {
+      // Create unary factor
+      const gtsam::Pose3 key_T_world_imu(keyframe->T_world_imu.matrix());
+      factors.add(create_unary_factor(key_T_world_imu, X(current), keyframe->voxelized_frame(), frames[current]->frame));
+    } else {
+      // Create binary factor
+      const int target = keyframe->id;
+      auto factor = create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame);
+      factors.add(factor);
+    }
+  }
+
+  return factors;
+}
+
 void OdometryEstimation::fallback_smoother() {
   // We observed that IncrementalFixedLagSmoother occasionally marginalize values that are
   // still in the optimization window, resulting in an out_of_range exception
   // (we have to remember that it is in gtsam_unstable directory)
   // To continue estimation, we reset the smoother here with saved states
+  std::cerr << console::yellow;
   std::cerr << "warning: smoother corrupted!!" << std::endl;
   std::cerr << "       : falling back to recover the smoother!!" << std::endl;
-
-  std::cout << "num_frames:" << frames.size() << std::endl;
-  std::cout << "mc        :" << marginalized_cursor << std::endl;
+  std::cerr << "num_frames:" << frames.size() << std::endl;
+  std::cerr << "mc        :" << marginalized_cursor << std::endl;
+  std::cerr << console::reset;
 
   Config config(GlobalConfig::get_config_path("config_frontend"));
   gtsam::ISAM2Params isam2_params;
@@ -337,7 +408,7 @@ void OdometryEstimation::update_frames(int current) {
   }
 }
 
-void OdometryEstimation::update_keyframes(int current) {
+void OdometryEstimation::update_keyframes_overlap(int current) {
   if (keyframes.empty()) {
     keyframes.push_back(frames[current]);
     return;
@@ -416,67 +487,48 @@ void OdometryEstimation::update_keyframes(int current) {
   Callbacks::on_marginalized_keyframes(marginalized_keyframes);
 }
 
-gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int current) {
-  const auto create_binary_factor = [this](
-                                      gtsam::Key target_key,
-                                      gtsam::Key source_key,
-                                      const gtsam_ext::VoxelizedFrame::ConstPtr& target,
-                                      const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
-    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
-    const auto& stream = stream_buffer.first;
-    const auto& buffer = stream_buffer.second;
-    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, target, source, stream, buffer);
-  };
+void OdometryEstimation::update_keyframes_entropy(const gtsam::NonlinearFactorGraph& matching_cost_factors, int current) {
+  gtsam::Values values = smoother->calculateEstimate();
 
-  const auto create_unary_factor = [this](
-                                     const gtsam::Pose3& fixed_target_pose,
-                                     gtsam::Key source_key,
-                                     const gtsam_ext::VoxelizedFrame::ConstPtr& target,
-                                     const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
-    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
-    const auto& stream = stream_buffer.first;
-    const auto& buffer = stream_buffer.second;
-    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, target, source, stream, buffer);
-  };
-
-  gtsam::NonlinearFactorGraph factors;
-  if (current == 0 || !enable_matching_cost_factors) {
-    return factors;
-  }
-
-  // There must be factors between consecutive frames
-  for (int target = current - full_connection_window_size; target < current; target++) {
-    if (target < 0) {
-      continue;
-    }
-
-    factors.add(create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame));
-  }
-
-  for (const auto& keyframe : keyframes) {
-    if (keyframe->id >= current - full_connection_window_size) {
-      // There already exist a factor
-      continue;
-    }
-
-    auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
-    const auto& stream = stream_buffer.first;
-    const auto& buffer = stream_buffer.second;
-
-    double span = frames[current]->stamp - keyframe->stamp;
-    if (span > smoother_lag - 0.1) {
-      // Create unary factor
-      const gtsam::Pose3 key_T_world_imu(keyframe->T_world_imu.matrix());
-      factors.add(create_unary_factor(key_T_world_imu, X(current), keyframe->voxelized_frame(), frames[current]->frame));
-    } else {
-      // Create binary factor
-      const int target = keyframe->id;
-      auto factor = create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame);
-      factors.add(factor);
+  gtsam::NonlinearFactorGraph valid_factors;
+  for (const auto& factor : matching_cost_factors) {
+    bool valid = std::all_of(factor->keys().begin(), factor->keys().end(), [&](const gtsam::Key key) { return values.exists(key); });
+    if (valid) {
+      valid_factors.push_back(factor);
     }
   }
 
-  return factors;
+  gtsam_ext::NonlinearFactorSetGPU factor_set;
+  factor_set.add(valid_factors);
+  factor_set.linearize(values);
+  auto linearized = valid_factors.linearize(values);
+
+  gtsam::Matrix6 H = linearized->hessianBlockDiagonal()[X(current)];
+  double negative_entropy = std::log(H.determinant());
+
+  const double rate = 0.98;
+
+  entropy_num_frames++;
+  entropy_running_average += (negative_entropy - entropy_running_average) / entropy_num_frames;
+
+  if (!keyframes.empty() && negative_entropy > entropy_running_average * rate) {
+    return;
+  }
+
+  entropy_num_frames = 0;
+  entropy_running_average = 0.0;
+
+  const auto& new_keyframe = frames[current];
+  keyframes.push_back(new_keyframe);
+
+  if (keyframes.size() <= max_num_keyframes) {
+    return;
+  }
+
+  std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;
+  marginalized_keyframes.push_back(keyframes.front());
+  keyframes.erase(keyframes.begin());
+  Callbacks::on_marginalized_keyframes(marginalized_keyframes);
 }
 
 }  // namespace glim

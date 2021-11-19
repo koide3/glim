@@ -13,7 +13,6 @@
   //                             : it is inserted into the keyframe list
   */
   "odometry_estimation": {
-    "factor_type": "VGICP_GPU",
     "smoother_lag": 3.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
