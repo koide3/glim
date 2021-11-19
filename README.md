@@ -97,7 +97,7 @@ This package is released under the GPLv3 license. For commercial purposes, pleas
 
 
 ## Contact
-[Kenji Koide](https://staff.aist.go.jp/k.koide/), ```k.koide@aist.go.jp```
+[Kenji Koide](https://staff.aist.go.jp/k.koide/), k.koide@aist.go.jp
 
 [Mobile Robotics Research Team (MR2T)](https://unit.aist.go.jp/hcmrc/mr-rt/index.html), National Institute of Advanced Industrial Science and Technology (AIST), Japan
 
