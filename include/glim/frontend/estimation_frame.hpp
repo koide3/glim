@@ -53,6 +53,7 @@ struct EstimationFrame {
       case FrameID::IMU:
         return T_world_imu;
     }
+    return Eigen::Isometry3d::Identity();
   }
 
   /**
