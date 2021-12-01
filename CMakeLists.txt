@@ -121,7 +121,7 @@ endif()
 ###########
 ## ament ##
 ###########
-find_package(ament_cmake)
+find_package(ament_cmake QUIET)
 if(ament_cmake_FOUND)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
   ament_export_include_directories(include)
@@ -132,7 +132,7 @@ endif()
 ############
 ## catkin ##
 ############
-find_package(catkin)
+find_package(catkin QUIET)
 if(catkin_FOUND)
   catkin_package(
     INCLUDE_DIRS include thirdparty/gtsam_ext/include
