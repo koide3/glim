@@ -21,7 +21,7 @@ double to_sec(const Stamp& stamp) {
   return stamp.sec + stamp.nanosec / 1e9;
 }
 
-builtin_interfaces::msg::Time from_sec(const double time) {
+inline builtin_interfaces::msg::Time from_sec(const double time) {
   builtin_interfaces::msg::Time stamp;
   stamp.sec = std::floor(time);
   stamp.nanosec = (time - stamp.sec) * 1e9;
@@ -42,7 +42,7 @@ double to_sec(const Stamp& stamp) {
   return stamp.toSec();
 }
 
-ros::Time from_sec(const double time) {
+inline ros::Time from_sec(const double time) {
   ros::Time stamp;
   stamp.sec = std::floor(time);
   stamp.nsec = (time - stamp.sec) * 1e9;
@@ -122,6 +122,8 @@ public:
       }
     }
 
+    double stamp = -1.0;
+
     std::vector<double> times;
     if (time_offset >= 0) {
       times.resize(num_points);
@@ -152,10 +154,9 @@ public:
           std::cerr << "warning: assume they are abs times and convert them to rel times" << std::endl;
         }
 
-        const double t0 = times.front();
-
+        stamp = times.front();
         for (auto& t : times) {
-          t = t - t0;
+          t = t - stamp;
         }
       }
     }
@@ -177,7 +178,10 @@ public:
       }
     }
 
-    const double stamp = to_sec(points_msg->header.stamp);
+    if (stamp < 0.0) {
+      stamp = to_sec(points_msg->header.stamp);
+    }
+
     return RawPoints::Ptr(new RawPoints{stamp, times, intensities, points});
   }
 
@@ -188,7 +192,7 @@ public:
   std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;
 };
 
-PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_ext::Frame& frame) {
+static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_ext::Frame& frame) {
   PointCloud2Ptr msg(new PointCloud2);
   msg->header.frame_id = frame_id;
   msg->header.stamp = from_sec(stamp);

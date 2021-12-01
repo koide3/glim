@@ -38,7 +38,13 @@ struct EstimationFrame {
    * @note   TODO: Check if it's valid operation
    * @return gtsam_ext::VoxelizedFrame::ConstPtr
    */
-  gtsam_ext::VoxelizedFrame::ConstPtr voxelized_frame() const { return std::dynamic_pointer_cast<const gtsam_ext::VoxelizedFrame>(frame); }
+  gtsam_ext::VoxelizedFrame::ConstPtr voxelized_frame() const {
+    const auto voxelized = std::dynamic_pointer_cast<const gtsam_ext::VoxelizedFrame>(frame);
+    if (!voxelized) {
+      std::cerr << "warning: invalid upcasting!!" << std::endl;
+    }
+    return voxelized;
+  }
 
   /**
    * @brief Get the sensor pose according to frame_id

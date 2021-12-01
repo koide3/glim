@@ -7,10 +7,12 @@
   // voxel_resolution            : Resolution for VGICP voxels (0.25 ~ 0.5 for indoor, 0.5 ~ 2.0 for outdoor)
   // full_connection_window_size : Latest sensor pose variable is connected with all of the past $full_connection_window_size poses
   //                             : Must be >1. Increase this for aggressive motion data (3~5)
+  // keyframe_update_strategy    : "OVERLAP" / "DISPLACEMENT" / "ENTROPY"
   // max_num_keyframes           : Maximum number of keyframes
   // keyframe_min_overlap        : Keyframes that overlap to the latest with a rate smaller than this will be eliminated
   // keyframe_max_overlap        : If the overlap between the latest frame and keyframes is smaller than this,
   //                             : it is inserted into the keyframe list
+  // keyframe_delta_(trans|rot)  : Keyframe displacement threshold [m / rad]
   */
   "odometry_estimation": {
     "smoother_lag": 3.0,
@@ -19,8 +21,12 @@
     "isam2_relinearize_thresh": 0.1,
     "voxel_resolution": 0.5,
     "full_connection_window_size": 3,
+    "keyframe_update_strategy": "DISPLACEMENT",
     "max_num_keyframes": 15,
     "keyframe_min_overlap": 0.05,
-    "keyframe_max_overlap": 0.8
+    "keyframe_max_overlap": 0.8,
+    "keyframe_delta_trans": 2.0,
+    "keyframe_delta_rot": 0.5,
+    "keyframe_entropy_thresh": 0.99
   }
 }

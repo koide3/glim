@@ -39,7 +39,7 @@ add_subdirectory(thirdparty/gtsam_ext)
 if(BUILD_WITH_CUDA)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
   install(TARGETS gtsam_ext_cuda)
-  list(APPEND GPU_SRCS src/glim/frontend/odometry_estimation.cpp)
+  list(APPEND GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
 endif()
 
 add_library(glim SHARED

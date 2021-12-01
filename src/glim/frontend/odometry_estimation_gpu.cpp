@@ -1,4 +1,4 @@
-#include <glim/frontend/odometry_estimation.hpp>
+#include <glim/frontend/odometry_estimation_gpu.hpp>
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
@@ -30,25 +30,38 @@ using gtsam::symbol_shorthand::B;  // IMU bias
 using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 
-OdometryEstimation::OdometryEstimation() {
+OdometryEstimationGPU::OdometryEstimationGPU() {
   Config config(GlobalConfig::get_config_path("config_frontend"));
 
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
   max_num_keyframes = config.param<int>("odometry_estimation", "max_num_keyframes", 10);
   full_connection_window_size = config.param<int>("odometry_estimation", "full_connection_window_size", 3);
 
+  const std::string strategy = config.param<std::string>("odometry_estimation", "keyframe_update_strategy", "OVERLAP");
+  if (strategy == "OVERLAP") {
+    keyframe_strategy = KeyframeUpdateStrategy::OVERLAP;
+  } else if (strategy == "DISPLACEMENT") {
+    keyframe_strategy = KeyframeUpdateStrategy::DISPLACEMENT;
+  } else if (strategy == "ENTROPY") {
+    keyframe_strategy = KeyframeUpdateStrategy::ENTROPY;
+  } else {
+    std::cerr << console::bold_red << "error: unknown keyframe update strategy " << strategy << console::reset << std::endl;
+  }
+
   keyframe_min_overlap = config.param<double>("odometry_estimation", "keyframe_min_overlap", 0.1);
   keyframe_max_overlap = config.param<double>("odometry_estimation", "keyframe_max_overlap", 0.9);
+  keyframe_delta_trans = config.param<double>("odometry_estimation", "keyframe_delta_trans", 1.0);
+  keyframe_delta_rot = config.param<double>("odometry_estimation", "keyframe_delta_rot", 0.25);
+  keyframe_entropy_thresh = config.param<double>("odometry_estimation", "keyframe_entropy_thresh", 0.99);
+
+  entropy_num_frames = 0;
+  entropy_running_average = 0.0;
 
   marginalized_cursor = 0;
-  enable_matching_cost_factors = true;
 
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
   init_estimation.reset(new NaiveInitialStateEstimation);
-
-  entropy_num_frames = 0;
-  entropy_running_average = 0.0;
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
@@ -63,14 +76,12 @@ OdometryEstimation::OdometryEstimation() {
   isam2_params.setRelinearizeThreshold(config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1));
   smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(smoother_lag, isam2_params));
 
-#if BUILD_GTSAM_EXT_GPU
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
-#endif
 }
 
-OdometryEstimation ::~OdometryEstimation() {}
+OdometryEstimationGPU::~OdometryEstimationGPU() {}
 
-void OdometryEstimation::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
+void OdometryEstimationGPU::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
 
   if (init_estimation) {
@@ -79,7 +90,7 @@ void OdometryEstimation::insert_imu(const double stamp, const Eigen::Vector3d& l
   imu_integration->insert_imu(stamp, linear_acc, angular_vel);
 }
 
-EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
+EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
   Callbacks::on_insert_frame(raw_frame);
 
   const int current = frames.size();
@@ -137,7 +148,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
     new_values.insert(B(0), gtsam::imuBias::ConstantBias(new_frame->imu_bias));
 
     // Prior for initial IMU states
-    new_factors.add(gtsam_ext::LoosePriorFactor<gtsam::Pose3>(X(0), gtsam::Pose3(init_state->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+    new_factors.add(gtsam_ext::LoosePriorFactor<gtsam::Pose3>(X(0), gtsam::Pose3(init_state->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e10)));
     new_factors.add(gtsam::PriorFactor<gtsam::Vector3>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0)));
     new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(0), gtsam::imuBias::ConstantBias(init_state->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e2)));
 
@@ -178,7 +189,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
   new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
   // Create IMU factor
   gtsam::ImuFactor::shared_ptr imu_factor;
-  if (num_imu_integrated > 2) {
+  if (num_imu_integrated >= 2) {
     imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
     new_factors.add(imu_factor);
   } else {
@@ -244,8 +255,18 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
 
   // Update frames and keyframes
   update_frames(current);
-  update_keyframes_overlap(current);
-  // update_keyframes_entropy(matching_cost_factors, current);
+
+  switch (keyframe_strategy) {
+    case KeyframeUpdateStrategy::OVERLAP:
+      update_keyframes_overlap(current);
+      break;
+    case KeyframeUpdateStrategy::DISPLACEMENT:
+      update_keyframes_displacement(current);
+      break;
+    case KeyframeUpdateStrategy::ENTROPY:
+      update_keyframes_entropy(matching_cost_factors, current);
+      break;
+  }
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
   Callbacks::on_update_frames(active_frames);
@@ -254,7 +275,7 @@ EstimationFrame::ConstPtr OdometryEstimation::insert_frame(const PreprocessedFra
   return frames[current];
 }
 
-std::vector<EstimationFrame::ConstPtr> OdometryEstimation::get_remaining_frames() {
+std::vector<EstimationFrame::ConstPtr> OdometryEstimationGPU::get_remaining_frames() {
   std::vector<EstimationFrame::ConstPtr> marginalized_frames;
   for (int i = marginalized_cursor; i < frames.size(); i++) {
     marginalized_frames.push_back(frames[i]);
@@ -265,7 +286,7 @@ std::vector<EstimationFrame::ConstPtr> OdometryEstimation::get_remaining_frames(
   return marginalized_frames;
 }
 
-gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int current) {
+gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(int current) {
   const auto create_binary_factor = [this](
                                       gtsam::Key target_key,
                                       gtsam::Key source_key,
@@ -289,7 +310,7 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
   };
 
   gtsam::NonlinearFactorGraph factors;
-  if (current == 0 || !enable_matching_cost_factors) {
+  if (current == 0) {
     return factors;
   }
 
@@ -328,7 +349,7 @@ gtsam::NonlinearFactorGraph OdometryEstimation::create_matching_cost_factors(int
   return factors;
 }
 
-void OdometryEstimation::fallback_smoother() {
+void OdometryEstimationGPU::fallback_smoother() {
   // We observed that IncrementalFixedLagSmoother occasionally marginalize values that are
   // still in the optimization window, resulting in an out_of_range exception
   // (we have to remember that it is in gtsam_unstable directory)
@@ -386,7 +407,7 @@ void OdometryEstimation::fallback_smoother() {
   smoother->update(factors, values, stamps);
 }
 
-void OdometryEstimation::update_frames(int current) {
+void OdometryEstimationGPU::update_frames(int current) {
   for (int i = marginalized_cursor; i < frames.size(); i++) {
     try {
       Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
@@ -408,7 +429,11 @@ void OdometryEstimation::update_frames(int current) {
   }
 }
 
-void OdometryEstimation::update_keyframes_overlap(int current) {
+/**
+ * @brief Keyframe management based on overlap metric
+ * @ref   Koide et al., "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", ICRA2022
+ */
+void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   if (keyframes.empty()) {
     keyframes.push_back(frames[current]);
     return;
@@ -487,15 +512,86 @@ void OdometryEstimation::update_keyframes_overlap(int current) {
   Callbacks::on_marginalized_keyframes(marginalized_keyframes);
 }
 
-void OdometryEstimation::update_keyframes_entropy(const gtsam::NonlinearFactorGraph& matching_cost_factors, int current) {
+/**
+ * @brief Keyframe management based on displacement criteria
+ * @ref   Engel et al., "Direct Sparse Odometry", IEEE Trans. PAMI, 2018
+ */
+void OdometryEstimationGPU::update_keyframes_displacement(int current) {
+  if (keyframes.empty()) {
+    keyframes.push_back(frames[current]);
+    return;
+  }
+
+  const Eigen::Isometry3d delta_from_last = keyframes.back()->T_world_imu.inverse() * frames[current]->T_world_imu;
+  const double delta_trans = delta_from_last.translation().norm();
+  const double delta_rot = Eigen::AngleAxisd(delta_from_last.linear()).angle();
+
+  if (delta_trans < keyframe_delta_trans && delta_rot < keyframe_delta_rot) {
+    return;
+  }
+
+  const auto& new_keyframe = frames[current];
+  keyframes.push_back(new_keyframe);
+
+  if (keyframes.size() <= max_num_keyframes) {
+    return;
+  }
+
+  for (int i = 0; i < keyframes.size() - 1; i++) {
+    const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
+    const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->voxelized_frame(), delta);
+
+    if (overlap < 0.01) {
+      std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;
+      marginalized_keyframes.push_back(keyframes[i]);
+      keyframes.erase(keyframes.begin() + i);
+      Callbacks::on_marginalized_keyframes(marginalized_keyframes);
+      return;
+    }
+  }
+
+  const int leave_window = 2;
+  const double eps = 1e-3;
+  std::vector<double> scores(keyframes.size() - 1, 0.0);
+  for (int i = leave_window; i < keyframes.size() - 1; i++) {
+    double sum_inv_dist = 0.0;
+    for (int j = 0; j < keyframes.size() - 1; j++) {
+      if (i == j) {
+        continue;
+      }
+
+      const double dist = (keyframes[i]->T_world_imu.translation() - keyframes[j]->T_world_imu.translation()).norm();
+      sum_inv_dist += 1.0 / (dist + eps);
+    }
+
+    const double d0 = (keyframes[i]->T_world_imu.translation() - new_keyframe->T_world_imu.translation()).norm();
+    scores[i] = std::sqrt(d0) * sum_inv_dist;
+  }
+
+  const auto max_score_loc = std::max_element(scores.begin(), scores.end());
+  const int max_score_index = std::distance(scores.begin(), max_score_loc);
+
+  std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;
+  marginalized_keyframes.push_back(keyframes[max_score_index]);
+  keyframes.erase(keyframes.begin() + max_score_index);
+  Callbacks::on_marginalized_keyframes(marginalized_keyframes);
+}
+
+/**
+ * @brief Keyframe management based on entropy measure
+ * @ref   Kuo et al., "Redesigning SLAM for Arbitrary Multi-Camera Systems", ICRA2020
+ */
+void OdometryEstimationGPU::update_keyframes_entropy(const gtsam::NonlinearFactorGraph& matching_cost_factors, int current) {
   gtsam::Values values = smoother->calculateEstimate();
 
   gtsam::NonlinearFactorGraph valid_factors;
   for (const auto& factor : matching_cost_factors) {
     bool valid = std::all_of(factor->keys().begin(), factor->keys().end(), [&](const gtsam::Key key) { return values.exists(key); });
-    if (valid) {
-      valid_factors.push_back(factor);
+    if (!valid) {
+      continue;
     }
+
+    valid_factors.push_back(factor->clone());
   }
 
   gtsam_ext::NonlinearFactorSetGPU factor_set;
@@ -506,7 +602,7 @@ void OdometryEstimation::update_keyframes_entropy(const gtsam::NonlinearFactorGr
   gtsam::Matrix6 H = linearized->hessianBlockDiagonal()[X(current)];
   double negative_entropy = std::log(H.determinant());
 
-  const double rate = 0.98;
+  const double rate = 0.99;
 
   entropy_num_frames++;
   entropy_running_average += (negative_entropy - entropy_running_average) / entropy_num_frames;

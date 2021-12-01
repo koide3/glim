@@ -117,7 +117,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   Callbacks::on_insert_submap(submap);
 
   if (current == 0) {
-    new_factors->emplace_shared<gtsam_ext::PriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e12));
+    new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e12));
   } else {
     new_factors->add(*create_between_factors(current));
     new_factors->add(*create_matching_cost_factors(current));

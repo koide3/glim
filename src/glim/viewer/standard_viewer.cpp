@@ -34,6 +34,7 @@ public:
     show_frontend_scans = true;
     show_frontend_keyframes = true;
     show_submaps = true;
+    show_factors = true;
 
     trajectory.reset(new TrajectoryManager);
 
@@ -101,16 +102,37 @@ public:
       return false;
     }
 
+    if (!show_factors && starts_with(name, "factors")) {
+      return false;
+    }
+
     return true;
   }
 
   void drawing_selection() {
     ImGui::Begin("selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Checkbox("track", &track);
+    ImGui::SameLine();
     ImGui::Checkbox("current", &show_current);
-    ImGui::Checkbox("frontend scans", &show_frontend_scans);
-    ImGui::Checkbox("frontend keyframes", &show_frontend_keyframes);
+
+    ImGui::Separator();
+    bool show_frontend = show_frontend_scans || show_frontend_keyframes;
+    if (ImGui::Checkbox("frontend", &show_frontend)) {
+      show_frontend_scans = show_frontend_keyframes = show_frontend;
+    }
+    ImGui::Checkbox("scans", &show_frontend_scans);
+    ImGui::SameLine();
+    ImGui::Checkbox("keyframes", &show_frontend_keyframes);
+
+    ImGui::Separator();
+    bool show_backend = show_submaps || show_factors;
+    if (ImGui::Checkbox("backend", &show_backend)) {
+      show_submaps = show_factors = show_backend;
+    }
+
     ImGui::Checkbox("submaps", &show_submaps);
+    ImGui::SameLine();
+    ImGui::Checkbox("factors", &show_factors);
     ImGui::End();
   }
 
@@ -430,6 +452,7 @@ public:
   bool show_frontend_scans;
   bool show_frontend_keyframes;
   bool show_submaps;
+  bool show_factors;
 
   std::unique_ptr<TrajectoryManager> trajectory;
 
