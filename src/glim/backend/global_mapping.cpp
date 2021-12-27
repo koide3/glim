@@ -407,6 +407,7 @@ bool GlobalMapping::load(const std::string& path) {
     return false;
   }
 
+  bool gpu_enabled = false;
   std::string token;
   int num_submaps, num_all_frames, num_matching_cost_factors;
 
@@ -418,6 +419,10 @@ bool GlobalMapping::load(const std::string& path) {
   for (int i = 0; i < num_matching_cost_factors; i++) {
     auto& factor = matching_cost_factors[i];
     ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
+
+    if (std::get<0>(factor).find("gpu") != std::string::npos) {
+      gpu_enabled = true;
+    }
   }
 
   submaps.resize(num_submaps);
@@ -431,11 +436,18 @@ bool GlobalMapping::load(const std::string& path) {
     submaps[i] = submap;
     subsampled_submaps[i] = submap->frame;
 
+    if (gpu_enabled) {
 #ifdef BUILD_GTSAM_EXT_GPU
-    voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame);
+      subsampled_submaps[i] = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submaps[i]);
+      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame);
 #else
-    voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
+      std::cerr << console::yellow << "warning: Loaded graph constains GPU factors while glim was build without GPU features!!" << console::reset << std::endl;
 #endif
+    }
+
+    if (voxelized_submaps[i] == nullptr) {
+      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
+    }
 
     Callbacks::on_insert_submap(submap);
   }

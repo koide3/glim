@@ -73,7 +73,7 @@ void InteractiveViewer::viewer_loop() {
   viewer->register_ui_callback("context_menu", [this] { context_menu(); });
   viewer->register_ui_callback("run_modals", [this] { run_modals(); });
 
-  viewer->add_drawable_filter("filter", [this](const std::string& name) {
+  viewer->register_drawable_filter("filter", [this](const std::string& name) {
     const auto starts_with = [](const std::string& name, const std::string& pattern) {
       return name.size() < pattern.size() ? false : std::equal(pattern.begin(), pattern.end(), name.begin());
     };

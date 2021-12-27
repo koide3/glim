@@ -57,7 +57,7 @@ public:
     submap_viewer->set_draw_xy_grid(false);
     submap_viewer->use_topdown_camera_control(80.0);
 
-    viewer->add_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
+    viewer->register_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
     viewer->register_ui_callback("selection", [this] { drawing_selection(); });
 
     viewer_started = true;
