@@ -3,6 +3,7 @@
 #include <random>
 #include <vector>
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <glim/preprocess/preprocessed_frame.hpp>
 
@@ -15,6 +16,7 @@ namespace glim {
 class CloudPreprocessor {
 public:
   using Points = std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   /**
    * @brief Construct a new Cloud Preprocessor object
@@ -42,6 +44,8 @@ private:
   std::vector<int> find_neighbors(const Points& points, int k) const;
 
 private:
+  Eigen::Isometry3d T_lidar_offset;
+
   bool use_random_grid_downsampling;
   double distance_near_thresh;
   double distance_far_thresh;

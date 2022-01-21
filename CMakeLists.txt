@@ -3,8 +3,11 @@ project(glim)
 
 add_compile_options(-std=c++17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
-set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
 
 option(BUILD_WITH_CUDA "Build with GPU support" ON)
 option(BUILD_WITH_VIEWER "Build with visualizer" ON)
@@ -118,22 +121,19 @@ if(BUILD_WITH_VIEWER)
   install(TARGETS glim_vis)
 endif()
 
-###########
-## ament ##
-###########
-find_package(ament_cmake QUIET)
-if(ament_cmake_FOUND)
-  add_definitions(-DBUILD_GTSAM_EXT_GPU)
+#################
+## ROS-related ##
+#################
+if($ENV{ROS_VERSION} EQUAL 2)
+  # ROS2
+  find_package(ament_cmake REQUIRED)
+  install(DIRECTORY config DESTINATION share/glim)
   ament_export_include_directories(include)
   ament_export_libraries(${glim_LIBRARIES})
   ament_package()
-endif()
-
-############
-## catkin ##
-############
-find_package(catkin QUIET)
-if(catkin_FOUND)
+elseif($ENV{ROS_VERSION} EQUAL 1)
+  # ROS1
+  find_package(catkin REQUIRED)
   catkin_package(
     INCLUDE_DIRS include thirdparty/gtsam_ext/include
     LIBRARIES ${glim_LIBRARIES}

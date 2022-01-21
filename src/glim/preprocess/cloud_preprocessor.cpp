@@ -11,6 +11,13 @@ namespace glim {
 
 CloudPreprocessor::CloudPreprocessor() {
   Config config(GlobalConfig::get_config_path("config_preprocess"));
+  Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
+
+  T_lidar_offset.setIdentity();
+  auto lidar_offset = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_offset");
+  if (lidar_offset) {
+    T_lidar_offset = *lidar_offset;
+  }
 
   use_random_grid_downsampling = config.param<bool>("preprocess", "use_random_grid_downsampling", false);
 
@@ -24,7 +31,12 @@ CloudPreprocessor::CloudPreprocessor() {
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(double stamp, const std::vector<double>& times, const Points& points) const {
-  auto frame = distance_filter(times, points);
+  PreprocessedFrame::Ptr frame(new PreprocessedFrame);
+  frame->times = times;
+  frame->points.resize(points.size());
+  std::transform(points.begin(), points.end(), frame->points.begin(), [this](const Eigen::Vector4d& p) { return T_lidar_offset * p; });
+
+  frame = distance_filter(frame->times, frame->points);
   if (use_random_grid_downsampling) {
     frame = downsample_randomgrid(frame->times, frame->points, mt, downsample_resolution, downsample_rate);
   } else {
