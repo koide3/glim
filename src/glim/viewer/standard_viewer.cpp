@@ -33,6 +33,11 @@ StandardViewer::StandardViewer() {
   show_submaps = true;
   show_factors = true;
 
+  show_frontend_status = false;
+  last_id = last_num_points = 0;
+  last_imu_vel.setZero();
+  last_imu_bias.setZero();
+
   trajectory.reset(new TrajectoryManager);
 
   set_callbacks();
@@ -106,6 +111,11 @@ void StandardViewer::set_callbacks() {
     invoke([this, new_frame] {
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
+
+      last_id = new_frame->id;
+      last_num_points = new_frame->frame->size();
+      last_imu_vel = new_frame->v_world_imu;
+      last_imu_bias = new_frame->imu_bias;
 
       trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor());
       const Eigen::Isometry3f pose = resolve_pose(new_frame);
@@ -409,7 +419,12 @@ bool StandardViewer::drawable_filter(const std::string& name) {
 
 void StandardViewer::drawable_selection() {
   ImGui::Begin("selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-  ImGui::Checkbox("track", &track);
+
+  if (ImGui::Checkbox("track", &track)) {
+    if (track) {
+      guik::LightViewer::instance()->reset_center();
+    }
+  }
   ImGui::SameLine();
   ImGui::Checkbox("current", &show_current);
 
@@ -418,6 +433,12 @@ void StandardViewer::drawable_selection() {
   if (ImGui::Checkbox("frontend", &show_frontend)) {
     show_frontend_scans = show_frontend_keyframes = show_frontend;
   }
+
+  ImGui::SameLine();
+  if (ImGui::Button("Status")) {
+    show_frontend_status = true;
+  }
+
   ImGui::Checkbox("scans", &show_frontend_scans);
   ImGui::SameLine();
   ImGui::Checkbox("keyframes", &show_frontend_keyframes);
@@ -432,5 +453,14 @@ void StandardViewer::drawable_selection() {
   ImGui::SameLine();
   ImGui::Checkbox("factors", &show_factors);
   ImGui::End();
+
+  if (show_frontend_status) {
+    ImGui::Begin("frontend status", &show_frontend_status, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text("frame ID:%d", last_id);
+    ImGui::Text("#points:%d", last_num_points);
+    ImGui::Text("vel:%.3f %.3f %.3f", last_imu_vel[0], last_imu_vel[1], last_imu_vel[2]);
+    ImGui::Text("bias:%.3f %.3f %.3f %.3f %.3f %.3f", last_imu_bias[0], last_imu_bias[1], last_imu_bias[2], last_imu_bias[3], last_imu_bias[4], last_imu_bias[5]);
+    ImGui::End();
+  }
 }
 }  // namespace glim

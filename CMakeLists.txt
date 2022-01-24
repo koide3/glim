@@ -124,7 +124,7 @@ endif()
 #################
 ## ROS-related ##
 #################
-if(DEFINED $ENV{ROS_VERSION})
+if(DEFINED ENV{ROS_VERSION})
   if($ENV{ROS_VERSION} EQUAL 2)
     # ROS2
     find_package(ament_cmake REQUIRED)

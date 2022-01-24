@@ -16,6 +16,8 @@ struct EstimationFrame;
 
 class StandardViewer {
 public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
   StandardViewer();
   virtual ~StandardViewer();
 
@@ -45,6 +47,12 @@ private:
   bool show_frontend_keyframes;
   bool show_submaps;
   bool show_factors;
+
+  bool show_frontend_status;
+  int last_id;
+  int last_num_points;
+  Eigen::Vector3d last_imu_vel;
+  Eigen::Matrix<double, 6, 1> last_imu_bias;
 
   std::unique_ptr<TrajectoryManager> trajectory;
   std::vector<Eigen::Isometry3f, Eigen::aligned_allocator<Eigen::Isometry3f>> submap_keyframes;

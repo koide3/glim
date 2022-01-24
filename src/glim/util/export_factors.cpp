@@ -13,17 +13,17 @@
 #include <gtsam_ext/factors/loose_prior_factor.hpp>
 #include <gtsam_ext/factors/rotate_vector3_factor.hpp>
 
-
+/*
 namespace boost { namespace serialization {
    struct U;  // forward-declaration for Bug 1676
-} } // boost::serialization 
+} } // boost::serialization
 
 namespace Eigen { namespace internal {
   // Workaround for bug 1676
   template<>
   struct traits<boost::serialization::U> {enum {Flags=0};};
-} } 
-
+} }
+*/
 
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Isotropic, "gtsam::noiseModel::Isotropic");
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Gaussian, "gtsam::noiseModel::Gaussian");
