@@ -449,7 +449,7 @@ bool GlobalMapping::load(const std::string& path) {
       subsampled_submaps[i] = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submaps[i]);
       voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame);
 #else
-      std::cerr << console::yellow << "warning: Loaded graph constains GPU factors while glim was build without GPU features!!" << console::reset << std::endl;
+      std::cerr << console::yellow << "warning: Loaded graph constains GPU factors while glim was built without GPU features!!" << console::reset << std::endl;
 #endif
     }
 

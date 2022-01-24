@@ -124,18 +124,20 @@ endif()
 #################
 ## ROS-related ##
 #################
-if($ENV{ROS_VERSION} EQUAL 2)
-  # ROS2
-  find_package(ament_cmake REQUIRED)
-  install(DIRECTORY config DESTINATION share/glim)
-  ament_export_include_directories(include)
-  ament_export_libraries(${glim_LIBRARIES})
-  ament_package()
-elseif($ENV{ROS_VERSION} EQUAL 1)
-  # ROS1
-  find_package(catkin REQUIRED)
-  catkin_package(
-    INCLUDE_DIRS include thirdparty/gtsam_ext/include
-    LIBRARIES ${glim_LIBRARIES}
-  )
+if(DEFINED $ENV{ROS_VERSION})
+  if($ENV{ROS_VERSION} EQUAL 2)
+    # ROS2
+    find_package(ament_cmake REQUIRED)
+    install(DIRECTORY config DESTINATION share/glim)
+    ament_export_include_directories(include)
+    ament_export_libraries(${glim_LIBRARIES})
+    ament_package()
+  elseif($ENV{ROS_VERSION} EQUAL 1)
+    # ROS1
+    find_package(catkin REQUIRED)
+    catkin_package(
+      INCLUDE_DIRS include thirdparty/gtsam_ext/include
+      LIBRARIES ${glim_LIBRARIES}
+    )
+  endif()
 endif()
