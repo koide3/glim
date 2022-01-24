@@ -30,7 +30,7 @@ using gtsam::symbol_shorthand::X;
 
 using Callbacks = SubMappingCallbacks;
 
-SubMapping::SubMapping() {
+SubMappingParams::SubMappingParams() {
   Config config(GlobalConfig::get_config_path("config_backend"));
 
   enable_imu = config.param<bool>("sub_mapping", "enable_imu", true);
@@ -57,7 +57,11 @@ SubMapping::SubMapping() {
   if (registration_error_factor_type.find("GPU") != std::string::npos) {
     enable_gpu = true;
   }
+}
 
+SubMappingParams::~SubMappingParams() {}
+
+SubMapping::SubMapping(const SubMappingParams& params) : params(params) {
   submap_count = 0;
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
@@ -75,7 +79,7 @@ SubMapping::~SubMapping() {}
 
 void SubMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
-  if (enable_imu) {
+  if (params.enable_imu) {
     imu_integration->insert_imu(stamp, linear_acc, angular_vel);
   }
 }
@@ -87,7 +91,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   const int last = current - 1;
   odom_frames.push_back(odom_frame);
 
-  if (enable_imu && odom_frame->frame_id != FrameID::IMU) {
+  if (params.enable_imu && odom_frame->frame_id != FrameID::IMU) {
     std::cerr << console::yellow << "warning: odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation" << console::reset << std::endl;
   }
 
@@ -98,7 +102,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values->at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
   }
   // Create a relative pose factor between consecutive frames
-  else if (create_between_factors) {
+  else if (params.create_between_factors) {
     auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), odom_frames[last]->frame, odom_frames[current]->frame);
     auto linearized = factor->linearize(*values);
     auto H = linearized->hessianBlockDiagonal()[X(current)];
@@ -109,7 +113,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   }
 
   // Create an IMU preintegration factor
-  if (enable_imu) {
+  if (params.enable_imu) {
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
     values->insert(V(current), odom_frame->v_world_imu);
@@ -137,7 +141,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   bool insert_as_keyframe = keyframes.empty();
   if (!insert_as_keyframe) {
     // Overlap-based keyframe update
-    if (keyframe_update_strategy == "OVERLAP") {
+    if (params.keyframe_update_strategy == "OVERLAP") {
       /*
       std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> targets(keyframes.size());
       std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> deltas(keyframes.size());
@@ -148,17 +152,17 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       const double overlap = odom_frame->frame->overlap_auto(targets, deltas);
       */
       const double overlap = odom_frame->frame->overlap_auto(voxelized_keyframes.back(), keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
-      insert_as_keyframe = overlap < max_keyframe_overlap;
+      insert_as_keyframe = overlap < params.max_keyframe_overlap;
     }
     // Displacement-based keyframe update
-    else if (keyframe_update_strategy == "DISPLACEMENT") {
+    else if (params.keyframe_update_strategy == "DISPLACEMENT") {
       const Eigen::Isometry3d delta_from_keyframe = keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor();
       const double delta_trans = delta_from_keyframe.translation().norm();
       const double delta_angle = Eigen::AngleAxisd(delta_from_keyframe.linear()).angle();
 
-      insert_as_keyframe = delta_trans > keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot;
+      insert_as_keyframe = delta_trans > params.keyframe_update_interval_trans || delta_angle > params.keyframe_update_interval_rot;
     } else {
-      std::cerr << console::yellow << "warning: unknown keyframe update strategy " << console::underline << keyframe_update_strategy << console::reset << std::endl;
+      std::cerr << console::yellow << "warning: unknown keyframe update strategy " << console::underline << params.keyframe_update_strategy << console::reset << std::endl;
     }
   }
 
@@ -169,11 +173,11 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
     // Create registration error factors (fully connected)
     for (int i = 0; i < keyframes.size() - 1; i++) {
-      if (registration_error_factor_type == "VGICP") {
+      if (params.registration_error_factor_type == "VGICP") {
         graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelized_keyframes[i], keyframes.back()->frame);
       }
 #ifdef BUILD_GTSAM_EXT_GPU
-      else if (registration_error_factor_type == "VGICP_GPU") {
+      else if (params.registration_error_factor_type == "VGICP_GPU") {
         auto roundrobin = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin);
         auto stream_buffer = roundrobin->get_stream_buffer();
         const auto& stream = stream_buffer.first;
@@ -182,7 +186,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       }
 #endif
       else {
-        std::cerr << console::yellow << "warning: unknown registration error factor type " << console::underline << registration_error_factor_type << console::yellow << std::endl;
+        std::cerr << console::yellow << "warning: unknown registration error factor type " << console::underline << params.registration_error_factor_type << console::yellow
+                  << std::endl;
       }
     }
   }
@@ -207,7 +212,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   gtsam_ext::Frame::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
-  if (enable_imu) {
+  if (params.enable_imu) {
     const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
@@ -230,20 +235,20 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   }
 
   // Random sampling for registration error factors
-  gtsam_ext::Frame::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, keyframe_randomsampling_rate, mt);
+  gtsam_ext::Frame::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, params.keyframe_randomsampling_rate, mt);
 
   gtsam_ext::VoxelizedFrame::Ptr voxelized_keyframe;
   EstimationFrame::Ptr keyframe(new EstimationFrame);
   *keyframe = *odom_frame;
 
 #ifdef BUILD_GTSAM_EXT_GPU
-  if (enable_gpu) {
-    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(keyframe_voxel_resolution, *deskewed_frame);
+  if (params.enable_gpu) {
+    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
   }
 #endif
   if (!voxelized_keyframe) {
-    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(keyframe_voxel_resolution, *deskewed_frame);
+    voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = subsampled_frame;
   }
 
@@ -253,7 +258,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
 }
 
 SubMap::Ptr SubMapping::create_submap(bool force_create) const {
-  if (keyframes.size() < max_num_keyframes && !force_create) {
+  if (keyframes.size() < params.max_num_keyframes && !force_create) {
     return nullptr;
   }
 
@@ -265,7 +270,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     lm_params.callback = [](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) { Callbacks::on_optimization_status(status, values); };
   }
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
-  if (enable_optimization) {
+  if (params.enable_optimization) {
     try {
       gtsam::Values optimized = optimizer.optimize();
       *values = optimized;
@@ -293,7 +298,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     const Eigen::Isometry3d T_world_sensor(values->at<gtsam::Pose3>(X(i)).matrix());
     frame->set_T_world_sensor(odom_frames[i]->frame_id, T_world_sensor);
 
-    if (enable_imu) {
+    if (params.enable_imu) {
       frame->v_world_imu = values->at<gtsam::Vector3>(V(i));
       frame->imu_bias = values->at<gtsam::imuBias::ConstantBias>(B(i)).vector();
     }
@@ -310,13 +315,13 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
 
   // TODO: improve merging process
 #ifdef BUILD_GTSAM_EXT_GPU
-  if (enable_gpu) {
+  if (params.enable_gpu) {
     // submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
   }
 #endif
 
   if (submap->frame == nullptr) {
-    submap->frame = gtsam_ext::merge_voxelized_frames(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution);
+    submap->frame = gtsam_ext::merge_voxelized_frames(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution, params.submap_voxel_resolution);
   }
 
   return submap;

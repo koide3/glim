@@ -37,7 +37,7 @@ using gtsam::symbol_shorthand::X;
 
 using Callbacks = GlobalMappingCallbacks;
 
-GlobalMapping::GlobalMapping() {
+GlobalMappingParams::GlobalMappingParams() {
   Config config(GlobalConfig::get_config_path("config_backend"));
 
   enable_imu = config.param<bool>("global_mapping", "enable_imu", true);
@@ -51,8 +51,16 @@ GlobalMapping::GlobalMapping() {
 
   enable_gpu = registration_error_factor_type.find("GPU") != std::string::npos;
 
+  use_isam2_dogleg = config.param<bool>("global_mapping", "use_isam2_dogleg", false);
+  isam2_relinearize_skip = config.param<int>("global_mapping", "isam2_relinearize_skip", 1);
+  isam2_relinearize_thresh = config.param<double>("global_mapping", "isam2_relinearize_thresh", 0.1);
+}
+
+GlobalMappingParams::~GlobalMappingParams() {}
+
+GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params) {
 #ifndef BUILD_GTSAM_EXT_GPU
-  if (enable_gpu) {
+  if (params.enable_gpu) {
     std::cerr << console::bold_red << "error: GPU-based factors cannot be used because GLIM is built without GPU option!!" << console::reset << std::endl;
   }
 #endif
@@ -63,12 +71,12 @@ GlobalMapping::GlobalMapping() {
   new_factors.reset(new gtsam::NonlinearFactorGraph);
 
   gtsam::ISAM2Params isam2_params;
-  if (config.param<bool>("global_mapping", "use_isam2_dogleg", false)) {
+  if (params.use_isam2_dogleg) {
     gtsam::ISAM2DoglegParams dogleg_params;
     isam2_params.setOptimizationParams(dogleg_params);
   }
-  isam2_params.setRelinearizeSkip(config.param<int>("global_mapping", "isam2_relinearize_skip", 1));
-  isam2_params.setRelinearizeThreshold(config.param<double>("global_mapping", "isam2_relinearize_thresh", 0.1));
+  isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
+  isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
   isam2.reset(new gtsam_ext::ISAM2Ext(isam2_params));
 
 #ifdef BUILD_GTSAM_EXT_GPU
@@ -80,7 +88,7 @@ GlobalMapping::~GlobalMapping() {}
 
 void GlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
-  if (enable_imu) {
+  if (params.enable_imu) {
     imu_integration->insert_imu(stamp, linear_acc, angular_vel);
   }
 }
@@ -123,7 +131,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
     new_factors->add(*create_matching_cost_factors(current));
   }
 
-  if (enable_imu) {
+  if (params.enable_imu) {
     if (submap->odom_frames.front()->frame_id != FrameID::IMU) {
       std::cerr << console::yellow << "warning: odom frames are not estimated in the IMU frame while global mapping requires IMU estimation" << console::reset << std::endl;
     }
@@ -166,7 +174,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
       imu_integration->erase_imu_data(imu_read_cursor);
 
       if (num_integrated < 2) {
-        std::cerr << "warning: fficient IMU data between submaps (global_mapping)!!" << std::endl;
+        std::cerr << "warning: efficient IMU data between submaps (global_mapping)!!" << std::endl;
         new_factors->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last * 2 + 1), V(current * 2), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       } else {
         new_factors
@@ -191,22 +199,22 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 }
 
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
-  gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, randomsampling_rate, mt);
+  gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, params.randomsampling_rate, mt);
   gtsam_ext::VoxelizedFrame::Ptr voxelized_submap;
 
 #ifdef BUILD_GTSAM_EXT_GPU
-  if (enable_gpu && !submap->frame->points_gpu) {
+  if (params.enable_gpu && !submap->frame->points_gpu) {
     submap->frame = std::make_shared<gtsam_ext::FrameGPU>(*submap->frame);
   }
 
-  if (enable_gpu) {
+  if (params.enable_gpu) {
     subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap, true);
-    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame, false);
+    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame, false);
   }
 #endif
 
   if (!voxelized_submap) {
-    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
+    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.submap_voxel_resolution, *submap->frame);
   }
 
   submaps.push_back(submap);
@@ -231,7 +239,7 @@ void GlobalMapping::optimize() {
 
 boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_factors(int current) const {
   auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
-  if (current == 0 || !enable_between_factors) {
+  if (current == 0 || !params.enable_between_factors) {
     return factors;
   }
 
@@ -279,22 +287,22 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
 
   for (int i = 0; i < current; i++) {
     const double dist = (submaps[i]->T_world_origin.translation() - current_submap->T_world_origin.translation()).norm();
-    if (dist > max_implicit_loop_distance) {
+    if (dist > params.max_implicit_loop_distance) {
       continue;
     }
 
     const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * current_submap->T_world_origin;
     const double overlap = current_submap->frame->overlap_auto(voxelized_submaps[i], delta);
 
-    if (overlap < min_implicit_loop_overlap) {
+    if (overlap < params.min_implicit_loop_overlap) {
       continue;
     }
 
-    if (registration_error_factor_type == "VGICP") {
+    if (params.registration_error_factor_type == "VGICP") {
       factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current]);
     }
 #ifdef BUILD_GTSAM_EXT_GPU
-    else if (registration_error_factor_type == "VGICP_GPU") {
+    else if (params.registration_error_factor_type == "VGICP_GPU") {
       const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
@@ -302,7 +310,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     }
 #endif
     else {
-      std::cerr << console::yellow << "warning: Unknown registration error type " << console::underline << registration_error_factor_type << console::reset << std::endl;
+      std::cerr << console::yellow << "warning: Unknown registration error type " << console::underline << params.registration_error_factor_type << console::reset << std::endl;
     }
   }
 
@@ -439,14 +447,14 @@ bool GlobalMapping::load(const std::string& path) {
     if (gpu_enabled) {
 #ifdef BUILD_GTSAM_EXT_GPU
       subsampled_submaps[i] = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submaps[i]);
-      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(submap_voxel_resolution, *submap->frame);
+      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame);
 #else
       std::cerr << console::yellow << "warning: Loaded graph constains GPU factors while glim was build without GPU features!!" << console::reset << std::endl;
 #endif
     }
 
     if (voxelized_submaps[i] == nullptr) {
-      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(submap_voxel_resolution, *submap->frame);
+      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.submap_voxel_resolution, *submap->frame);
     }
 
     Callbacks::on_insert_submap(submap);

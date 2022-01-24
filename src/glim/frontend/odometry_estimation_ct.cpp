@@ -22,15 +22,7 @@ namespace glim {
 using gtsam::symbol_shorthand::X;
 using Callbacks = OdometryEstimationCallbacks;
 
-/**
- * @brief Target map for scan-to-model matching
- */
-struct OdometryEstimationCT::TargetMap {
-  gtsam_ext::Frame::Ptr frame;
-  std::shared_ptr<gtsam_ext::NearestNeighborSearch> kdtree;
-};
-
-OdometryEstimationCT::OdometryEstimationCT() {
+OdometryEstimationCTParams::OdometryEstimationCTParams() {
   Config config(GlobalConfig::get_config_path("config_frontend_ct"));
 
   num_threads = config.param<int>("odometry_estimation_ct", "num_threads", 4);
@@ -44,7 +36,19 @@ OdometryEstimationCT::OdometryEstimationCT() {
   stiffness_scale_second = config.param<double>("odometry_estimation_ct", "stiffness_scale_second", 1e3);
   lm_max_iterations_first = config.param<int>("odometry_estimation_ct", "lm_max_iterations_first", 5);
   lm_max_iterations_second = config.param<int>("odometry_estimation_ct", "lm_max_iterations_second", 5);
+}
 
+OdometryEstimationCTParams::~OdometryEstimationCTParams() {}
+
+/**
+ * @brief Target map for scan-to-model matching
+ */
+struct OdometryEstimationCT::TargetMap {
+  gtsam_ext::Frame::Ptr frame;
+  std::shared_ptr<gtsam_ext::NearestNeighborSearch> kdtree;
+};
+
+OdometryEstimationCT::OdometryEstimationCT(const OdometryEstimationCTParams& params) : params(params) {
   v_last_current_history.push_back(gtsam::Vector6::Zero());
 
   frame_count = 0;
@@ -109,8 +113,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   // Create CT-GICP factor
   gtsam::NonlinearFactorGraph graph;
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor>(X(0), X(1), target_map->frame, new_frame->frame, target_map->kdtree);
-  factor->set_num_threads(num_threads);
-  factor->set_max_corresponding_distance(max_correspondence_distance);
+  factor->set_num_threads(params.num_threads);
+  factor->set_max_corresponding_distance(params.max_correspondence_distance);
   graph.add(factor);
 
   // LM configuration
@@ -122,13 +126,13 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   try {
     // First optimization step with a large stiffness
     // graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_first));
-    lm_params.setMaxIterations(lm_max_iterations_first);
+    lm_params.setMaxIterations(params.lm_max_iterations_first);
     values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
     // Second optimization step with a more elastic setting
     // graph.erase(graph.end() - 1);
     // graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(1), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, stiffness_scale_second));
-    lm_params.setMaxIterations(lm_max_iterations_second);
+    lm_params.setMaxIterations(params.lm_max_iterations_second);
     values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
   } catch (std::exception& e) {
     std::cerr << console::bold_red << "error: an exception was caught during odometry estimation" << console::reset << std::endl;
@@ -165,7 +169,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   std::nth_element(dists.begin(), dists.begin() + dists.size() / 2, dists.end());
   const double interval_trans_p = std::min(dists[dists.size() / 2] / 20.0, 1.0);
 
-  if (delta_trans > interval_trans_p * keyframe_update_interval_trans || delta_angle > keyframe_update_interval_rot) {
+  if (delta_trans > interval_trans_p * params.keyframe_update_interval_trans || delta_angle > params.keyframe_update_interval_rot) {
     keyframes.push_back(new_frame);
 
     // Create the target map in background
@@ -182,7 +186,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   }
 
   // Pop the oldest keyframe
-  if (keyframes.size() > max_num_keyframes) {
+  if (keyframes.size() > params.max_num_keyframes) {
     std::vector<EstimationFrame::ConstPtr> marginalized_keyframes = {keyframes.front()};
     Callbacks::on_marginalized_keyframes(marginalized_keyframes);
 

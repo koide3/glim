@@ -20,9 +20,31 @@ namespace glim {
 
 class IMUIntegration;
 
+struct GlobalMappingParams {
+public:
+  GlobalMappingParams();
+  ~GlobalMappingParams();
+
+public:
+  bool enable_gpu;
+  bool enable_imu;
+  bool enable_between_factors;
+  std::string between_registration_type;
+
+  std::string registration_error_factor_type;
+  double submap_voxel_resolution;
+  double randomsampling_rate;
+  double max_implicit_loop_distance;
+  double min_implicit_loop_overlap;
+
+  bool use_isam2_dogleg;
+  double isam2_relinearize_skip;
+  double isam2_relinearize_thresh;
+};
+
 class GlobalMapping : public GlobalMappingBase {
 public:
-  GlobalMapping();
+  GlobalMapping(const GlobalMappingParams& params = GlobalMappingParams());
   virtual ~GlobalMapping();
 
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
@@ -44,18 +66,10 @@ private:
   void update_submaps();
 
 private:
+  using Params = GlobalMappingParams;
+  Params params;
+
   std::mt19937 mt;
-
-  bool enable_gpu;
-  bool enable_imu;
-  bool enable_between_factors;
-  std::string between_registration_type;
-
-  std::string registration_error_factor_type;
-  double submap_voxel_resolution;
-  double randomsampling_rate;
-  double max_implicit_loop_distance;
-  double min_implicit_loop_overlap;
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::any stream_buffer_roundrobin;

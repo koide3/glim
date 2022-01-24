@@ -23,6 +23,33 @@ class IMUIntegration;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
 
+struct OdometryEstimationGPUParams {
+public:
+  OdometryEstimationGPUParams();
+  ~OdometryEstimationGPUParams();
+
+  enum class KeyframeUpdateStrategy { OVERLAP, DISPLACEMENT, ENTROPY };
+
+public:
+  // Optimization params
+  double smoother_lag;
+  bool use_isam2_dogleg;
+  double isam2_relinearize_skip;
+  double isam2_relinearize_thresh;
+
+  double voxel_resolution;
+  int max_num_keyframes;
+  int full_connection_window_size;
+
+  // Keyframe management params
+  KeyframeUpdateStrategy keyframe_strategy;
+  double keyframe_min_overlap;
+  double keyframe_max_overlap;
+  double keyframe_delta_trans;
+  double keyframe_delta_rot;
+  double keyframe_entropy_thresh;
+};
+
 /**
  * @brief GPU-based tightly coupled LiDAR-IMU frontend
  *
@@ -31,7 +58,7 @@ class OdometryEstimationGPU : public OdometryEstimationBase {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  OdometryEstimationGPU();
+  OdometryEstimationGPU(const OdometryEstimationGPUParams& params = OdometryEstimationGPUParams());
   virtual ~OdometryEstimationGPU() override;
 
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
@@ -48,21 +75,8 @@ private:
   void update_keyframes_entropy(const gtsam::NonlinearFactorGraph& matching_cost_factors, int current);
 
 private:
-  enum class KeyframeUpdateStrategy { OVERLAP, DISPLACEMENT, ENTROPY };
-
-  // Optimization params
-  double smoother_lag;
-  double voxel_resolution;
-  int max_num_keyframes;
-  int full_connection_window_size;
-
-  // Keyframe management params
-  KeyframeUpdateStrategy keyframe_strategy;
-  double keyframe_min_overlap;
-  double keyframe_max_overlap;
-  double keyframe_delta_trans;
-  double keyframe_delta_rot;
-  double keyframe_entropy_thresh;
+  using Params = OdometryEstimationGPUParams;
+  Params params;
 
   int entropy_num_frames;
   double entropy_running_average;

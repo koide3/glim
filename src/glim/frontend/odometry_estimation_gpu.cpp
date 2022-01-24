@@ -30,7 +30,7 @@ using gtsam::symbol_shorthand::B;  // IMU bias
 using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 
-OdometryEstimationGPU::OdometryEstimationGPU() {
+OdometryEstimationGPUParams::OdometryEstimationGPUParams() {
   Config config(GlobalConfig::get_config_path("config_frontend"));
 
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
@@ -54,6 +54,15 @@ OdometryEstimationGPU::OdometryEstimationGPU() {
   keyframe_delta_rot = config.param<double>("odometry_estimation", "keyframe_delta_rot", 0.25);
   keyframe_entropy_thresh = config.param<double>("odometry_estimation", "keyframe_entropy_thresh", 0.99);
 
+  smoother_lag = config.param<double>("odometry_estimation", "smoother_lag", 5.0);
+  use_isam2_dogleg = config.param<bool>("odometry_estimation", "use_isam2_dogleg", false);
+  isam2_relinearize_skip = config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1);
+  isam2_relinearize_thresh = config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1);
+}
+
+OdometryEstimationGPUParams::~OdometryEstimationGPUParams() {}
+
+OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& params) : params(params) {
   entropy_num_frames = 0;
   entropy_running_average = 0.0;
 
@@ -67,14 +76,13 @@ OdometryEstimationGPU::OdometryEstimationGPU() {
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation);
 
-  smoother_lag = config.param<double>("odometry_estimation", "smoother_lag", 5.0);
   gtsam::ISAM2Params isam2_params;
-  if (config.param<bool>("odometry_estimation", "use_isam2_dogleg", false)) {
+  if (params.use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
   }
-  isam2_params.setRelinearizeSkip(config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1));
-  isam2_params.setRelinearizeThreshold(config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1));
-  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(smoother_lag, isam2_params));
+  isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
+  isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
+  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(params.smoother_lag, isam2_params));
 
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
 }
@@ -126,7 +134,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     }
 
     auto covs = covariance_estimation->estimate(points_imu, raw_frame->neighbors);
-    new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(voxel_resolution, points_imu, covs);
+    new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.voxel_resolution, points_imu, covs);
     new_frame->frame_id = FrameID::IMU;
 
     Callbacks::on_new_frame(new_frame);
@@ -224,7 +232,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   }
 
   auto deskewed_covs = covariance_estimation->estimate(deskewed, raw_frame->neighbors);
-  new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(voxel_resolution, deskewed, deskewed_covs);
+  new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.voxel_resolution, deskewed, deskewed_covs);
   new_frame->frame_id = FrameID::IMU;
 
   Callbacks::on_new_frame(new_frame);
@@ -242,7 +250,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   // Find out marginalized frames
   while (marginalized_cursor < current) {
     double span = frames[current]->stamp - frames[marginalized_cursor]->stamp;
-    if (span < smoother_lag - 0.1) {
+    if (span < params.smoother_lag - 0.1) {
       break;
     }
 
@@ -256,14 +264,14 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   // Update frames and keyframes
   update_frames(current);
 
-  switch (keyframe_strategy) {
-    case KeyframeUpdateStrategy::OVERLAP:
+  switch (params.keyframe_strategy) {
+    case Params::KeyframeUpdateStrategy::OVERLAP:
       update_keyframes_overlap(current);
       break;
-    case KeyframeUpdateStrategy::DISPLACEMENT:
+    case Params::KeyframeUpdateStrategy::DISPLACEMENT:
       update_keyframes_displacement(current);
       break;
-    case KeyframeUpdateStrategy::ENTROPY:
+    case Params::KeyframeUpdateStrategy::ENTROPY:
       update_keyframes_entropy(matching_cost_factors, current);
       break;
   }
@@ -315,7 +323,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(
   }
 
   // There must be at least one factor between consecutive frames
-  for (int target = current - full_connection_window_size; target < current; target++) {
+  for (int target = current - params.full_connection_window_size; target < current; target++) {
     if (target < 0) {
       continue;
     }
@@ -324,7 +332,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(
   }
 
   for (const auto& keyframe : keyframes) {
-    if (keyframe->id >= current - full_connection_window_size) {
+    if (keyframe->id >= current - params.full_connection_window_size) {
       // There already exists a factor
       continue;
     }
@@ -334,7 +342,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(
     const auto& buffer = stream_buffer.second;
 
     double span = frames[current]->stamp - keyframe->stamp;
-    if (span > smoother_lag - 0.1) {
+    if (span > params.smoother_lag - 0.1) {
       // Create unary factor
       const gtsam::Pose3 key_T_world_imu(keyframe->T_world_imu.matrix());
       factors.add(create_unary_factor(key_T_world_imu, X(current), keyframe->voxelized_frame(), frames[current]->frame));
@@ -361,14 +369,13 @@ void OdometryEstimationGPU::fallback_smoother() {
   std::cerr << "mc        :" << marginalized_cursor << std::endl;
   std::cerr << console::reset;
 
-  Config config(GlobalConfig::get_config_path("config_frontend"));
   gtsam::ISAM2Params isam2_params;
-  if (config.param<bool>("odometry_estimation", "use_isam2_dogleg", false)) {
+  if (params.use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
   }
-  isam2_params.setRelinearizeSkip(config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1));
-  isam2_params.setRelinearizeThreshold(config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1));
-  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(smoother_lag, isam2_params));
+  isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
+  isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
+  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(params.smoother_lag, isam2_params));
 
   gtsam::Values values;
   gtsam::NonlinearFactorGraph factors;
@@ -392,7 +399,7 @@ void OdometryEstimationGPU::fallback_smoother() {
       factors.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(i - 1), B(i), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
     }
 
-    for (int target = i - full_connection_window_size; target < i; target++) {
+    for (int target = i - params.full_connection_window_size; target < i; target++) {
       if (target <= marginalized_cursor) {
         continue;
       }
@@ -447,14 +454,14 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   }
 
   const double overlap = frames[current]->frame->overlap_gpu(keyframes_, delta_from_keyframes);
-  if (overlap > keyframe_max_overlap) {
+  if (overlap > params.keyframe_max_overlap) {
     return;
   }
 
   const auto& new_keyframe = frames[current];
   keyframes.push_back(new_keyframe);
 
-  if (keyframes.size() <= max_num_keyframes) {
+  if (keyframes.size() <= params.max_num_keyframes) {
     return;
   }
 
@@ -464,14 +471,14 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   for (int i = 0; i < keyframes.size(); i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
     const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->voxelized_frame(), delta);
-    if (overlap < keyframe_min_overlap) {
+    if (overlap < params.keyframe_min_overlap) {
       marginalized_keyframes.push_back(keyframes[i]);
       keyframes.erase(keyframes.begin() + i);
       i--;
     }
   }
 
-  if (keyframes.size() <= max_num_keyframes) {
+  if (keyframes.size() <= params.max_num_keyframes) {
     Callbacks::on_marginalized_keyframes(marginalized_keyframes);
     return;
   }
@@ -526,14 +533,14 @@ void OdometryEstimationGPU::update_keyframes_displacement(int current) {
   const double delta_trans = delta_from_last.translation().norm();
   const double delta_rot = Eigen::AngleAxisd(delta_from_last.linear()).angle();
 
-  if (delta_trans < keyframe_delta_trans && delta_rot < keyframe_delta_rot) {
+  if (delta_trans < params.keyframe_delta_trans && delta_rot < params.keyframe_delta_rot) {
     return;
   }
 
   const auto& new_keyframe = frames[current];
   keyframes.push_back(new_keyframe);
 
-  if (keyframes.size() <= max_num_keyframes) {
+  if (keyframes.size() <= params.max_num_keyframes) {
     return;
   }
 
@@ -602,12 +609,10 @@ void OdometryEstimationGPU::update_keyframes_entropy(const gtsam::NonlinearFacto
   gtsam::Matrix6 H = linearized->hessianBlockDiagonal()[X(current)];
   double negative_entropy = std::log(H.determinant());
 
-  const double rate = 0.99;
-
   entropy_num_frames++;
   entropy_running_average += (negative_entropy - entropy_running_average) / entropy_num_frames;
 
-  if (!keyframes.empty() && negative_entropy > entropy_running_average * rate) {
+  if (!keyframes.empty() && negative_entropy > entropy_running_average * params.keyframe_entropy_thresh) {
     return;
   }
 
@@ -617,7 +622,7 @@ void OdometryEstimationGPU::update_keyframes_entropy(const gtsam::NonlinearFacto
   const auto& new_keyframe = frames[current];
   keyframes.push_back(new_keyframe);
 
-  if (keyframes.size() <= max_num_keyframes) {
+  if (keyframes.size() <= params.max_num_keyframes) {
     return;
   }
 

@@ -9,7 +9,7 @@
 
 namespace glim {
 
-CloudPreprocessor::CloudPreprocessor() {
+CloudPreprocessorParams::CloudPreprocessorParams() {
   Config config(GlobalConfig::get_config_path("config_preprocess"));
 
   use_random_grid_downsampling = config.param<bool>("preprocess", "use_random_grid_downsampling", false);
@@ -21,21 +21,25 @@ CloudPreprocessor::CloudPreprocessor() {
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
 }
 
+CloudPreprocessorParams::~CloudPreprocessorParams() {}
+
+CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : params(params) {}
+
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(double stamp, const std::vector<double>& times, const Points& points) const {
   auto frame = distance_filter(times, points);
-  if (use_random_grid_downsampling) {
-    frame = downsample_randomgrid(frame->times, frame->points, mt, downsample_resolution, downsample_rate);
+  if (params.use_random_grid_downsampling) {
+    frame = downsample_randomgrid(frame->times, frame->points, mt, params.downsample_resolution, params.downsample_rate);
   } else {
-    frame = downsample(frame->times, frame->points, downsample_resolution);
+    frame = downsample(frame->times, frame->points, params.downsample_resolution);
   }
   frame = sort_by_time(frame->times, frame->points);
 
   frame->stamp = stamp;
   frame->scan_end_time = stamp + frame->times.back();
-  frame->k_neighbors = k_correspondences;
-  frame->neighbors = find_neighbors(frame->points, k_correspondences);
+  frame->k_neighbors = params.k_correspondences;
+  frame->neighbors = find_neighbors(frame->points, params.k_correspondences);
 
   return frame;
 }
@@ -70,7 +74,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<doub
       continue;
     }
 
-    if (dist < distance_near_thresh || dist > distance_far_thresh) {
+    if (dist < params.distance_near_thresh || dist > params.distance_far_thresh) {
       continue;
     }
 

@@ -8,6 +8,20 @@
 
 namespace glim {
 
+struct CloudPreprocessorParams {
+public:
+  CloudPreprocessorParams();
+  ~CloudPreprocessorParams();
+
+public:
+  bool use_random_grid_downsampling;
+  double distance_near_thresh;
+  double distance_far_thresh;
+  double downsample_resolution;
+  double downsample_rate;
+  int k_correspondences;
+};
+
 /**
  * @brief Point cloud preprocessor
  *
@@ -19,7 +33,7 @@ public:
   /**
    * @brief Construct a new Cloud Preprocessor object
    */
-  CloudPreprocessor();
+  CloudPreprocessor(const CloudPreprocessorParams& params = CloudPreprocessorParams());
 
   /**
    * @brief Destroy the Cloud Preprocessor object
@@ -42,13 +56,8 @@ private:
   std::vector<int> find_neighbors(const Points& points, int k) const;
 
 private:
-  bool use_random_grid_downsampling;
-  double distance_near_thresh;
-  double distance_far_thresh;
-  double downsample_resolution;
-  double downsample_rate;
-  int k_correspondences;
-
+  using Params = CloudPreprocessorParams;
+  Params params;
   mutable std::mt19937 mt;
 };
 

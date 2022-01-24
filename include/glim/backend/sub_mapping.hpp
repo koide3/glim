@@ -21,24 +21,12 @@ class IMUIntegration;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
 
-class SubMapping : public SubMappingBase {
+struct SubMappingParams {
 public:
-  SubMapping();
-  virtual ~SubMapping() override;
+  SubMappingParams();
+  ~SubMappingParams();
 
-  virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
-  virtual void insert_frame(const EstimationFrame::ConstPtr& odom_frame) override;
-
-  virtual std::vector<SubMap::Ptr> get_submaps() override;
-
-  virtual std::vector<SubMap::Ptr> submit_end_of_sequence() override;
-
-private:
-  void insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame);
-
-  SubMap::Ptr create_submap(bool force_create = false) const;
-
-private:
+public:
   bool enable_gpu;
   bool enable_imu;
   bool enable_optimization;
@@ -58,6 +46,28 @@ private:
 
   double submap_downsample_resolution;
   double submap_voxel_resolution;
+};
+
+class SubMapping : public SubMappingBase {
+public:
+  SubMapping(const SubMappingParams& params = SubMappingParams());
+  virtual ~SubMapping() override;
+
+  virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
+  virtual void insert_frame(const EstimationFrame::ConstPtr& odom_frame) override;
+
+  virtual std::vector<SubMap::Ptr> get_submaps() override;
+
+  virtual std::vector<SubMap::Ptr> submit_end_of_sequence() override;
+
+private:
+  void insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame);
+
+  SubMap::Ptr create_submap(bool force_create = false) const;
+
+private:
+  using Params = SubMappingParams;
+  Params params;
 
   std::mt19937 mt;
   int submap_count;
