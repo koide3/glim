@@ -325,9 +325,11 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2,
     if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedMatchingCostFactor>(factor)) {
       inserted_factors.push_back(std::make_tuple(FactorType::MATCHING_COST, factor->keys()[0], factor->keys()[1]));
     }
+#ifdef BUILD_GTSAM_EXT_GPU
     if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
       inserted_factors.push_back(std::make_tuple(FactorType::MATCHING_COST, factor->keys()[0], factor->keys()[1]));
     }
+#endif
     if (boost::dynamic_pointer_cast<gtsam::ImuFactor>(factor)) {
       inserted_factors.push_back(std::make_tuple(FactorType::IMU, factor->keys()[0], factor->keys()[2]));
     }
