@@ -25,12 +25,18 @@ class CloudCovarianceEstimation;
 
 struct OdometryEstimationGPUParams {
 public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
   OdometryEstimationGPUParams();
   ~OdometryEstimationGPUParams();
 
   enum class KeyframeUpdateStrategy { OVERLAP, DISPLACEMENT, ENTROPY };
 
 public:
+  // Sensor params;
+  Eigen::Isometry3d T_lidar_imu;
+  Eigen::Matrix<double, 6, 1> imu_bias;
+
   // Optimization params
   double smoother_lag;
   bool use_isam2_dogleg;

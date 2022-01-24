@@ -6,17 +6,11 @@
 
 namespace glim {
 
-NaiveInitialStateEstimation::NaiveInitialStateEstimation() : stamp(0.0), sum_acc(Eigen::Vector3d::Zero()) {
-  Config config(GlobalConfig::get_config_path("config_sensors"));
-  T_lidar_imu = config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
-
-  auto bias = config.param<std::vector<double>>("sensors", "imu_bias");
-  if (bias && bias->size() == 6) {
-    imu_bias = Eigen::Map<const Eigen::Matrix<double, 6, 1>>(bias->data());
-  } else {
-    imu_bias.setZero();
-  }
-}
+NaiveInitialStateEstimation::NaiveInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias)
+: stamp(0.0),
+  sum_acc(Eigen::Vector3d::Zero()),
+  imu_bias(imu_bias),
+  T_lidar_imu(T_lidar_imu) {}
 
 NaiveInitialStateEstimation ::~NaiveInitialStateEstimation() {}
 

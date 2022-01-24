@@ -31,6 +31,18 @@ using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 
 OdometryEstimationGPUParams::OdometryEstimationGPUParams() {
+  // sensor config
+  Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
+  T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
+
+  auto bias = sensor_config.param<std::vector<double>>("sensors", "imu_bias");
+  if (bias && bias->size() == 6) {
+    imu_bias = Eigen::Map<const Eigen::Matrix<double, 6, 1>>(bias->data());
+  } else {
+    imu_bias.setZero();
+  }
+
+  // frontend config
   Config config(GlobalConfig::get_config_path("config_frontend"));
 
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
@@ -70,7 +82,7 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
 
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
-  init_estimation.reset(new NaiveInitialStateEstimation);
+  init_estimation.reset(new NaiveInitialStateEstimation(params.T_lidar_imu, params.imu_bias));
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);

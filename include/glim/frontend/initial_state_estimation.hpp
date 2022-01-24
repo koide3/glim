@@ -45,7 +45,7 @@ class NaiveInitialStateEstimation : public InitialStateEstimation {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  NaiveInitialStateEstimation();
+  NaiveInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias);
   virtual ~NaiveInitialStateEstimation();
 
   virtual void insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
