@@ -9,6 +9,7 @@
 #include <glim/frontend/callbacks.hpp>
 #include <glim/frontend/estimation_frame.hpp>
 #include <glim/backend/callbacks.hpp>
+#include <glim/util/config.hpp>
 #include <glim/util/trajectory_manager.hpp>
 
 #include <glk/colormap.hpp>
@@ -23,6 +24,8 @@
 namespace glim {
 
 StandardViewer::StandardViewer() {
+  glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
+
   kill_switch = false;
   request_to_terminate = false;
 
@@ -39,6 +42,9 @@ StandardViewer::StandardViewer() {
   last_imu_bias.setZero();
 
   trajectory.reset(new TrajectoryManager);
+
+  enable_partial_rendering = config.param("standard_viewer", "enable_partial_rendering", false);
+  partial_rendering_budget = config.param("standard_viewer", "partial_rendering_budget", 1024);
 
   set_callbacks();
   thread = std::thread([this] { viewer_loop(); });
@@ -281,7 +287,14 @@ void StandardViewer::set_callbacks() {
 
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
-      viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, guik::Rainbow(T_world_origin->matrix().cast<float>()));
+      auto shader_setting = guik::Rainbow(T_world_origin->matrix().cast<float>());
+
+      if (enable_partial_rendering) {
+        cloud_buffer->enable_partial_rendering(partial_rendering_budget);
+        shader_setting.add("dynamic_object", 0).make_transparent();
+      }
+
+      viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, shader_setting);
     });
   });
 
@@ -359,8 +372,14 @@ void StandardViewer::set_callbacks() {
 }
 
 void StandardViewer::viewer_loop() {
-  auto viewer = guik::LightViewer::instance(Eigen::Vector2i(2560, 1440));
+  glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
+
+  auto viewer = guik::LightViewer::instance(Eigen::Vector2i(config.param("standard_viewer", "viewer_width", 2560), config.param("standard_viewer", "viewer_height", 1440)));
   viewer->enable_vsync();
+  if (enable_partial_rendering) {
+    viewer->enable_partial_rendering(1e-1);
+    viewer->shader_setting().add("dynamic_object", 1);
+  }
 
   auto submap_viewer = viewer->sub_viewer("submap");
   submap_viewer->set_pos(Eigen::Vector2i(100, 800));

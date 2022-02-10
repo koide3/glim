@@ -77,6 +77,9 @@ protected:
   bool draw_factors;
   bool draw_spheres;
 
+  bool enable_partial_rendering;
+  int partial_rendering_budget;
+
   // Click information
   Eigen::Vector4i right_clicked_info;
   Eigen::Vector3f right_clicked_pos;

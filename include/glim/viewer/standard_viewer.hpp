@@ -41,6 +41,9 @@ private:
   std::atomic_bool kill_switch;
   std::thread thread;
 
+  bool enable_partial_rendering;
+  int partial_rendering_budget;
+
   bool track;
   bool show_current;
   bool show_frontend_scans;

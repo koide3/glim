@@ -6,6 +6,7 @@
 #include <glim/backend/sub_map.hpp>
 #include <glim/backend/callbacks.hpp>
 #include <glim/util/concurrent_vector.hpp>
+#include <glim/util/config.hpp>
 
 #include <glim/viewer/interactive/manual_loop_close_modal.hpp>
 #include <glim/viewer/interactive/bundle_adjustment_modal.hpp>
@@ -31,6 +32,8 @@ namespace glim {
 using gtsam::symbol_shorthand::X;
 
 InteractiveViewer::InteractiveViewer() {
+  glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
+
   kill_switch = false;
   request_to_terminate = false;
   request_to_clear = false;
@@ -41,6 +44,9 @@ InteractiveViewer::InteractiveViewer() {
   draw_points = true;
   draw_factors = true;
   draw_spheres = true;
+
+  enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
+  partial_rendering_budget = config.param("interactive_viewer", "partial_rendering_budget", 1024);
 
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -68,6 +74,12 @@ void InteractiveViewer::viewer_loop() {
   auto viewer = guik::LightViewer::instance(Eigen::Vector2i(2560, 1440));
   viewer->enable_info_buffer();
   viewer->enable_vsync();
+
+  if (enable_partial_rendering) {
+    viewer->enable_partial_rendering(0.1);
+    viewer->shader_setting().add("dynamic_object", 1);
+  }
+
   viewer->register_ui_callback("selection", [this] { drawable_selection(); });
   viewer->register_ui_callback("on_click", [this] { on_click(); });
   viewer->register_ui_callback("context_menu", [this] { context_menu(); });
@@ -215,7 +227,14 @@ void InteractiveViewer::update_viewer() {
     } else {
       const Eigen::Vector4i info(static_cast<int>(PickType::POINTS), 0, 0, submap->id);
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
-      viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, guik::Rainbow(submap_pose).add("info_values", info));
+      auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info);
+
+      if (enable_partial_rendering) {
+        cloud_buffer->enable_partial_rendering(partial_rendering_budget);
+        shader_setting.add("dynamic_object", 0).make_transparent();
+      }
+
+      viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, shader_setting);
     }
 
     const Eigen::Vector4i info(static_cast<int>(PickType::FRAME), 0, 0, submap->id);
