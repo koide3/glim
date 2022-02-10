@@ -15,6 +15,7 @@
   // keyframe_delta_(trans|rot)  : Keyframe displacement threshold [m / rad]
   */
   "odometry_estimation": {
+    "frontend_mode": "GPU",
     "smoother_lag": 3.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,

@@ -33,7 +33,7 @@
   // isam2_relinearize_thresh       : Relinearization is performed only when linear delta gets larger than this
   */
   "sub_mapping": {
-    "enable_imu": true,
+    "enable_imu": false,
     "enable_optimization": true,
     // Keyframe update strategy
     "max_num_keyframes": 15,
@@ -45,22 +45,22 @@
     "create_between_factors": true,
     "between_registration_type": "GICP",
     // Registration error factors
-    "registration_error_factor_type": "VGICP_GPU",
-    "keyframe_randomsampling_rate": 1.0,
+    "registration_error_factor_type": "VGICP",
+    "keyframe_randomsampling_rate": 0.1,
     "keyframe_voxel_resolution": 0.5,
     // Post processing
     "submap_downsample_resolution": 0.1,
     "submap_voxel_resolution": 0.5
   },
   "global_mapping": {
-    "enable_imu": true,
+    "enable_imu": false,
     // Relative pose factors
-    "create_between_factors": false,
+    "create_between_factors": true,
     "between_registration_type": "GICP",
     // Registration error factors
-    "registration_error_factor_type": "VGICP_GPU",
+    "registration_error_factor_type": "VGICP",
     "submap_voxel_resolution": 2.0,
-    "randomsampling_rate": 1.0,
+    "randomsampling_rate": 0.1,
     "max_implicit_loop_distance": 100.0,
     "min_implicit_loop_overlap": 0.05,
     // Optimizer settings
