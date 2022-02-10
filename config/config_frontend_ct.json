@@ -13,7 +13,7 @@
   // keyframe_update_interval_* : When the displacement from the last keyframe exceeds this param,
   //                            : the latest scan is inserted into the keyframe list (trans[m], rot[rad])
   // stiffness_scale_*          : Scale of the information matrix for "stiffness" factor between the scan beginning and end
-  //                            : Setting this to large makes the registration behaves like a plain ICP
+  //                            : A large stiffness scale makes the registration behave like a plain ICP
   // lm_max_iterations_*        : Maximum iterations for LM optimization for each optimization step
   */
   "odometry_estimation_ct": {

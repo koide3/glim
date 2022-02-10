@@ -1,11 +1,11 @@
 {
   /*** Preprocessing parameters ***
   // distance_(near|far)_thresh  : Points out of this range will be filtered out
-  // use_random_grid_downsampling: If false, use the conventional voxelgrid downsampling is used
-  //                             : Otherwise, voxel-based random sampling is used (recommended for Livox)
+  // use_random_grid_downsampling: If false, use the conventional voxelgrid downsampling
+  //                             : Otherwise, use voxel-based random sampling (recommended for Livox)
   // downsample_resolution       : Voxel grid resolution for downsampling
   // random_downsample_rate      : Sampling rate for voxel-based random sampling
-  // k_correspondences           : The number of neighbors used for covariance estimation
+  // k_correspondences           : Number of neighbors for covariance estimation
   */
   "preprocess": {
     "distance_near_thresh": 2.0,
