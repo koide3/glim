@@ -169,7 +169,8 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
 
     // Prior for initial IMU states
     new_factors.add(gtsam_ext::LoosePriorFactor<gtsam::Pose3>(X(0), gtsam::Pose3(init_state->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e10)));
-    new_factors.add(gtsam::PriorFactor<gtsam::Vector3>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0)));
+    // new_factors.add(gtsam::PriorFactor<gtsam::Vector3>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0)));
+    new_factors.add(gtsam::PriorFactor<gtsam::Vector3>(V(0), gtsam::Vector3(20.0, 0.0, 0.0), gtsam::noiseModel::Isotropic::Precision(3, 1.0)));
     new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(0), gtsam::imuBias::ConstantBias(init_state->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e2)));
 
     smoother->update(new_factors, new_values, new_stamps);
@@ -206,7 +207,8 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   new_values.insert(B(current), last_imu_bias);
 
   // Constant IMU bias assumption
-  new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+  new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e10)));
+  new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
   // Create IMU factor
   gtsam::ImuFactor::shared_ptr imu_factor;
   if (num_imu_integrated >= 2) {
