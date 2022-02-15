@@ -139,7 +139,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     new_frame->imu_bias = init_state->imu_bias;
     new_frame->raw_frame = raw_frame;
 
-    // Transform points to IMU frame
+    // Transform points into IMU frame
     std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points_imu(raw_frame->size());
     for (int i = 0; i < raw_frame->size(); i++) {
       points_imu[i] = T_imu_lidar * raw_frame->points[i];

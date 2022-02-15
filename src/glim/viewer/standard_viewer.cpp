@@ -28,6 +28,8 @@ StandardViewer::StandardViewer() {
 
   track = true;
   show_current = true;
+  show_intensity = false;
+  show_intensity = false;
   show_frontend_scans = true;
   show_frontend_keyframes = true;
   show_submaps = true;
@@ -112,6 +114,11 @@ void StandardViewer::set_callbacks() {
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
 
+      if (!new_frame->raw_frame->intensities.empty()) {
+        const double max_intensity = *std::max_element(new_frame->raw_frame->intensities.begin(), new_frame->raw_frame->intensities.end());
+        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, new_frame->raw_frame->intensities, 1.0 / 1.0);
+      }
+
       last_id = new_frame->id;
       last_num_points = new_frame->frame->size();
       last_imu_vel = new_frame->v_world_imu;
@@ -123,9 +130,14 @@ void StandardViewer::set_callbacks() {
       if (track) {
         viewer->lookat(pose.translation());
       }
-      viewer->update_drawable("current_frame", cloud_buffer, guik::FlatColor(1.0, 0.5, 0.0, 1.0, pose).add("point_scale", 2.0f));
+
+      guik::ShaderSetting shader_setting = guik::FlatColor(1.0f, 0.5f, 0.0f, 1.0f, pose);
+      if (show_intensity) {
+        shader_setting.add("color_mode", guik::ColorMode::VERTEX_COLOR);
+      }
+      viewer->update_drawable("current_frame", cloud_buffer, shader_setting.add("point_scale", 2.0f));
       viewer->update_drawable("current_coord", glk::Primitives::coordinate_system(), guik::VertexColor(pose * Eigen::UniformScaling<float>(1.5f)));
-      viewer->update_drawable("frame_" + std::to_string(new_frame->id), cloud_buffer, guik::Rainbow(pose));
+      viewer->update_drawable("frame_" + std::to_string(new_frame->id), cloud_buffer, guik::VertexColor(pose));
     });
   });
 
@@ -427,6 +439,8 @@ void StandardViewer::drawable_selection() {
   }
   ImGui::SameLine();
   ImGui::Checkbox("current", &show_current);
+  ImGui::SameLine();
+  ImGui::Checkbox("intensity", &show_intensity);
 
   ImGui::Separator();
   bool show_frontend = show_frontend_scans || show_frontend_keyframes;

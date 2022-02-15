@@ -43,6 +43,7 @@ private:
 
   bool track;
   bool show_current;
+  bool show_intensity;
   bool show_frontend_scans;
   bool show_frontend_keyframes;
   bool show_submaps;

@@ -89,6 +89,7 @@ target_link_libraries(glim
   ${GTSAM_LIBRARIES}
 )
 
+
 list(APPEND glim_LIBRARIES glim)
 install(TARGETS glim gtsam_ext)
 install(DIRECTORY include/ DESTINATION include)
@@ -130,7 +131,7 @@ if(DEFINED ENV{ROS_VERSION})
     find_package(ament_cmake REQUIRED)
     install(DIRECTORY config DESTINATION share/glim)
     ament_export_include_directories(include)
-    ament_export_libraries(${glim_LIBRARIES})
+    ament_export_libraries(${glim_LIBRARIES} gtsam_ext gtsam_ext_cuda)
     ament_package()
   elseif($ENV{ROS_VERSION} EQUAL 1)
     # ROS1

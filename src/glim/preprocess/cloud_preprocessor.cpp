@@ -56,7 +56,35 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(double stamp, const std::ve
   return frame;
 }
 
-PreprocessedFrame::Ptr CloudPreprocessor::sort_by_time(const std::vector<double>& times, const Points& points) const {
+PreprocessedFrame::Ptr CloudPreprocessor::preprocess(double stamp, const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const {
+  if (!intensities.empty() && points.size() != intensities.size()) {
+    std::cerr << console::bold_red << "error: # of intensities is not the same as # of points!!" << console::reset << std::endl;
+  }
+
+  PreprocessedFrame::Ptr frame(new PreprocessedFrame);
+  frame->times = times;
+  frame->points.resize(points.size());
+  std::transform(points.begin(), points.end(), frame->points.begin(), [this](const Eigen::Vector4d& p) { return params.T_lidar_offset * p; });
+  frame->intensities.resize(intensities.size());
+  std::copy(intensities.begin(), intensities.end(), frame->intensities.begin());
+
+  frame = distance_filter(frame->times, frame->points, frame->intensities);
+  if (params.use_random_grid_downsampling) {
+    frame = downsample_randomgrid(frame->times, frame->points, frame->intensities, mt, params.downsample_resolution, params.downsample_rate);
+  } else {
+    frame = downsample(frame->times, frame->points, frame->intensities, params.downsample_resolution);
+  }
+  frame = sort_by_time(frame->times, frame->points, frame->intensities);
+
+  frame->stamp = stamp;
+  frame->scan_end_time = stamp + frame->times.back();
+  frame->k_neighbors = params.k_correspondences;
+  frame->neighbors = find_neighbors(frame->points, params.k_correspondences);
+
+  return frame;
+}
+
+PreprocessedFrame::Ptr CloudPreprocessor::sort_by_time(const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const {
   // sort by time
   std::vector<int> indices(times.size());
   std::iota(indices.begin(), indices.end(), 0);
@@ -65,19 +93,34 @@ PreprocessedFrame::Ptr CloudPreprocessor::sort_by_time(const std::vector<double>
   PreprocessedFrame::Ptr sorted(new PreprocessedFrame());
   sorted->times.resize(times.size());
   sorted->points.resize(points.size());
+  sorted->intensities.resize(intensities.size());
   for (int i = 0; i < times.size(); i++) {
     const int index = indices[i];
     sorted->times[i] = times[index];
     sorted->points[i] = points[index];
+    if (!intensities.empty()) {
+      sorted->intensities[i] = intensities[index];
+    }
   }
 
   return sorted;
 }
 
+PreprocessedFrame::Ptr CloudPreprocessor::sort_by_time(const std::vector<double>& times, const Points& points) const {
+  std::vector<double> intensities;
+  return sort_by_time(times, points, intensities);
+}
+
 PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<double>& times, const Points& points) const {
+  std::vector<double> intensities;
+  return distance_filter(times, points, intensities);
+}
+
+PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const {
   PreprocessedFrame::Ptr filtered(new PreprocessedFrame());
   filtered->times.reserve(times.size());
   filtered->points.reserve(points.size());
+  filtered->intensities.reserve(intensities.size());
 
   for (int i = 0; i < points.size(); i++) {
     const double dist = points[i].norm();
@@ -92,6 +135,9 @@ PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<doub
 
     filtered->times.push_back(times[i]);
     filtered->points.push_back(points[i]);
+    if (!intensities.empty()) {
+      filtered->intensities.push_back(intensities[i]);
+    }
   }
 
   return filtered;

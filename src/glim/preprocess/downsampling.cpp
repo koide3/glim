@@ -2,6 +2,7 @@
 #include <Eigen/Core>
 #include <boost/functional/hash.hpp>
 
+#include <glim/preprocess/downsampling.hpp>
 #include <glim/preprocess/preprocessed_frame.hpp>
 
 namespace glim {
@@ -41,6 +42,25 @@ public:
     sum_points.push_back(point);
   }
 
+  void add(double time, const Eigen::Vector4d& point, const double intensity) {
+    for (int i = 0; i < num_points.size(); i++) {
+      if (std::abs(sum_times[i] / num_points[i] - time) > time_thresh) {
+        continue;
+      }
+
+      num_points[i]++;
+      sum_times[i] += time;
+      sum_points[i] += point;
+      sum_intensities[i] += intensity;
+      return;
+    }
+
+    num_points.push_back(1);
+    sum_times.push_back(time);
+    sum_points.push_back(point);
+    sum_intensities.push_back(intensity);
+  }
+
   void finalize(std::vector<double>& times, std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points) {
     for (int i = 0; i < num_points.size(); i++) {
       times.push_back(sum_times[i] / num_points[i]);
@@ -48,13 +68,26 @@ public:
     }
   }
 
+  void finalize(std::vector<double>& times, std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points, std::vector<double>& intensities) {
+    for (int i = 0; i < num_points.size(); i++) {
+      times.push_back(sum_times[i] / num_points[i]);
+      points.push_back(sum_points[i] / num_points[i]);
+      intensities.push_back(sum_intensities[i] / num_points[i]);
+    }
+  }
+
   const double time_thresh;
   std::vector<int> num_points;
   std::vector<double> sum_times;
+  std::vector<double> sum_intensities;
   std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> sum_points;
 };
 
-PreprocessedFrame::Ptr downsample(const std::vector<double>& times, const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points, double resolution) {
+PreprocessedFrame::Ptr downsample(
+  const std::vector<double>& times,
+  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  const std::vector<double>& intensities,
+  double resolution) {
   using VoxelMap = std::unordered_map<
     Eigen::Vector3i,
     AveragingVoxel::Ptr,
@@ -73,18 +106,33 @@ PreprocessedFrame::Ptr downsample(const std::vector<double>& times, const std::v
     if (found == voxels.end()) {
       found = voxels.insert(found, std::make_pair(coord, std::make_shared<AveragingVoxel>(time_thresh)));
     }
-    found->second->add(times[i], points[i]);
+
+    if (intensities.empty()) {
+      found->second->add(times[i], points[i]);
+    } else {
+      found->second->add(times[i], points[i], intensities[i]);
+    }
   }
 
   PreprocessedFrame::Ptr downsampled(new PreprocessedFrame());
   downsampled->times.reserve(2 * voxels.size());
   downsampled->points.reserve(2 * voxels.size());
+  downsampled->intensities.reserve(2 * voxels.size());
 
   for (const auto& voxel : voxels) {
-    voxel.second->finalize(downsampled->times, downsampled->points);
+    if (intensities.empty()) {
+      voxel.second->finalize(downsampled->times, downsampled->points);
+    } else {
+      voxel.second->finalize(downsampled->times, downsampled->points, downsampled->intensities);
+    }
   }
 
   return downsampled;
+}
+
+PreprocessedFrame::Ptr downsample(const std::vector<double>& times, const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points, double resolution) {
+  std::vector<double> intensities;
+  return downsample(times, points, intensities, resolution);
 }
 
 struct RandomSamplingVoxel {
@@ -104,9 +152,11 @@ public:
 PreprocessedFrame::Ptr downsample_randomgrid(
   const std::vector<double>& times,
   const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  const std::vector<double>& intensities,
   std::mt19937& mt,
   double resolution,
   double sampling_rate) {
+  //
   using VoxelMap = std::unordered_map<
     Eigen::Vector3i,
     RandomSamplingVoxel::Ptr,
@@ -130,6 +180,7 @@ PreprocessedFrame::Ptr downsample_randomgrid(
   PreprocessedFrame::Ptr downsampled(new PreprocessedFrame);
   downsampled->times.reserve(times.size() * sampling_rate * 1.2);
   downsampled->points.reserve(points.size() * sampling_rate * 1.2);
+  downsampled->intensities.reserve(intensities.size() * sampling_rate * 1.2);
 
   for (const auto& voxel : voxelmap) {
     const auto& indices = voxel.second->indices;
@@ -137,6 +188,10 @@ PreprocessedFrame::Ptr downsample_randomgrid(
       for (const int index : indices) {
         downsampled->times.push_back(times[index]);
         downsampled->points.push_back(points[index]);
+
+        if (!intensities.empty()) {
+          downsampled->intensities.push_back(intensities[index]);
+        }
       }
     } else {
       std::vector<int> sampled(points_per_voxel);
@@ -144,11 +199,26 @@ PreprocessedFrame::Ptr downsample_randomgrid(
       for (const int index : sampled) {
         downsampled->times.push_back(times[index]);
         downsampled->points.push_back(points[index]);
+
+        if (!intensities.empty()) {
+          downsampled->intensities.push_back(intensities[index]);
+        }
       }
     }
   }
 
   return downsampled;
+}
+
+PreprocessedFrame::Ptr downsample_randomgrid(
+  const std::vector<double>& times,
+  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  std::mt19937& mt,
+  double resolution,
+  double sampling_rate) {
+  //
+  std::vector<double> intensities;
+  return downsample_randomgrid(times, points, intensities, mt, resolution, sampling_rate);
 }
 
 }  // namespace glim
