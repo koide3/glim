@@ -43,6 +43,7 @@ if(BUILD_WITH_CUDA)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
   install(TARGETS gtsam_ext_cuda)
   list(APPEND GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
+  list(APPEND glim_LIBRARIES gtsam_ext_cuda)
 endif()
 
 add_library(glim SHARED
@@ -91,7 +92,7 @@ target_link_libraries(glim
 )
 
 
-list(APPEND glim_LIBRARIES glim)
+list(APPEND glim_LIBRARIES glim gtsam_ext)
 install(TARGETS glim gtsam_ext)
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
@@ -132,7 +133,7 @@ if(DEFINED ENV{ROS_VERSION})
     find_package(ament_cmake REQUIRED)
     install(DIRECTORY config DESTINATION share/glim)
     ament_export_include_directories(include)
-    ament_export_libraries(${glim_LIBRARIES} gtsam_ext gtsam_ext_cuda)
+    ament_export_libraries(${glim_LIBRARIES})
     ament_package()
   elseif($ENV{ROS_VERSION} EQUAL 1)
     # ROS1
