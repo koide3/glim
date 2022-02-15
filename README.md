@@ -93,7 +93,7 @@ This package is released under the GPLv3 license. For commercial purposes, pleas
 ## Papers
 - Koide et al., "Voxelized GICP for Fast and Accurate 3D Point Cloud Registration", ICRA2021 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/icra2021_02.pdf)
 - Koide et al., "Globally Consistent 3D LiDAR Mapping with GPU-accelerated GICP Matching Cost Factors", IEEE RA-L, 2021 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/ral2021.pdf)
-- Koide et al., "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", IROS2022 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/iros2022.pdf)
+- Koide et al., "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", ICRA2022 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/icra2022.pdf)
 
 
 ## Contact

@@ -1,0 +1,11 @@
+{
+  /*** Global Configuration ***/
+  "global": {
+    "config_path": "",
+    "config_viewer": "../../config_viewer.json",
+    "config_sensors": "../../config_sensors.json",
+    "config_preprocess": "../../config_preprocess.json",
+    "config_frontend": "config_frontend_ct.json",
+    "config_backend": "config_backend.json"
+  }
+}

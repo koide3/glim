@@ -33,7 +33,7 @@
   // isam2_relinearize_thresh       : Relinearization is performed only when linear delta gets larger than this
   */
   "sub_mapping": {
-    "enable_imu": true,
+    "enable_imu": false,
     "enable_optimization": true,
     // Keyframe update strategy
     "max_num_keyframes": 15,
@@ -53,7 +53,7 @@
     "submap_voxel_resolution": 0.5
   },
   "global_mapping": {
-    "enable_imu": true,
+    "enable_imu": false,
     // Relative pose factors
     "create_between_factors": false,
     "between_registration_type": "GICP",

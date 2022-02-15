@@ -32,7 +32,7 @@ private:
 public:
   static GlobalConfig* instance(const std::string& config_path = "") {
     if (inst == nullptr) {
-      inst = new GlobalConfig(config_path + "/config_global.json");
+      inst = new GlobalConfig(config_path + "/config.json");
       inst->override_param("global", "config_path", config_path);
     }
     return inst;

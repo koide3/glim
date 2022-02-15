@@ -206,7 +206,8 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   new_values.insert(B(current), last_imu_bias);
 
   // Constant IMU bias assumption
-  new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+  new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e10)));
+  // new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
   // Create IMU factor
   gtsam::ImuFactor::shared_ptr imu_factor;
   if (num_imu_integrated >= 2) {

@@ -23,19 +23,19 @@ using gtsam::symbol_shorthand::X;
 using Callbacks = OdometryEstimationCallbacks;
 
 OdometryEstimationCTParams::OdometryEstimationCTParams() {
-  Config config(GlobalConfig::get_config_path("config_frontend_ct"));
+  Config config(GlobalConfig::get_config_path("config_frontend"));
 
-  num_threads = config.param<int>("odometry_estimation_ct", "num_threads", 4);
-  max_correspondence_distance = config.param<double>("odometry_estimation_ct", "max_correspondence_distance", 1.0);
+  num_threads = config.param<int>("odometry_estimation", "num_threads", 4);
+  max_correspondence_distance = config.param<double>("odometry_estimation", "max_correspondence_distance", 1.0);
 
-  max_num_keyframes = config.param<int>("odometry_estimation_ct", "max_num_keyframes", 20);
-  keyframe_update_interval_rot = config.param<double>("odometry_estimation_ct", "keyframe_update_interval_rot", 3.15);
-  keyframe_update_interval_trans = config.param<double>("odometry_estimation_ct", "keyframe_update_interval_trans", 1.0);
+  max_num_keyframes = config.param<int>("odometry_estimation", "max_num_keyframes", 20);
+  keyframe_update_interval_rot = config.param<double>("odometry_estimation", "keyframe_update_interval_rot", 3.15);
+  keyframe_update_interval_trans = config.param<double>("odometry_estimation", "keyframe_update_interval_trans", 1.0);
 
-  stiffness_scale_first = config.param<double>("odometry_estimation_ct", "stiffness_scale_first", 1e6);
-  stiffness_scale_second = config.param<double>("odometry_estimation_ct", "stiffness_scale_second", 1e3);
-  lm_max_iterations_first = config.param<int>("odometry_estimation_ct", "lm_max_iterations_first", 5);
-  lm_max_iterations_second = config.param<int>("odometry_estimation_ct", "lm_max_iterations_second", 5);
+  stiffness_scale_first = config.param<double>("odometry_estimation", "stiffness_scale_first", 1e6);
+  stiffness_scale_second = config.param<double>("odometry_estimation", "stiffness_scale_second", 1e3);
+  lm_max_iterations_first = config.param<int>("odometry_estimation", "lm_max_iterations_first", 5);
+  lm_max_iterations_second = config.param<int>("odometry_estimation", "lm_max_iterations_second", 5);
 }
 
 OdometryEstimationCTParams::~OdometryEstimationCTParams() {}

@@ -1,0 +1,14 @@
+{
+  "standard_viewer": {
+    "viewer_width": 2560,
+    "viewer_height": 1440,
+    "enable_partial_rendering": false,
+    "partial_rendering_budget": 1024
+  },
+  "interactive_viewer": {
+    "viewer_width": 2560,
+    "viewer_height": 1440,
+    "enable_partial_rendering": true,
+    "partial_rendering_budget": 1024
+  }
+}
