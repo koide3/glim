@@ -1,5 +1,7 @@
 #include <glim/common/cloud_covariance_estimation.hpp>
 
+#include <iostream>
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <Eigen/Eigen>
@@ -14,10 +16,12 @@ CloudCovarianceEstimation::~CloudCovarianceEstimation() {}
 
 std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCovarianceEstimation::estimate(
   const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
-  const std::vector<int>& neighbors) const {
+  const std::vector<int>& neighbors,
+  const int k_neighbors) const {
   //
   const int k_correspondences = neighbors.size() / points.size();
   assert(k_correspondences * points.size() == neighbors.size());
+  assert(k_neighbors <= k_correspondences);
 
   // Precompute pt * pt.transpose()
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> pt_cross(points.size());
@@ -32,19 +36,32 @@ std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCov
     Eigen::Matrix4d sum_cross = Eigen::Matrix4d::Zero();
 
     const int begin = k_correspondences * i;
-    for (int j = 0; j < k_correspondences; j++) {
+    for (int j = 0; j < k_neighbors; j++) {
       const int index = neighbors[begin + j];
       sum_points += points[index];
       sum_cross += pt_cross[index];
     }
 
-    const Eigen::Vector4d mean = sum_points / k_correspondences;
-    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / (k_correspondences + 1);
+    const Eigen::Vector4d mean = sum_points / k_neighbors;
+    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / (k_neighbors - 1);
     covs[i] = regularize(cov);
     covs[i](3, 3) = 0.0;
   }
 
   return covs;
+}
+
+std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCovarianceEstimation::estimate(
+  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  const std::vector<int>& neighbors) const {
+  //
+  const int k = neighbors.size() / points.size();
+  if (k * points.size() != neighbors.size()) {
+    std::cerr << "error: k * points.size() != neighbors.size()" << std::endl;
+    abort();
+  }
+
+  return estimate(points, neighbors, k);
 }
 
 Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov) const {

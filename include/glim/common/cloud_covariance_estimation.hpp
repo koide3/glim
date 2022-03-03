@@ -12,6 +12,9 @@ public:
   CloudCovarianceEstimation();
   ~CloudCovarianceEstimation();
 
+  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>
+  estimate(const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points, const std::vector<int>& neighbors, const int k_neighbors) const;
+
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> estimate(
     const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
     const std::vector<int>& neighbors) const;

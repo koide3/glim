@@ -382,8 +382,14 @@ void GlobalMapping::save(const std::string& path) {
       write_tum_frame(odom_lidar_ofs, frame->stamp, frame->T_world_lidar);
     }
 
+    const Eigen::Isometry3d T_world_endpoint_L = submaps[i]->T_world_origin * submaps[i]->T_origin_endpoint_L;
+    const Eigen::Isometry3d T_odom_frame0 = submaps[i]->frames.front()->T_world_lidar;
+
     for (const auto& frame : submaps[i]->frames) {
-      write_tum_frame(traj_lidar_ofs, frame->stamp, frame->T_world_lidar);
+      const Eigen::Isometry3d T_odom_frame = frame->T_world_lidar;
+      const Eigen::Isometry3d T_world_frame = T_world_endpoint_L * T_odom_frame0.inverse() * T_odom_frame;
+
+      write_tum_frame(traj_lidar_ofs, frame->stamp, T_world_frame);
     }
 
     submaps[i]->save((boost::format("%s/%06d") % path % i).str());

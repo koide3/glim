@@ -99,7 +99,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
 
   // Fix the first frame
   if (current == 0) {
-    graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values->at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+    graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values->at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e8));
   }
   // Create a relative pose factor between consecutive frames
   else if (params.create_between_factors) {
