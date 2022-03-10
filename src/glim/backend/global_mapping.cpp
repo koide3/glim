@@ -19,6 +19,7 @@
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
 #include <gtsam_ext/optimizers/isam2_ext.hpp>
+#include <gtsam_ext/optimizers/isam2_ext_dummy.hpp>
 #include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 
@@ -41,6 +42,8 @@ GlobalMappingParams::GlobalMappingParams() {
   Config config(GlobalConfig::get_config_path("config_backend"));
 
   enable_imu = config.param<bool>("global_mapping", "enable_imu", true);
+  enable_optimization = config.param<bool>("global_mapping", "enable_optimization", true);
+
   enable_between_factors = config.param<bool>("global_mapping", "create_between_factors", false);
   between_registration_type = config.param<std::string>("global_mapping", "between_registration_type", "GICP");
   registration_error_factor_type = config.param<std::string>("global_mapping", "registration_error_factor_type", "VGICP");
@@ -77,7 +80,12 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
   }
   isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
-  isam2.reset(new gtsam_ext::ISAM2Ext(isam2_params));
+
+  if (params.enable_optimization) {
+    isam2.reset(new gtsam_ext::ISAM2Ext(isam2_params));
+  } else {
+    isam2.reset(new gtsam_ext::ISAM2ExtDummy(isam2_params));
+  }
 
 #ifdef BUILD_GTSAM_EXT_GPU
   stream_buffer_roundrobin = std::make_shared<gtsam_ext::StreamTempBufferRoundRobin>(64);

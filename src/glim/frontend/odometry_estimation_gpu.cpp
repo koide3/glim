@@ -45,6 +45,12 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() {
   // frontend config
   Config config(GlobalConfig::get_config_path("config_frontend"));
 
+  const auto init_T_world_imu = config.param<Eigen::Isometry3d>("odometry_estimation", "init_T_world_imu");
+  const auto init_v_world_imu = config.param<Eigen::Vector3d>("odometry_estimation", "init_v_world_imu");
+  this->estimate_init_state = !init_T_world_imu && !init_v_world_imu;
+  this->init_T_world_imu = init_T_world_imu.value_or(Eigen::Isometry3d::Identity());
+  this->init_v_world_imu = init_v_world_imu.value_or(Eigen::Vector3d::Zero());
+
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
   max_num_keyframes = config.param<int>("odometry_estimation", "max_num_keyframes", 10);
   full_connection_window_size = config.param<int>("odometry_estimation", "full_connection_window_size", 3);
@@ -82,7 +88,12 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
 
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
-  init_estimation.reset(new NaiveInitialStateEstimation(params.T_lidar_imu, params.imu_bias));
+
+  auto init_estimation = new NaiveInitialStateEstimation(params.T_lidar_imu, params.imu_bias);
+  if (!params.estimate_init_state) {
+    init_estimation->set_init_state(params.init_T_world_imu, params.init_v_world_imu);
+  }
+  this->init_estimation.reset(init_estimation);
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);

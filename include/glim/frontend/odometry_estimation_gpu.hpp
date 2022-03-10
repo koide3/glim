@@ -37,6 +37,11 @@ public:
   Eigen::Isometry3d T_lidar_imu;
   Eigen::Matrix<double, 6, 1> imu_bias;
 
+  // Init state
+  bool estimate_init_state;
+  Eigen::Isometry3d init_T_world_imu;
+  Eigen::Vector3d init_v_world_imu;
+
   // Optimization params
   double smoother_lag;
   bool use_isam2_dogleg;

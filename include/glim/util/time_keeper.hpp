@@ -37,13 +37,15 @@ public:
   void validate_imu_stamp(const double imu_stamp);
 
 private:
+  void replace_points_stamp(const glim::RawPoints::Ptr& points);
   double estimate_scan_duration(const double stamp);
 
 private:
   const AbsPointTimeParams abs_params;
 
   bool first_warning;        // Flag to show warning messages only once
-  double last_points_stamp;  // Timestamp of last frame
+  double last_points_stamp;  // Timestamp of the last LiDAR frame
+  double last_imu_stamp;     // Timestamp of the last IMU data
 
   int num_scans;                   // Number of frames for scan duration estimation
   double first_points_stamp;       // Timestamp of the first frame for scan duration estimation

@@ -8,6 +8,7 @@ namespace glim {
 TimeKeeper::TimeKeeper(const AbsPointTimeParams& abs_params) : abs_params(abs_params) {
   first_warning = true;
   last_points_stamp = -1.0;
+  last_imu_stamp = -1.0;
 
   num_scans = 0;
   first_points_stamp = 0.0;
@@ -18,18 +19,43 @@ TimeKeeper::TimeKeeper(const AbsPointTimeParams& abs_params) : abs_params(abs_pa
 TimeKeeper::~TimeKeeper() {}
 
 void TimeKeeper::validate_imu_stamp(const double imu_stamp) {
-  if (last_points_stamp <= 0.0) {
-    return;
+  const double imu_diff = imu_stamp - last_imu_stamp;
+  if (last_imu_stamp < 0.0) {
+    // First IMU frame
+  } else if (imu_stamp < last_imu_stamp) {
+    std::cerr << console::yellow << "warning: IMU timestamp rewind detected!!" << console::reset << std::endl;
+    std::cerr << console::yellow << boost::format("       : current:%.6f last:%.6f diff:%.6f") % imu_stamp % last_imu_stamp % imu_diff << console::reset << std::endl;
+  } else if (imu_stamp - last_imu_stamp > 0.1) {
+    std::cerr << console::yellow << "warning: large time gap between consecutive IMU data!!" << console::reset << std::endl;
+    std::cerr << console::yellow << boost::format("       : current:%.6f last:%.6f diff:%.6f") % imu_stamp % last_imu_stamp % imu_diff << console::reset << std::endl;
   }
+  last_imu_stamp = imu_stamp;
 
-  const double diff = std::abs(imu_stamp - last_points_stamp);
-  if (diff > 1.0) {
+  const double points_diff = imu_stamp - last_points_stamp;
+  if (last_points_stamp > 0.0 && std::abs(points_diff) > 1.0) {
     std::cerr << console::yellow << "warning: large time difference between points and imu!!" << console::reset << std::endl;
-    std::cerr << console::yellow << boost::format("       : points:%.6f imu:%.6f diff:%.6f") % last_points_stamp % imu_stamp % diff << console::reset << std::endl;
+    std::cerr << console::yellow << boost::format("       : points:%.6f imu:%.6f diff:%.6f") % last_points_stamp % imu_stamp % points_diff << console::reset << std::endl;
   }
 }
 
 void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
+  replace_points_stamp(points);
+
+  const double time_diff = points->stamp - last_points_stamp;
+  if (last_points_stamp < 0.0) {
+    // First LiDAR frame
+  } else if (time_diff < 0.0) {
+    std::cerr << console::yellow << "warning: point timestamp rewind detected!!" << console::reset << std::endl;
+    std::cerr << console::yellow << boost::format("       : current:%.6f last:%.6f diff:%.6f") % points->stamp % last_points_stamp % time_diff << console::reset << std::endl;
+  } else if (time_diff > 0.5) {
+    std::cerr << console::yellow << "warning: large time gap between consecutive LiDAR frames!!" << console::reset << std::endl;
+    std::cerr << console::yellow << boost::format("       : current:%.6f last:%.6f diff:%.6f") % points->stamp % last_points_stamp % time_diff << console::reset << std::endl;
+  }
+
+  last_points_stamp = points->stamp;
+}
+
+void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
   // No per-point timestamps
   // Assign timestamps based on scan duration
   if (points->times.empty()) {
@@ -41,7 +67,6 @@ void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
       }
     }
 
-    last_points_stamp = points->stamp;
     return;
   }
 
@@ -93,7 +118,6 @@ void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
     }
   }
 
-  last_points_stamp = points->stamp;
   first_warning = false;
 }
 

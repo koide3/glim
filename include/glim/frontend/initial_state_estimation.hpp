@@ -51,12 +51,18 @@ public:
   virtual void insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
   virtual EstimationFrame::ConstPtr initial_pose() override;
 
+  void set_init_state(const Eigen::Isometry3d& init_T_world_imu, const Eigen::Vector3d& init_v_world_imu);
+
 private:
   double stamp;
   Eigen::Vector3d sum_acc;
 
   Eigen::Matrix<double, 6, 1> imu_bias;
   Eigen::Isometry3d T_lidar_imu;
+
+  bool force_init;
+  Eigen::Vector3d init_v_world_imu;
+  Eigen::Isometry3d init_T_world_imu;
 };
 
 // TODO: Implement Loose-coupling-based initial state estimator

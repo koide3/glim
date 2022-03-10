@@ -32,7 +32,6 @@ StandardViewer::StandardViewer() {
   track = true;
   show_current = true;
   show_intensity = false;
-  show_intensity = false;
   show_frontend_scans = true;
   show_frontend_keyframes = true;
   show_submaps = true;
@@ -138,12 +137,14 @@ void StandardViewer::set_callbacks() {
       }
 
       guik::ShaderSetting shader_setting = guik::FlatColor(1.0f, 0.5f, 0.0f, 1.0f, pose);
+      guik::ShaderSetting shader_setting_rainbow = guik::Rainbow(pose);
       if (show_intensity) {
         shader_setting.add("color_mode", guik::ColorMode::VERTEX_COLOR);
+        shader_setting_rainbow.add("color_mode", guik::ColorMode::VERTEX_COLOR);
       }
       viewer->update_drawable("current_frame", cloud_buffer, shader_setting.add("point_scale", 2.0f));
       viewer->update_drawable("current_coord", glk::Primitives::coordinate_system(), guik::VertexColor(pose * Eigen::UniformScaling<float>(1.5f)));
-      viewer->update_drawable("frame_" + std::to_string(new_frame->id), cloud_buffer, guik::VertexColor(pose));
+      viewer->update_drawable("frame_" + std::to_string(new_frame->id), cloud_buffer, shader_setting_rainbow);
     });
   });
 

@@ -28,6 +28,7 @@ public:
 public:
   bool enable_gpu;
   bool enable_imu;
+  bool enable_optimization;
   bool enable_between_factors;
   std::string between_registration_type;
 
