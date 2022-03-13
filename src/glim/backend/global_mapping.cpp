@@ -78,7 +78,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
     gtsam::ISAM2DoglegParams dogleg_params;
     isam2_params.setOptimizationParams(dogleg_params);
   }
-  isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
+  isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
 
   if (params.enable_optimization) {

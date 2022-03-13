@@ -11,10 +11,6 @@ namespace gtsam {
 class Values;
 }
 
-namespace gtsam_ext {
-class IntegratedCT_GICPFactor;
-}
-
 namespace glim {
 
 class CloudCovarianceEstimation;

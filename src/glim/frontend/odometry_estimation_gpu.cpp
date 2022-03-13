@@ -103,7 +103,7 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
   if (params.use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
   }
-  isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
+  isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
   smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(params.smoother_lag, isam2_params));
 
@@ -397,7 +397,7 @@ void OdometryEstimationGPU::fallback_smoother() {
   if (params.use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
   }
-  isam2_params.setRelinearizeSkip(params.isam2_relinearize_skip);
+  isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
   smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(params.smoother_lag, isam2_params));
 
