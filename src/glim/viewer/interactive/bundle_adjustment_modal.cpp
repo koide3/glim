@@ -1,5 +1,7 @@
 #include <glim/viewer/interactive/bundle_adjustment_modal.hpp>
 
+#include <boost/format.hpp>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam_ext/factors/bundle_adjustment_factor_evm.hpp>
 #include <gtsam_ext/factors/bundle_adjustment_factor_lsq.hpp>

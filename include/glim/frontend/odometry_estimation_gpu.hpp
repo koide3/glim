@@ -59,6 +59,9 @@ public:
   double keyframe_delta_trans;
   double keyframe_delta_rot;
   double keyframe_entropy_thresh;
+
+  // Logging params
+  bool save_imu_rate_trajectory;
 };
 
 /**

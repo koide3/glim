@@ -35,6 +35,13 @@ PreprocessedFrame::Ptr downsample(const std::vector<double>& times, const std::v
  * @return PreprocessedFrame::Ptr Downsampled points
  */
 PreprocessedFrame::Ptr downsample_randomgrid(
+  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  const std::vector<double>& intensities,
+  std::mt19937& mt,
+  double resolution,
+  double sampling_rate);
+
+PreprocessedFrame::Ptr downsample_randomgrid(
   const std::vector<double>& times,
   const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
   const std::vector<double>& intensities,

@@ -44,6 +44,18 @@ void SubMap::save(const std::string& path) {
     ofs << "v_world_imu: " << frames[i]->v_world_imu.transpose() << std::endl;
   }
 
+  std::ofstream ofs_imu_rate(path + "/imu_rate.txt");
+  for (const auto& frame : frames) {
+    if (!frame->imu_rate_trajectory.size()) {
+      continue;
+    }
+
+    for (int i = 0; i < frame->imu_rate_trajectory.cols(); i++) {
+      const auto& data = frame->imu_rate_trajectory.col(i);
+      ofs_imu_rate << boost::format("%.9f %.6f %.6f %.6f %.6f %.6f %.6f %.6f") % data[0] % data[1] % data[2] % data[3] % data[4] % data[5] % data[6] % data[7] << std::endl;
+    }
+  }
+
   frame->save_compact(path);
 }
 

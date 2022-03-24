@@ -76,6 +76,8 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() {
   use_isam2_dogleg = config.param<bool>("odometry_estimation", "use_isam2_dogleg", false);
   isam2_relinearize_skip = config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1);
   isam2_relinearize_thresh = config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1);
+
+  save_imu_rate_trajectory = config.param<bool>("odometry_estimation", "save_imu_rate_trajectory", false);
 }
 
 OdometryEstimationGPUParams::~OdometryEstimationGPUParams() {}
@@ -248,6 +250,15 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   new_frame->imu_bias = last_imu_bias.vector();
 
   new_frame->raw_frame = raw_frame;
+
+  if (params.save_imu_rate_trajectory) {
+    new_frame->imu_rate_trajectory.resize(8, pred_imu_times.size());
+    for (int i = 0; i < pred_imu_times.size(); i++) {
+      const Eigen::Vector3d trans = pred_imu_poses[i].translation();
+      const Eigen::Quaterniond quat(pred_imu_poses[i].linear());
+      new_frame->imu_rate_trajectory.col(i) << pred_imu_times[i], trans, quat.x(), quat.y(), quat.z(), quat.w();
+    }
+  }
 
   // Deskew and tranform points into IMU frame
   auto deskewed = deskewing->deskew(T_imu_lidar, pred_imu_times, pred_imu_poses, raw_frame->stamp, raw_frame->times, raw_frame->points);

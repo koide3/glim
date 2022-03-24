@@ -1,5 +1,7 @@
 #include <glim/viewer/interactive/manual_loop_close_modal.hpp>
 
+#include <boost/format.hpp>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/BetweenFactor.h>

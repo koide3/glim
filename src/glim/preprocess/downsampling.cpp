@@ -166,7 +166,7 @@ PreprocessedFrame::Ptr downsample_randomgrid(
 
   VoxelMap voxelmap;
 
-  for (int i = 0; i < times.size(); i++) {
+  for (int i = 0; i < points.size(); i++) {
     Eigen::Vector3i coord = (points[i].array() / resolution - 0.5).floor().cast<int>().head<3>();
     auto found = voxelmap.find(coord);
     if (found == voxelmap.end()) {
@@ -186,8 +186,11 @@ PreprocessedFrame::Ptr downsample_randomgrid(
     const auto& indices = voxel.second->indices;
     if (indices.size() <= points_per_voxel) {
       for (const int index : indices) {
-        downsampled->times.push_back(times[index]);
         downsampled->points.push_back(points[index]);
+
+        if (!times.empty()) {
+          downsampled->times.push_back(times[index]);
+        }
 
         if (!intensities.empty()) {
           downsampled->intensities.push_back(intensities[index]);
@@ -197,8 +200,11 @@ PreprocessedFrame::Ptr downsample_randomgrid(
       std::vector<int> sampled(points_per_voxel);
       std::sample(indices.begin(), indices.end(), sampled.begin(), points_per_voxel, mt);
       for (const int index : sampled) {
-        downsampled->times.push_back(times[index]);
         downsampled->points.push_back(points[index]);
+
+        if(!times.empty()) {
+          downsampled->times.push_back(times[index]);
+        }
 
         if (!intensities.empty()) {
           downsampled->intensities.push_back(intensities[index]);
@@ -217,6 +223,14 @@ PreprocessedFrame::Ptr downsample_randomgrid(
   double resolution,
   double sampling_rate) {
   //
+  std::vector<double> intensities;
+  return downsample_randomgrid(times, points, intensities, mt, resolution, sampling_rate);
+}
+
+PreprocessedFrame::Ptr
+downsample_randomgrid(const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points, std::mt19937& mt, double resolution, double sampling_rate) {
+  //
+  std::vector<double> times;
   std::vector<double> intensities;
   return downsample_randomgrid(times, points, intensities, mt, resolution, sampling_rate);
 }

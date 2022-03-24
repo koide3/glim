@@ -379,6 +379,9 @@ void GlobalMapping::save(const std::string& path) {
   std::ofstream odom_lidar_ofs(path + "/odom_lidar.txt");
   std::ofstream traj_lidar_ofs(path + "/traj_lidar.txt");
 
+  std::ofstream odom_imu_ofs(path + "/odom_imu.txt");
+  std::ofstream traj_imu_ofs(path + "/traj_imu.txt");
+
   const auto write_tum_frame = [](std::ofstream& ofs, const double stamp, const Eigen::Isometry3d& pose) {
     const Eigen::Quaterniond quat(pose.linear());
     const Eigen::Vector3d trans(pose.translation());
@@ -388,16 +391,19 @@ void GlobalMapping::save(const std::string& path) {
   for (int i = 0; i < submaps.size(); i++) {
     for (const auto& frame : submaps[i]->odom_frames) {
       write_tum_frame(odom_lidar_ofs, frame->stamp, frame->T_world_lidar);
+      write_tum_frame(odom_imu_ofs, frame->stamp, frame->T_world_imu);
     }
 
     const Eigen::Isometry3d T_world_endpoint_L = submaps[i]->T_world_origin * submaps[i]->T_origin_endpoint_L;
-    const Eigen::Isometry3d T_odom_frame0 = submaps[i]->frames.front()->T_world_lidar;
+    const Eigen::Isometry3d T_odom_lidar0 = submaps[i]->frames.front()->T_world_lidar;
+    const Eigen::Isometry3d T_odom_imu0 = submaps[i]->frames.front()->T_world_imu;
 
     for (const auto& frame : submaps[i]->frames) {
-      const Eigen::Isometry3d T_odom_frame = frame->T_world_lidar;
-      const Eigen::Isometry3d T_world_frame = T_world_endpoint_L * T_odom_frame0.inverse() * T_odom_frame;
+      const Eigen::Isometry3d T_world_lidar = T_world_endpoint_L * T_odom_lidar0.inverse() * frame->T_world_lidar;
+      const Eigen::Isometry3d T_world_imu = T_world_endpoint_L * T_odom_imu0.inverse() * frame->T_world_imu;
 
-      write_tum_frame(traj_lidar_ofs, frame->stamp, T_world_frame);
+      write_tum_frame(traj_lidar_ofs, frame->stamp, T_world_lidar);
+      write_tum_frame(traj_imu_ofs, frame->stamp, T_world_imu);
     }
 
     submaps[i]->save((boost::format("%s/%06d") % path % i).str());
@@ -473,6 +479,8 @@ bool GlobalMapping::load(const std::string& path) {
 
     Callbacks::on_insert_submap(submap);
   }
+
+  return true;
 
   gtsam::Values values;
   gtsam::NonlinearFactorGraph graph;

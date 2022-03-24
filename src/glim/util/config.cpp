@@ -164,6 +164,7 @@ template bool Config::override_param(const std::string&, const std::string&, con
 template bool Config::override_param(const std::string&, const std::string&, const std::string&);
 template bool Config::override_param(const std::string&, const std::string&, const std::vector<int>&);
 template bool Config::override_param(const std::string&, const std::string&, const std::vector<double>&);
+template bool Config::override_param(const std::string&, const std::string&, const std::vector<std::string>&);
 
 template bool Config::override_param(const std::string&, const std::string&, const Eigen::Vector2d&);
 template bool Config::override_param(const std::string&, const std::string&, const Eigen::Vector3d&);
