@@ -212,7 +212,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   gtsam_ext::Frame::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
-  if (params.enable_imu) {
+  if (params.enable_imu && odom_frame->raw_frame) {
     const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 

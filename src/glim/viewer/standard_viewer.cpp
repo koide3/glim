@@ -119,9 +119,11 @@ void StandardViewer::set_callbacks() {
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
 
-      if (!new_frame->raw_frame->intensities.empty()) {
-        const double max_intensity = *std::max_element(new_frame->raw_frame->intensities.begin(), new_frame->raw_frame->intensities.end());
-        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, new_frame->raw_frame->intensities, 1.0 / 1.0);
+      if (new_frame->raw_frame && !new_frame->raw_frame->intensities.empty()) {
+        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, new_frame->raw_frame->intensities);
+      } else if (new_frame->frame->intensities) {
+        std::vector<float> intensities(new_frame->frame->intensities, new_frame->frame->intensities + new_frame->frame->size());
+        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, intensities, new_frame->frame->size());
       }
 
       last_id = new_frame->id;
