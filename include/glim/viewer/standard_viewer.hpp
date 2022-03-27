@@ -58,6 +58,9 @@ private:
   Eigen::Vector3d last_imu_vel;
   Eigen::Matrix<double, 6, 1> last_imu_bias;
 
+  Eigen::Vector2f z_range;
+  Eigen::Vector2f auto_z_range;
+
   std::unique_ptr<TrajectoryManager> trajectory;
   std::vector<Eigen::Isometry3f, Eigen::aligned_allocator<Eigen::Isometry3f>> submap_keyframes;
 
