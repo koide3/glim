@@ -20,7 +20,7 @@ public:
    * @brief Construct a new Async Odometry Estimation object
    * @param odometry_estimation  Odometry estimation to be wrapped
    */
-  AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation);
+  AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation, bool enable_imu);
 
   /**
    * @brief Destroy the Async Odometry Estimation object
@@ -89,6 +89,7 @@ private:
   ConcurrentVector<EstimationFrame::ConstPtr> output_estimation_results;
   ConcurrentVector<EstimationFrame::ConstPtr> output_marginalized_frames;
 
+  bool enable_imu;
   std::shared_ptr<OdometryEstimationBase> odometry_estimation;
 };
 

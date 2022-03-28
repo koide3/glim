@@ -54,6 +54,7 @@
   },
   "global_mapping": {
     "enable_imu": false,
+    "enable_optimization": true,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",

@@ -2,7 +2,8 @@
 
 namespace glim {
 
-AsyncOdometryEstimation::AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation) : odometry_estimation(odometry_estimation) {
+AsyncOdometryEstimation::AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation, bool enable_imu) : odometry_estimation(odometry_estimation) {
+  this->enable_imu = enable_imu;
   kill_switch = false;
   end_of_sequence = false;
   thread = std::thread([this] { run(); });
@@ -29,7 +30,7 @@ void AsyncOdometryEstimation::insert_frame(const PreprocessedFrame::Ptr& frame) 
 
 void AsyncOdometryEstimation::join() {
   end_of_sequence = true;
-  if(thread.joinable()) {
+  if (thread.joinable()) {
     thread.join();
   }
 }
@@ -60,8 +61,8 @@ void AsyncOdometryEstimation::run() {
     images.insert(images.end(), new_images.begin(), new_images.end());
     raw_frames.insert(raw_frames.end(), new_raw_frames.begin(), new_raw_frames.end());
 
-    if(images.empty() && imu_frames.empty() && raw_frames.empty()) {
-      if(end_of_sequence) {
+    if (images.empty() && imu_frames.empty() && raw_frames.empty()) {
+      if (end_of_sequence) {
         break;
       }
 
@@ -78,13 +79,21 @@ void AsyncOdometryEstimation::run() {
       last_imu_time = stamp;
     }
 
-    while (!images.empty() && images.front().first < last_imu_time) {
+    while (!images.empty()) {
+      if (enable_imu && images.front().first < last_imu_time) {
+        break;
+      }
+
       const auto image = images.front();
       odometry_estimation->insert_image(image.first, image.second);
       images.pop_front();
     }
 
-    while (!raw_frames.empty() && raw_frames.front()->scan_end_time < last_imu_time) {
+    while (!raw_frames.empty()) {
+      if (enable_imu && raw_frames.front()->scan_end_time < last_imu_time) {
+        break;
+      }
+
       const auto& frame = raw_frames.front();
       std::vector<EstimationFrame::ConstPtr> marginalized;
       auto state = odometry_estimation->insert_frame(frame, marginalized);
@@ -98,4 +107,4 @@ void AsyncOdometryEstimation::run() {
   auto marginalized = odometry_estimation->get_remaining_frames();
   output_marginalized_frames.insert(marginalized);
 }
-}
+}  // namespace glim
