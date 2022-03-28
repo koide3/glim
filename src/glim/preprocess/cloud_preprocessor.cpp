@@ -26,6 +26,8 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   downsample_resolution = config.param<double>("preprocess", "downsample_resolution", 0.15);
   downsample_rate = config.param<double>("preprocess", "random_downsample_rate", 0.3);
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
+
+  num_threads = config.param<int>("preprocess", "num_threads", 10);
 }
 
 CloudPreprocessorParams::~CloudPreprocessorParams() {}
@@ -148,9 +150,10 @@ std::vector<int> CloudPreprocessor::find_neighbors(const Points& points, int k) 
 
   std::vector<int> neighbors(points.size() * k);
 
-  std::vector<size_t> k_indices(k);
-  std::vector<double> k_sq_dists(k);
+#pragma omp parallel for num_threads(params.num_threads) schedule(guided, 8)
   for (int i = 0; i < points.size(); i++) {
+    std::vector<size_t> k_indices(k);
+    std::vector<double> k_sq_dists(k);
     tree.knn_search(points[i].data(), k, k_indices.data(), k_sq_dists.data());
     std::copy(k_indices.begin(), k_indices.end(), neighbors.begin() + i * k);
   }

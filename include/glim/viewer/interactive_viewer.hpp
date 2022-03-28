@@ -80,6 +80,8 @@ protected:
   bool enable_partial_rendering;
   int partial_rendering_budget;
 
+  Eigen::Vector2f z_range;
+
   // Click information
   Eigen::Vector4i right_clicked_info;
   Eigen::Vector3f right_clicked_pos;

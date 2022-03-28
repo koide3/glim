@@ -23,6 +23,8 @@ public:
   double downsample_resolution;
   double downsample_rate;
   int k_correspondences;
+
+  int num_threads;
 };
 
 /**

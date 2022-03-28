@@ -139,7 +139,7 @@ struct RandomSamplingVoxel {
 public:
   using Ptr = std::shared_ptr<RandomSamplingVoxel>;
 
-  RandomSamplingVoxel() {}
+  RandomSamplingVoxel() { indices.reserve(16); }
   ~RandomSamplingVoxel() {}
 
   int size() const { return indices.size(); }
@@ -202,7 +202,7 @@ PreprocessedFrame::Ptr downsample_randomgrid(
       for (const int index : sampled) {
         downsampled->points.push_back(points[index]);
 
-        if(!times.empty()) {
+        if (!times.empty()) {
           downsampled->times.push_back(times[index]);
         }
 
