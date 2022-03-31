@@ -102,8 +102,6 @@ void GlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear
 }
 
 void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
-  submap->drop_odom_frames();
-
   const int current = submaps.size();
   const int last = current - 1;
   insert_submap(current, submap);
@@ -131,6 +129,8 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   new_values->insert(X(current), current_T_world_submap);
   submap->T_world_origin = Eigen::Isometry3d(current_T_world_submap.matrix());
   Callbacks::on_insert_submap(submap);
+
+  submap->drop_frame_points();
 
   if (current == 0) {
     new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e12));

@@ -9,7 +9,7 @@
 
 namespace glim {
 
-void SubMap::drop_odom_frames() {
+void SubMap::drop_frame_points() {
   for (auto& frame : frames) {
     frame = frame->clone_wo_points();
   }
