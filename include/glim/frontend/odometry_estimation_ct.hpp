@@ -11,6 +11,10 @@ namespace gtsam {
 class Values;
 }
 
+namespace gtsam_ext {
+class iVox;
+}
+
 namespace glim {
 
 class CloudCovarianceEstimation;
@@ -23,9 +27,10 @@ public:
 public:
   int num_threads;
   double max_correspondence_distance;
-  int max_num_keyframes;
-  double keyframe_update_interval_rot;
-  double keyframe_update_interval_trans;
+
+  double ivox_resolution;
+  double ivox_min_points_dist;
+  int ivox_lru_thresh;
 
   double stiffness_scale_first;
   double stiffness_scale_second;
@@ -46,23 +51,15 @@ public:
   virtual EstimationFrame::ConstPtr insert_frame(const PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
 
 private:
-  struct TargetMap;
-  std::shared_ptr<TargetMap> create_target_map(const std::vector<EstimationFrame::ConstPtr>& keyframes);
-
-private:
   using Params = OdometryEstimationCTParams;
   Params params;
 
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
-  int frame_count;
   EstimationFrame::Ptr last_frame;
   std::deque<Eigen::Matrix<double, 6, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 6, 1>>> v_last_current_history;
 
-  std::deque<EstimationFrame::Ptr> keyframes;
-
-  std::shared_ptr<TargetMap> target_map;
-  std::future<std::shared_ptr<TargetMap>> async_target;
+  std::shared_ptr<gtsam_ext::iVox> target_ivox;
 };
 
 }  // namespace glim
