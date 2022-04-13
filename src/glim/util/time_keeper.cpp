@@ -92,12 +92,13 @@ void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
 
   // Convert absolute times to relative times
   if (abs_params.replace_frame_timestamp) {
-    if (!abs_params.wrt_first_frame_timestamp && std::abs(points->stamp - points->times.front()) < 1.0) {
+    if (!abs_params.wrt_first_frame_timestamp || std::abs(points->stamp - points->times.front()) < 1.0) {
       if (first_warning) {
         std::cerr << console::yellow << boost::format("warning: use first point timestamp as frame timestamp") << console::reset << std::endl;
         std::cerr << console::yellow << boost::format("       : frame=%.6f point=%.6f") % points->stamp % points->times.front() << console::reset << std::endl;
       }
 
+      point_time_offset = 0.0;
       points->stamp = points->times.front();
     } else {
       if (first_warning) {

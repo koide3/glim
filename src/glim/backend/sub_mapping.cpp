@@ -151,7 +151,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
       }
       const double overlap = odom_frame->frame->overlap_auto(targets, deltas);
       */
-      const double overlap = odom_frame->frame->overlap_auto(voxelized_keyframes.back(), keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
+      const double overlap = gtsam_ext::overlap_auto(voxelized_keyframes.back(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
       insert_as_keyframe = overlap < params.max_keyframe_overlap;
     }
     // Displacement-based keyframe update

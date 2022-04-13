@@ -488,7 +488,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
     delta_from_keyframes[i] = keyframes[i]->T_world_imu.inverse() * frames[current]->T_world_imu;
   }
 
-  const double overlap = frames[current]->frame->overlap_gpu(keyframes_, delta_from_keyframes);
+  const double overlap = gtsam_ext::overlap_gpu(keyframes_, frames[current]->frame, delta_from_keyframes);
   if (overlap > params.keyframe_max_overlap) {
     return;
   }
@@ -505,7 +505,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   // Remove keyframes without overlap to the new keyframe
   for (int i = 0; i < keyframes.size(); i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->voxelized_frame(), delta);
+    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelized_frame(), new_keyframe->frame, delta);
     if (overlap < params.keyframe_min_overlap) {
       marginalized_keyframes.push_back(keyframes[i]);
       keyframes.erase(keyframes.begin() + i);
@@ -522,7 +522,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   std::vector<double> scores(keyframes.size() - 1, 0.0);
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const auto& keyframe = keyframes[i];
-    const double overlap_latest = new_keyframe->frame->overlap_gpu(keyframe->voxelized_frame(), keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu);
+    const double overlap_latest = gtsam_ext::overlap_gpu(keyframe->voxelized_frame(), new_keyframe->frame, keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu);
 
     std::vector<gtsam_ext::VoxelizedFrame::ConstPtr> other_keyframes;
     std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> delta_from_others;
@@ -536,7 +536,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
       delta_from_others.push_back(other->T_world_imu.inverse() * keyframe->T_world_imu);
     }
 
-    const double overlap_others = keyframe->frame->overlap_gpu(other_keyframes, delta_from_others);
+    const double overlap_others = gtsam_ext::overlap_gpu(other_keyframes, keyframe->frame, delta_from_others);
     scores[i] = overlap_latest * (1.0 - overlap_others);
   }
 
@@ -581,7 +581,7 @@ void OdometryEstimationGPU::update_keyframes_displacement(int current) {
 
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = new_keyframe->frame->overlap_gpu(keyframes[i]->voxelized_frame(), delta);
+    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelized_frame(), new_keyframe->frame, delta);
 
     if (overlap < 0.01) {
       std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;

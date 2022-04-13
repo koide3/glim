@@ -21,7 +21,7 @@ endif()
 
 find_package(Boost REQUIRED timer serialization)
 find_package(Eigen3 REQUIRED)
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED core)
 find_package(GTSAM REQUIRED)
 
 find_package(OpenMP)
