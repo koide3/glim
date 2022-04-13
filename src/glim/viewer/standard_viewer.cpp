@@ -42,6 +42,9 @@ StandardViewer::StandardViewer() {
   last_imu_vel.setZero();
   last_imu_bias.setZero();
 
+  z_range = config.param("standard_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
+  auto_z_range << 0.0f, 0.0f;
+
   trajectory.reset(new TrajectoryManager);
 
   enable_partial_rendering = config.param("standard_viewer", "enable_partial_rendering", false);
@@ -119,9 +122,11 @@ void StandardViewer::set_callbacks() {
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
 
-      if (!new_frame->raw_frame->intensities.empty()) {
-        const double max_intensity = *std::max_element(new_frame->raw_frame->intensities.begin(), new_frame->raw_frame->intensities.end());
-        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, new_frame->raw_frame->intensities, 1.0 / 1.0);
+      if (new_frame->raw_frame && !new_frame->raw_frame->intensities.empty()) {
+        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, new_frame->raw_frame->intensities);
+      } else if (new_frame->frame->intensities) {
+        std::vector<float> intensities(new_frame->frame->intensities, new_frame->frame->intensities + new_frame->frame->size());
+        cloud_buffer->add_intensity(glk::COLORMAP::TURBO, intensities);
       }
 
       last_id = new_frame->id;
@@ -325,14 +330,13 @@ void StandardViewer::set_callbacks() {
     invoke([this, latest_submap, submap_ids, submap_poses] {
       auto viewer = guik::LightViewer::instance();
 
-      Eigen::Vector2f z_range = Eigen::Vector2f(0.0f, 0.0f);
       std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> submap_positions(submap_ids.size());
 
       for (int i = 0; i < submap_ids.size(); i++) {
         submap_positions[i] = submap_poses[i].translation();
 
-        z_range[0] = std::min<float>(z_range[0], submap_poses[i].translation().z());
-        z_range[1] = std::max<float>(z_range[1], submap_poses[i].translation().z());
+        auto_z_range[0] = std::min<float>(auto_z_range[0], submap_poses[i].translation().z());
+        auto_z_range[1] = std::max<float>(auto_z_range[1], submap_poses[i].translation().z());
 
         auto drawable = viewer->find_drawable("submap_" + std::to_string(submap_ids[i]));
         if (drawable.first) {
@@ -351,7 +355,7 @@ void StandardViewer::set_callbacks() {
       }
 
       viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(submap_positions, indices), guik::FlatGreen());
-      viewer->shader_setting().add<Eigen::Vector2f>("z_range", z_range + Eigen::Vector2f(-2.0f, 4.0f));
+      viewer->shader_setting().add<Eigen::Vector2f>("z_range", auto_z_range + z_range);
     });
   });
 
@@ -389,6 +393,8 @@ void StandardViewer::viewer_loop() {
 
   auto viewer = guik::LightViewer::instance(Eigen::Vector2i(config.param("standard_viewer", "viewer_width", 2560), config.param("standard_viewer", "viewer_height", 1440)));
   viewer->enable_vsync();
+  viewer->shader_setting().add("z_range", z_range);
+
   if (enable_partial_rendering) {
     viewer->enable_partial_rendering(1e-1);
     viewer->shader_setting().add("dynamic_object", 1);
@@ -486,6 +492,12 @@ void StandardViewer::drawable_selection() {
   ImGui::Checkbox("submaps", &show_submaps);
   ImGui::SameLine();
   ImGui::Checkbox("factors", &show_factors);
+
+  ImGui::Separator();
+  if (ImGui::DragFloatRange2("z_range", &z_range[0], &z_range[1], 0.1f, -100.0f, 100.0f)) {
+    guik::LightViewer::instance()->shader_setting().add<Eigen::Vector2f>("z_range", auto_z_range + z_range);
+  }
+
   ImGui::End();
 
   if (show_frontend_status) {

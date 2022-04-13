@@ -23,7 +23,7 @@ public:
   /**
    * @brief Remove point clouds of the odometry estimation frames (to save memory)
    */
-  void drop_odom_frames();
+  void drop_frame_points();
 
   /**
    * @brief Save the submap

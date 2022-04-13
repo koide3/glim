@@ -2,13 +2,21 @@
   "standard_viewer": {
     "viewer_width": 2560,
     "viewer_height": 1440,
+    "default_z_range": [
+      -2.0,
+      4.0
+    ],
     "enable_partial_rendering": false,
     "partial_rendering_budget": 1024
   },
   "interactive_viewer": {
     "viewer_width": 2560,
     "viewer_height": 1440,
-    "enable_partial_rendering": true,
+    "default_z_range": [
+      -2.0,
+      4.0
+    ],
+    "enable_partial_rendering": false,
     "partial_rendering_budget": 1024
   }
 }

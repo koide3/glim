@@ -48,6 +48,8 @@ InteractiveViewer::InteractiveViewer() {
   enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
   partial_rendering_budget = config.param("interactive_viewer", "partial_rendering_budget", 1024);
 
+  z_range = config.param("interactive_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
+
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
@@ -74,6 +76,7 @@ void InteractiveViewer::viewer_loop() {
   auto viewer = guik::LightViewer::instance(Eigen::Vector2i(2560, 1440));
   viewer->enable_info_buffer();
   viewer->enable_vsync();
+  viewer->shader_setting().add("z_range", z_range);
 
   if (enable_partial_rendering) {
     viewer->enable_partial_rendering(0.1);
@@ -216,10 +219,13 @@ void InteractiveViewer::run_modals() {
 void InteractiveViewer::update_viewer() {
   auto viewer = guik::LightViewer::instance();
 
-  Eigen::Vector2f z_range(0.0f, 0.0f);
+  Eigen::Vector2f auto_z_range(0.0f, 0.0f);
   for (int i = 0; i < submaps.size(); i++) {
     const auto& submap = submaps[i];
     const Eigen::Affine3f submap_pose = submap_poses[i].cast<float>();
+
+    auto_z_range[0] = std::min(auto_z_range[0], submap_pose.translation().z());
+    auto_z_range[1] = std::max(auto_z_range[1], submap_pose.translation().z());
 
     auto drawable = viewer->find_drawable("submap_" + std::to_string(submap->id));
     if (drawable.first) {
@@ -249,6 +255,8 @@ void InteractiveViewer::update_viewer() {
       glk::Primitives::sphere(),
       guik::FlatColor(1.0f, 0.0f, 0.0f, 0.5f, submap_pose * Eigen::UniformScaling<float>(sphere_scale)).add("info_values", info).make_transparent());
   }
+
+  viewer->shader_setting().add<Eigen::Vector2f>("z_range", z_range + auto_z_range);
 
   std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> factor_lines;
   std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f>> factor_colors;
