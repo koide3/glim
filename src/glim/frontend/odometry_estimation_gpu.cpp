@@ -45,6 +45,8 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() {
   // frontend config
   Config config(GlobalConfig::get_config_path("config_frontend"));
 
+  fix_imu_bias = config.param<bool>("odometry_estimation", "fix_imu_bias", false);
+
   const auto init_T_world_imu = config.param<Eigen::Isometry3d>("odometry_estimation", "init_T_world_imu");
   const auto init_v_world_imu = config.param<Eigen::Vector3d>("odometry_estimation", "init_v_world_imu");
   this->estimate_init_state = !init_T_world_imu && !init_v_world_imu;
@@ -220,7 +222,9 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
 
   // Constant IMU bias assumption
   new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e10)));
-  // new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+  if (params.fix_imu_bias) {
+    new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(params.imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+  }
   // Create IMU factor
   gtsam::ImuFactor::shared_ptr imu_factor;
   if (num_imu_integrated >= 2) {

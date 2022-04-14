@@ -34,6 +34,7 @@ public:
 
 public:
   // Sensor params;
+  bool fix_imu_bias;
   Eigen::Isometry3d T_lidar_imu;
   Eigen::Matrix<double, 6, 1> imu_bias;
 
