@@ -82,6 +82,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg) 
   fields["t"] = std::make_pair(&time_type, &time_offset);
   fields["time"] = std::make_pair(&time_type, &time_offset);
   fields["time_stamp"] = std::make_pair(&time_type, &time_offset);
+  fields["timestamp"] = std::make_pair(&time_type, &time_offset);
   fields["intensity"] = std::make_pair(&intensity_type, &intensity_offset);
 
   for (const auto& field : points_msg->fields) {

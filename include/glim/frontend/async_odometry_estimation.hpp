@@ -90,6 +90,7 @@ private:
   ConcurrentVector<EstimationFrame::ConstPtr> output_marginalized_frames;
 
   bool enable_imu;
+  std::atomic_int internal_frame_queue_size;
   std::shared_ptr<OdometryEstimationBase> odometry_estimation;
 };
 

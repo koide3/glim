@@ -89,6 +89,7 @@ target_link_libraries(glim
   gtsam_ext
   ${OpenCV_LIBRARIES}
   ${GTSAM_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 
 
@@ -140,7 +141,7 @@ if(DEFINED ENV{ROS_VERSION})
     find_package(catkin REQUIRED)
     catkin_package(
       INCLUDE_DIRS include thirdparty/gtsam_ext/include
-      LIBRARIES ${glim_LIBRARIES}
+      LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES}
     )
   endif()
 endif()

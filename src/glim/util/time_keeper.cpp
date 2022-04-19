@@ -59,6 +59,12 @@ void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
   // No per-point timestamps
   // Assign timestamps based on scan duration
   if (points->times.empty()) {
+    if (first_warning) {
+      std::cerr << console::yellow << boost::format("warning: per-point timestamps are not given!!") << console::reset << std::endl;
+      std::cerr << console::yellow << boost::format("       : use pseudo per-point timestamps based on the order of points") << console::reset << std::endl;
+      first_warning = false;
+    }
+
     points->times.resize(points->size(), 0.0);
     const double scan_duration = estimate_scan_duration(points->stamp);
     if (scan_duration > 0.0) {

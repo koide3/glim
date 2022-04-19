@@ -6,22 +6,23 @@
   // Newer college: [-0.006, 0.012, 0.029, 0.0, 0.0, 1.0, 0.0]
   // rooftop: [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
   // hilti : [-0.022, 0.013, 0.019, 0.0, 0.0, 0.0, 1.0]
+  // hilti2022 : [-0.00855, -0.00100, 0.05500, 0.70711, -0.70711, 0.00000, 0.00000]
   //
   // "T_lidar_imu" transforms points in the "imu" frame into the "lidar" frame
   // e.g., p_lidar = T_lidar_imu * p_imu, T_world_imu = T_world_lidar * T_lidar_imu
   */
   "sensors": {
     "T_lidar_imu": [
-      0.0,
-      0.0,
-      -0.31,
-      1.0,
-      0.0,
-      0.0,
-      0.0
+      -0.00855,
+      -0.00100,
+      0.05500,
+      0.70711,
+      -0.70711,
+      0.00000,
+      0.00000
     ],
     "imu_acc_noise": 0.01,
-    "imu_gyro_noise": 0.01,
-    "imu_int_noise": 0.01
+    "imu_gyro_noise": 0.0001,
+    "imu_int_noise": 0.0001
   }
 }

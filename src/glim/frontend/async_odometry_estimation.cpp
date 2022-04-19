@@ -6,6 +6,7 @@ AsyncOdometryEstimation::AsyncOdometryEstimation(const std::shared_ptr<OdometryE
   this->enable_imu = enable_imu;
   kill_switch = false;
   end_of_sequence = false;
+  internal_frame_queue_size = 0;
   thread = std::thread([this] { run(); });
 }
 
@@ -36,7 +37,7 @@ void AsyncOdometryEstimation::join() {
 }
 
 int AsyncOdometryEstimation::input_queue_size() const {
-  return input_frame_queue.size();
+  return input_frame_queue.size() + internal_frame_queue_size;
 }
 
 int AsyncOdometryEstimation::output_queue_size() const {
@@ -60,6 +61,7 @@ void AsyncOdometryEstimation::run() {
 
     images.insert(images.end(), new_images.begin(), new_images.end());
     raw_frames.insert(raw_frames.end(), new_raw_frames.begin(), new_raw_frames.end());
+    internal_frame_queue_size = raw_frames.size();
 
     if (images.empty() && imu_frames.empty() && raw_frames.empty()) {
       if (end_of_sequence) {
@@ -101,6 +103,7 @@ void AsyncOdometryEstimation::run() {
       output_estimation_results.push_back(state);
       output_marginalized_frames.insert(marginalized);
       raw_frames.pop_front();
+      internal_frame_queue_size = raw_frames.size();
     }
   }
 
