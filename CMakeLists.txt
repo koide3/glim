@@ -51,6 +51,7 @@ add_library(glim SHARED
   src/glim/util/config.cpp
   src/glim/util/export_factors.cpp
   src/glim/util/time_keeper.cpp
+  src/glim/util/extension_module.cpp
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
   src/glim/preprocess/downsampling.cpp
