@@ -82,7 +82,7 @@ void AsyncOdometryEstimation::run() {
     }
 
     while (!images.empty()) {
-      if (enable_imu && images.front().first > last_imu_time) {
+      if (!end_of_sequence && enable_imu && images.front().first > last_imu_time) {
         break;
       }
 
@@ -92,7 +92,7 @@ void AsyncOdometryEstimation::run() {
     }
 
     while (!raw_frames.empty()) {
-      if (enable_imu && raw_frames.front()->scan_end_time > last_imu_time) {
+      if (!end_of_sequence && enable_imu && raw_frames.front()->scan_end_time > last_imu_time) {
         break;
       }
 
