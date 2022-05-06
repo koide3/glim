@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any>
+#include <vector>
 #include <memory>
 #include <optional>
 
@@ -19,6 +20,12 @@ public:
 
   template <typename T>
   bool override_param(const std::string& module_name, const std::string& param_name, const T& value);
+
+  template <typename T>
+  std::optional<T> param(const std::vector<std::string>& module_names, const std::string& param_name) const;
+
+  template <typename T>
+  T param(const std::vector<std::string>& module_names, const std::string& param_name, const T& default_value) const;
 
 private:
   std::any config;

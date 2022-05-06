@@ -142,6 +142,50 @@ bool Config::override_param(const std::string& module_name, const std::string& p
   return true;
 }
 
+template <typename T>
+std::optional<T> Config::param(const std::vector<std::string>& module_names, const std::string& param_name) const {
+  const auto& json = std::any_cast<const nlohmann::json&>(config);
+
+  nlohmann::json::const_iterator itr = json.find(module_names[0]);
+  if (itr == json.end()) {
+    return std::nullopt;
+  }
+
+  for (int i = 1; i < module_names.size(); i++) {
+    const auto next = itr->find(module_names[i]);
+    if (next == itr->end()) {
+      return std::nullopt;
+    }
+
+    itr = next;
+  }
+
+  auto parameter = itr->find(param_name);
+  if (parameter == itr->end()) {
+    return std::nullopt;
+  }
+
+  return traits<T>::convert(parameter->get<typename traits<T>::InType>());
+}
+
+template <typename T>
+T Config::param(const std::vector<std::string>& module_names, const std::string& param_name, const T& default_value) const {
+  auto found = param<T>(module_names, param_name);
+  if (!found) {
+    std::cerr << console::yellow;
+    std::cerr << "warning: param " << console::underline;
+    for (const auto& module_name : module_names) {
+      std::cerr << module_name << "/";
+    }
+    std::cerr << param_name << console::reset << console::yellow << " not found" << std::endl;
+    std::cerr << "       : use the default value" << std::endl;
+    std::cerr << console::reset;
+    return default_value;
+  }
+
+  return found.value();
+}
+
 template bool Config::param(const std::string&, const std::string&, const bool&) const;
 template int Config::param(const std::string&, const std::string&, const int&) const;
 template float Config::param(const std::string&, const std::string&, const float&) const;
@@ -156,6 +200,21 @@ template Eigen::Vector3d Config::param(const std::string&, const std::string&, c
 template Eigen::Vector4d Config::param(const std::string&, const std::string&, const Eigen::Vector4d&) const;
 template Eigen::Quaterniond Config::param(const std::string&, const std::string&, const Eigen::Quaterniond&) const;
 template Eigen::Isometry3d Config::param(const std::string&, const std::string&, const Eigen::Isometry3d&) const;
+
+template bool Config::param(const std::vector<std::string>&, const std::string&, const bool&) const;
+template int Config::param(const std::vector<std::string>&, const std::string&, const int&) const;
+template float Config::param(const std::vector<std::string>&, const std::string&, const float&) const;
+template double Config::param(const std::vector<std::string>&, const std::string&, const double&) const;
+template std::string Config::param(const std::vector<std::string>&, const std::string&, const std::string&) const;
+template std::vector<int> Config::param(const std::vector<std::string>&, const std::string&, const std::vector<int>&) const;
+template std::vector<double> Config::param(const std::vector<std::string>&, const std::string&, const std::vector<double>&) const;
+template std::vector<std::string> Config::param(const std::vector<std::string>&, const std::string&, const std::vector<std::string>&) const;
+
+template Eigen::Vector2d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Vector2d&) const;
+template Eigen::Vector3d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Vector3d&) const;
+template Eigen::Vector4d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Vector4d&) const;
+template Eigen::Quaterniond Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Quaterniond&) const;
+template Eigen::Isometry3d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Isometry3d&) const;
 
 template bool Config::override_param(const std::string&, const std::string&, const bool&);
 template bool Config::override_param(const std::string&, const std::string&, const int&);
