@@ -12,6 +12,8 @@
 
 namespace glim {
 
+GlobalConfig* GlobalConfig::inst = nullptr;
+
 namespace {
 // IO traits
 template <typename T>
@@ -134,6 +136,18 @@ T Config::param(const std::string& module_name, const std::string& param_name, c
 }
 
 template <typename T>
+T Config::param_cast(const std::string& module_name, const std::string& param_name) const {
+  auto found = param<T>(module_name, param_name);
+  if (!found) {
+    std::cerr << console::bold_red;
+    std::cerr << "error : param " << console::underline << module_name << "/" << param_name << console::reset << console::bold_red << " not found" << std::endl;
+    std::cerr << console::reset;
+    abort();
+  }
+  return *found;
+}
+
+template <typename T>
 bool Config::override_param(const std::string& module_name, const std::string& param_name, const T& value) {
   auto& json = std::any_cast<nlohmann::json&>(config);
 
@@ -143,16 +157,16 @@ bool Config::override_param(const std::string& module_name, const std::string& p
 }
 
 template <typename T>
-std::optional<T> Config::param(const std::vector<std::string>& module_names, const std::string& param_name) const {
+std::optional<T> Config::param_nested(const std::vector<std::string>& nested_module_names, const std::string& param_name) const {
   const auto& json = std::any_cast<const nlohmann::json&>(config);
 
-  nlohmann::json::const_iterator itr = json.find(module_names[0]);
+  nlohmann::json::const_iterator itr = json.find(nested_module_names[0]);
   if (itr == json.end()) {
     return std::nullopt;
   }
 
-  for (int i = 1; i < module_names.size(); i++) {
-    const auto next = itr->find(module_names[i]);
+  for (int i = 1; i < nested_module_names.size(); i++) {
+    const auto next = itr->find(nested_module_names[i]);
     if (next == itr->end()) {
       return std::nullopt;
     }
@@ -169,12 +183,12 @@ std::optional<T> Config::param(const std::vector<std::string>& module_names, con
 }
 
 template <typename T>
-T Config::param(const std::vector<std::string>& module_names, const std::string& param_name, const T& default_value) const {
-  auto found = param<T>(module_names, param_name);
+T Config::param_nested(const std::vector<std::string>& nested_module_names, const std::string& param_name, const T& default_value) const {
+  auto found = param_nested<T>(nested_module_names, param_name);
   if (!found) {
     std::cerr << console::yellow;
     std::cerr << "warning: param " << console::underline;
-    for (const auto& module_name : module_names) {
+    for (const auto& module_name : nested_module_names) {
       std::cerr << module_name << "/";
     }
     std::cerr << param_name << console::reset << console::yellow << " not found" << std::endl;
@@ -186,51 +200,42 @@ T Config::param(const std::vector<std::string>& module_names, const std::string&
   return found.value();
 }
 
-template bool Config::param(const std::string&, const std::string&, const bool&) const;
-template int Config::param(const std::string&, const std::string&, const int&) const;
-template float Config::param(const std::string&, const std::string&, const float&) const;
-template double Config::param(const std::string&, const std::string&, const double&) const;
-template std::string Config::param(const std::string&, const std::string&, const std::string&) const;
-template std::vector<int> Config::param(const std::string&, const std::string&, const std::vector<int>&) const;
-template std::vector<double> Config::param(const std::string&, const std::string&, const std::vector<double>&) const;
-template std::vector<std::string> Config::param(const std::string&, const std::string&, const std::vector<std::string>&) const;
+template <typename T>
+T Config::param_cast_nested(const std::vector<std::string>& nested_module_names, const std::string& param_name) const {
+  auto found = param_nested<T>(nested_module_names, param_name);
+  if (!found) {
+    std::cerr << console::bold_red;
+    std::cerr << "error: param " << console::underline;
+    for (const auto& module_name : nested_module_names) {
+      std::cerr << module_name << "/";
+    }
+    std::cerr << param_name << console::reset << console::bold_red << " not found" << std::endl;
+    std::cerr << console::reset;
+    abort();
+  }
+  return *found;
+}
 
-template Eigen::Vector2d Config::param(const std::string&, const std::string&, const Eigen::Vector2d&) const;
-template Eigen::Vector3d Config::param(const std::string&, const std::string&, const Eigen::Vector3d&) const;
-template Eigen::Vector4d Config::param(const std::string&, const std::string&, const Eigen::Vector4d&) const;
-template Eigen::Quaterniond Config::param(const std::string&, const std::string&, const Eigen::Quaterniond&) const;
-template Eigen::Isometry3d Config::param(const std::string&, const std::string&, const Eigen::Isometry3d&) const;
+#define DEFINE_SPECIALIZATION(TYPE)                                                                           \
+  template TYPE Config::param(const std::string&, const std::string&, const TYPE&) const;                     \
+  template TYPE Config::param_cast(const std::string&, const std::string&) const;                             \
+  template TYPE Config::param_nested(const std::vector<std::string>&, const std::string&, const TYPE&) const; \
+  template TYPE Config::param_cast_nested(const std::vector<std::string>&, const std::string&) const;         \
+  template bool Config::override_param(const std::string&, const std::string&, const TYPE&);
 
-template bool Config::param(const std::vector<std::string>&, const std::string&, const bool&) const;
-template int Config::param(const std::vector<std::string>&, const std::string&, const int&) const;
-template float Config::param(const std::vector<std::string>&, const std::string&, const float&) const;
-template double Config::param(const std::vector<std::string>&, const std::string&, const double&) const;
-template std::string Config::param(const std::vector<std::string>&, const std::string&, const std::string&) const;
-template std::vector<int> Config::param(const std::vector<std::string>&, const std::string&, const std::vector<int>&) const;
-template std::vector<double> Config::param(const std::vector<std::string>&, const std::string&, const std::vector<double>&) const;
-template std::vector<std::string> Config::param(const std::vector<std::string>&, const std::string&, const std::vector<std::string>&) const;
+DEFINE_SPECIALIZATION(bool)
+DEFINE_SPECIALIZATION(int)
+DEFINE_SPECIALIZATION(float)
+DEFINE_SPECIALIZATION(double)
+DEFINE_SPECIALIZATION(std::string)
+DEFINE_SPECIALIZATION(std::vector<int>)
+DEFINE_SPECIALIZATION(std::vector<double>)
+DEFINE_SPECIALIZATION(std::vector<std::string>)
 
-template Eigen::Vector2d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Vector2d&) const;
-template Eigen::Vector3d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Vector3d&) const;
-template Eigen::Vector4d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Vector4d&) const;
-template Eigen::Quaterniond Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Quaterniond&) const;
-template Eigen::Isometry3d Config::param(const std::vector<std::string>&, const std::string&, const Eigen::Isometry3d&) const;
-
-template bool Config::override_param(const std::string&, const std::string&, const bool&);
-template bool Config::override_param(const std::string&, const std::string&, const int&);
-template bool Config::override_param(const std::string&, const std::string&, const float&);
-template bool Config::override_param(const std::string&, const std::string&, const double&);
-template bool Config::override_param(const std::string&, const std::string&, const std::string&);
-template bool Config::override_param(const std::string&, const std::string&, const std::vector<int>&);
-template bool Config::override_param(const std::string&, const std::string&, const std::vector<double>&);
-template bool Config::override_param(const std::string&, const std::string&, const std::vector<std::string>&);
-
-template bool Config::override_param(const std::string&, const std::string&, const Eigen::Vector2d&);
-template bool Config::override_param(const std::string&, const std::string&, const Eigen::Vector3d&);
-template bool Config::override_param(const std::string&, const std::string&, const Eigen::Vector4d&);
-template bool Config::override_param(const std::string&, const std::string&, const Eigen::Quaterniond&);
-template bool Config::override_param(const std::string&, const std::string&, const Eigen::Isometry3d&);
-
-GlobalConfig* GlobalConfig::inst = nullptr;
+DEFINE_SPECIALIZATION(Eigen::Vector2d)
+DEFINE_SPECIALIZATION(Eigen::Vector3d)
+DEFINE_SPECIALIZATION(Eigen::Vector4d)
+DEFINE_SPECIALIZATION(Eigen::Quaterniond)
+DEFINE_SPECIALIZATION(Eigen::Isometry3d)
 
 }  // namespace glim
