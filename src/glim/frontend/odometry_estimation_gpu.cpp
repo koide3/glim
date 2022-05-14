@@ -7,7 +7,6 @@
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
 #include <gtsam_ext/factors/loose_prior_factor.hpp>
-#include <gtsam_ext/factors/pose3_calib_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
@@ -283,7 +282,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   new_factors.add(matching_cost_factors);
 
   // Update smoother
-  Callbacks::on_smoother_update(*smoother, new_factors, new_values);
+  Callbacks::on_smoother_update(*smoother, new_factors, new_values, new_stamps);
   smoother->update(new_factors, new_values, new_stamps);
 
   // Find out marginalized frames

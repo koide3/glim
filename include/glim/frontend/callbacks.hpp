@@ -84,7 +84,9 @@ struct OdometryEstimationCallbacks {
    * @param new_factors  New factors to be inserted into the graph
    * @param new_values   New values to be inserted into the graph
    */
-  static CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExt& smoother, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values)> on_smoother_update;
+  static CallbackSlot<
+    void(gtsam_ext::IncrementalFixedLagSmootherExt& smoother, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values, std::map<std::uint64_t, double>& new_stamps)>
+    on_smoother_update;
 
   /**
    * @brief Smoother corruption callback
