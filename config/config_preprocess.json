@@ -8,12 +8,12 @@
   // k_correspondences           : Number of neighbors for covariance estimation
   */
   "preprocess": {
-    "distance_near_thresh": 2.0,
+    "distance_near_thresh": 0.5,
     "distance_far_thresh": 100.0,
     "use_random_grid_downsampling": true,
-    "downsample_resolution": 0.5,
+    "downsample_resolution": 0.15,
     "random_downsample_rate": 0.1,
     "k_correspondences": 8,
-    "num_threads": 4
+    "num_threads": 2
   }
 }

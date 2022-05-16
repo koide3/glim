@@ -40,7 +40,7 @@
     "keyframe_update_strategy": "OVERLAP",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
-    "max_keyframe_overlap": 0.5,
+    "max_keyframe_overlap": 0.8,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",
@@ -56,14 +56,14 @@
     "enable_imu": true,
     "enable_optimization": true,
     // Relative pose factors
-    "create_between_factors": false,
+    "create_between_factors": true,
     "between_registration_type": "GICP",
     // Registration error factors
     "registration_error_factor_type": "VGICP_GPU",
-    "submap_voxel_resolution": 2.0,
+    "submap_voxel_resolution": 0.5,
     "randomsampling_rate": 1.0,
     "max_implicit_loop_distance": 100.0,
-    "min_implicit_loop_overlap": 0.05,
+    "min_implicit_loop_overlap": 0.2,
     // Optimizer settings
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
