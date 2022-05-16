@@ -19,6 +19,6 @@ CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> OdometryEstima
 CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExt&, gtsam::NonlinearFactorGraph&, gtsam::Values&, gtsam::FixedLagSmootherKeyTimestampMap&)>
   OdometryEstimationCallbacks::on_smoother_update;
 
-CallbackSlot<void()> OdometryEstimationCallbacks::on_smoother_corruption;
+CallbackSlot<void(double)> OdometryEstimationCallbacks::on_smoother_corruption;
 
 }  // namespace glim

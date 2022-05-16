@@ -92,7 +92,7 @@ struct OdometryEstimationCallbacks {
    * @brief Smoother corruption callback
    * @note  We should not forget that FixedLagSmoothers are in "gtsam_unstable" directory!!
    */
-  static CallbackSlot<void()> on_smoother_corruption;
+  static CallbackSlot<void(double)> on_smoother_corruption;
 };
 
 }  // namespace glim

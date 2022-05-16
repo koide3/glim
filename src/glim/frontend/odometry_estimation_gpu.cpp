@@ -11,6 +11,7 @@
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
 #include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_ext.hpp>
+#include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 #include <gtsam_ext/cuda/nonlinear_factor_set_gpu.hpp>
 
 #include <glim/util/config.hpp>
@@ -108,7 +109,7 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
   }
   isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
-  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(params.smoother_lag, isam2_params));
+  smoother.reset(new FixedLagSmootherExt(params.smoother_lag, isam2_params));
 
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
 }
@@ -413,7 +414,7 @@ void OdometryEstimationGPU::fallback_smoother() {
   }
   isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
-  smoother.reset(new gtsam_ext::IncrementalFixedLagSmootherExt(params.smoother_lag, isam2_params));
+  smoother.reset(new FixedLagSmootherExt(params.smoother_lag, isam2_params));
 
   gtsam::Values values;
   gtsam::NonlinearFactorGraph factors;
@@ -467,7 +468,7 @@ void OdometryEstimationGPU::update_frames(int current) {
       std::cerr << "caught " << e.what() << std::endl;
       std::cerr << "current:" << current << std::endl;
       std::cerr << "marginalized_cursor:" << marginalized_cursor << std::endl;
-      Callbacks::on_smoother_corruption();
+      Callbacks::on_smoother_corruption(frames[current]->stamp);
       fallback_smoother();
       break;
     }
@@ -475,7 +476,7 @@ void OdometryEstimationGPU::update_frames(int current) {
 }
 
 /**
- * @brief Keyframe management based on overlap metric
+ * @brief Keyframe management based on an overlap metric
  * @ref   Koide et al., "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", ICRA2022
  */
 void OdometryEstimationGPU::update_keyframes_overlap(int current) {

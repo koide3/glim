@@ -14,6 +14,7 @@ class NonlinearFactorGraph;
 namespace gtsam_ext {
 class VoxelizedFrame;
 class IncrementalFixedLagSmootherExt;
+class IncrementalFixedLagSmootherExtWithFallback;
 class StreamTempBufferRoundRobin;
 }  // namespace gtsam_ext
 
@@ -115,7 +116,8 @@ private:
   std::unique_ptr<gtsam_ext::StreamTempBufferRoundRobin> stream_buffer_roundrobin;
 
   // Optimizer
-  std::unique_ptr<gtsam_ext::IncrementalFixedLagSmootherExt> smoother;
+  using FixedLagSmootherExt = gtsam_ext::IncrementalFixedLagSmootherExtWithFallback;
+  std::unique_ptr<FixedLagSmootherExt> smoother;
 };
 
 }  // namespace glim

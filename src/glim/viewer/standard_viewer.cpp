@@ -153,6 +153,20 @@ void StandardViewer::set_callbacks() {
     });
   });
 
+  // Update frames callback
+  OdometryEstimationCallbacks::on_update_frames.add([this](const std::vector<EstimationFrame::ConstPtr>& frames) {
+    invoke([this, frames] {
+      auto viewer = guik::LightViewer::instance();
+      for (const auto& frame : frames) {
+        auto drawable = viewer->find_drawable("frame_" + std::to_string(frame->id));
+        if(drawable.first) {
+          const Eigen::Isometry3f pose = resolve_pose(frame);
+          drawable.first->add<Eigen::Matrix4f>("model_matrix", pose.matrix());
+        }
+      }
+    });
+  });
+
   // Update keyframes callback
   OdometryEstimationCallbacks::on_update_keyframes.add([this](const std::vector<EstimationFrame::ConstPtr>& keyframes) {
     invoke([this, keyframes] {
