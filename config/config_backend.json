@@ -54,13 +54,15 @@
   },
   "global_mapping": {
     "enable_imu": true,
-    "enable_optimization": true,
+    "enable_optimization": false,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",
     // Registration error factors
     "registration_error_factor_type": "VGICP_GPU",
     "submap_voxel_resolution": 0.5,
+    "submap_voxelmap_levels": 3,
+    "submap_voxelmap_scaling_factor": 2.0,
     "randomsampling_rate": 1.0,
     "max_implicit_loop_distance": 100.0,
     "min_implicit_loop_overlap": 0.2,
