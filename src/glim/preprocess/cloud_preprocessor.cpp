@@ -125,7 +125,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<doub
   filtered->intensities.reserve(intensities.size());
 
   for (int i = 0; i < points.size(); i++) {
-    const double dist = points[i].norm();
+    const double dist = (Eigen::Vector4d() << points[i].head<3>(), 0.0).finished().norm();
     if (!std::isfinite(dist)) {
       std::cout << console::yellow << "warning: an invalid point found!! " << points[i].transpose() << console::reset << std::endl;
       continue;

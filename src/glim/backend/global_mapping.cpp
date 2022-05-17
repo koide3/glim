@@ -48,6 +48,9 @@ GlobalMappingParams::GlobalMappingParams() {
   between_registration_type = config.param<std::string>("global_mapping", "between_registration_type", "GICP");
   registration_error_factor_type = config.param<std::string>("global_mapping", "registration_error_factor_type", "VGICP");
   submap_voxel_resolution = config.param<double>("global_mapping", "submap_voxel_resolution", 1.0);
+  submap_voxelmap_levels = config.param<int>("global_mapping", "submap_voxelmap_levels", 2);
+  submap_voxelmap_scaling_factor = config.param<double>("global_mapping", "submap_voxelmap_scaling_factor", 2.0);
+
   randomsampling_rate = config.param<double>("global_mapping", "randomsampling_rate", 1.0);
   max_implicit_loop_distance = config.param<double>("global_mapping", "max_implicit_loop_distance", 100.0);
   min_implicit_loop_overlap = config.param<double>("global_mapping", "min_implicit_loop_overlap", 0.1);
@@ -209,6 +212,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, params.randomsampling_rate, mt);
   gtsam_ext::VoxelizedFrame::Ptr voxelized_submap;
+  std::vector<gtsam_ext::GaussianVoxelMap::Ptr> multilevel_voxelmap;
 
 #ifdef BUILD_GTSAM_EXT_GPU
   if (params.enable_gpu && !submap->frame->points_gpu) {
@@ -218,6 +222,13 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   if (params.enable_gpu) {
     subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap, true);
     voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame, false);
+
+    for (int i = 0; i < params.submap_voxelmap_levels - 1; i++) {
+      const double resolution = params.submap_voxel_resolution * (i + 2);
+      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+      voxelmap->insert(*subsampled_submap);
+      multilevel_voxelmap.push_back(voxelmap);
+    }
   }
 #endif
 
@@ -228,6 +239,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   submaps.push_back(submap);
   subsampled_submaps.push_back(subsampled_submap);
   voxelized_submaps.push_back(voxelized_submap);
+  multilevel_voxelized_submaps.push_back(multilevel_voxelmap);
 }
 
 void GlobalMapping::optimize() {
@@ -253,6 +265,9 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
 
   const int last = current - 1;
   const gtsam::Pose3 init_delta = gtsam::Pose3((submaps[last]->T_world_origin.inverse() * submaps[current]->T_world_origin).matrix());
+
+  factors->add(gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), init_delta, gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+  return factors;
 
   gtsam::Values values;
   values.insert(X(0), gtsam::Pose3::identity());
@@ -315,6 +330,9 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
       factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current], stream, buffer);
+      for (const auto& voxelmap : multilevel_voxelized_submaps[i]) {
+        factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelmap, subsampled_submaps[current], stream, buffer);
+      }
     }
 #endif
     else {

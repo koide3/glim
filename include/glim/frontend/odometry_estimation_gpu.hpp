@@ -51,6 +51,9 @@ public:
   double isam2_relinearize_thresh;
 
   double voxel_resolution;
+  int voxelmap_levels;
+  double voxelmap_scaling_factor;
+
   int max_num_keyframes;
   int full_connection_window_size;
 

@@ -6,6 +6,7 @@
 #include <gtsam_ext/cuda/cuda_device_sync.hpp>
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
+#include <gtsam_ext/types/gaussian_voxelmap_gpu.hpp>
 #include <gtsam_ext/factors/loose_prior_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
@@ -54,6 +55,9 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() {
   this->init_v_world_imu = init_v_world_imu.value_or(Eigen::Vector3d::Zero());
 
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
+  voxelmap_levels = config.param<int>("odometry_estimation", "voxelmap_levels", 2);
+  voxelmap_scaling_factor = config.param<double>("odometry_estimation", "voxelmap_scaling_factor", 2.0);
+
   max_num_keyframes = config.param<int>("odometry_estimation", "max_num_keyframes", 10);
   full_connection_window_size = config.param<int>("odometry_estimation", "full_connection_window_size", 3);
 
@@ -160,8 +164,21 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
       points_imu[i] = T_imu_lidar * raw_frame->points[i];
     }
 
-    auto covs = covariance_estimation->estimate(points_imu, raw_frame->neighbors);
-    new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.voxel_resolution, points_imu, covs);
+    std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> normals;
+    std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> covs;
+    covariance_estimation->estimate(points_imu, raw_frame->neighbors, normals, covs);
+
+    auto frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.voxel_resolution, points_imu, covs);
+    frame->add_normals(normals);
+    new_frame->frame = frame;
+
+    for (int i = 0; i < params.voxelmap_levels - 1; i++) {
+      const double resolution = params.voxel_resolution * (i + 2);
+      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+      voxelmap->insert(*new_frame->frame);
+      new_frame->voxelmap_pyramid.push_back(voxelmap);
+    }
+
     new_frame->frame_id = FrameID::IMU;
 
     Callbacks::on_new_frame(new_frame);
@@ -270,8 +287,19 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     pt = T_imu_lidar * pt;
   }
 
-  auto deskewed_covs = covariance_estimation->estimate(deskewed, raw_frame->neighbors);
-  new_frame->frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.voxel_resolution, deskewed, deskewed_covs);
+  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> deskewed_normals;
+  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> deskewed_covs;
+  covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
+
+  auto frame = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.voxel_resolution, deskewed, deskewed_covs);
+  frame->add_normals(deskewed_normals);
+  new_frame->frame = frame;
+  for (int i = 0; i < params.voxelmap_levels - 1; i++) {
+    const double resolution = params.voxel_resolution * (i + 2);
+    auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+    voxelmap->insert(*new_frame->frame);
+    new_frame->voxelmap_pyramid.push_back(voxelmap);
+  }
   new_frame->frame_id = FrameID::IMU;
 
   Callbacks::on_new_frame(new_frame);
@@ -335,25 +363,44 @@ std::vector<EstimationFrame::ConstPtr> OdometryEstimationGPU::get_remaining_fram
 
 gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(int current) {
   const auto create_binary_factor = [this](
+                                      gtsam::NonlinearFactorGraph& factors,
                                       gtsam::Key target_key,
                                       gtsam::Key source_key,
-                                      const gtsam_ext::VoxelizedFrame::ConstPtr& target,
-                                      const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
+                                      const glim::EstimationFrame::ConstPtr& target,
+                                      const glim::EstimationFrame::ConstPtr& source) {
     auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
     const auto& stream = stream_buffer.first;
     const auto& buffer = stream_buffer.second;
-    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, target, source, stream, buffer);
+
+    auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, target->voxelized_frame(), source->frame, stream, buffer);
+    factor->set_enable_surface_validation(true);
+    factors.add(factor);
+
+    for (const auto& voxelmap : target->voxelmap_pyramid) {
+      auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, voxelmap, source->frame, stream, buffer);
+      factor->set_enable_surface_validation(true);
+      factors.add(factor);
+    }
   };
 
   const auto create_unary_factor = [this](
+                                     gtsam::NonlinearFactorGraph& factors,
                                      const gtsam::Pose3& fixed_target_pose,
                                      gtsam::Key source_key,
-                                     const gtsam_ext::VoxelizedFrame::ConstPtr& target,
-                                     const gtsam_ext::Frame::ConstPtr& source) -> gtsam::NonlinearFactor::shared_ptr {
+                                     const glim::EstimationFrame::ConstPtr& target,
+                                     const glim::EstimationFrame::ConstPtr& source) {
     auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
     const auto& stream = stream_buffer.first;
     const auto& buffer = stream_buffer.second;
-    return gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, target, source, stream, buffer);
+    auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, target->voxelized_frame(), source->frame, stream, buffer);
+    factor->set_enable_surface_validation(true);
+    factors.add(factor);
+
+    for (const auto& voxelmap : target->voxelmap_pyramid) {
+      auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, voxelmap, source->frame, stream, buffer);
+      factor->set_enable_surface_validation(true);
+      factors.add(factor);
+    }
   };
 
   gtsam::NonlinearFactorGraph factors;
@@ -367,7 +414,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(
       continue;
     }
 
-    factors.add(create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame));
+    create_binary_factor(factors, X(target), X(current), frames[target], frames[current]);
   }
 
   for (const auto& keyframe : keyframes) {
@@ -384,12 +431,11 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_matching_cost_factors(
     if (span > params.smoother_lag - 0.1) {
       // Create unary factor
       const gtsam::Pose3 key_T_world_imu(keyframe->T_world_imu.matrix());
-      factors.add(create_unary_factor(key_T_world_imu, X(current), keyframe->voxelized_frame(), frames[current]->frame));
+      create_unary_factor(factors, key_T_world_imu, X(current), keyframe, frames[current]);
     } else {
       // Create binary factor
       const int target = keyframe->id;
-      auto factor = create_binary_factor(X(target), X(current), frames[target]->voxelized_frame(), frames[current]->frame);
-      factors.add(factor);
+      create_binary_factor(factors, X(target), X(current), frames[target], frames[current]);
     }
   }
 
@@ -446,7 +492,15 @@ void OdometryEstimationGPU::fallback_smoother() {
       auto stream_buffer = stream_buffer_roundrobin->get_stream_buffer();
       auto& stream = stream_buffer.first;
       auto& buffer = stream_buffer.second;
-      factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(target), X(i), frames[target]->voxelized_frame(), frames[i]->frame, stream, buffer);
+      auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(target), X(i), frames[target]->voxelized_frame(), frames[i]->frame, stream, buffer);
+      factor->set_enable_surface_validation(true);
+      factors.add(factor);
+
+      for (const auto& voxelmap : frames[target]->voxelmap_pyramid) {
+        auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(target), X(i), voxelmap, frames[i]->frame, stream, buffer);
+        factor->set_enable_surface_validation(true);
+        factors.add(factor);
+      }
     }
   }
 

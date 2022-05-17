@@ -102,5 +102,7 @@ public:
 
   FrameID frame_id;                  // Coordinate frame of $frame
   gtsam_ext::Frame::ConstPtr frame;  // Deskewed points for state estimation
+
+  std::vector<gtsam_ext::GaussianVoxelMap::Ptr> voxelmap_pyramid;
 };
 }  // namespace glim
