@@ -7,7 +7,7 @@
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
 #include <gtsam_ext/types/gaussian_voxelmap_gpu.hpp>
-#include <gtsam_ext/factors/loose_prior_factor.hpp>
+#include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
@@ -200,9 +200,9 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     new_values.insert(B(0), gtsam::imuBias::ConstantBias(new_frame->imu_bias));
 
     // Prior for initial IMU states
-    new_factors.add(gtsam_ext::LoosePriorFactor<gtsam::Pose3>(X(0), gtsam::Pose3(init_state->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e10)));
-    new_factors.add(gtsam::PriorFactor<gtsam::Vector3>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0)));
-    new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(0), gtsam::imuBias::ConstantBias(init_state->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e2)));
+    new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, 1e10);
+    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0));
+    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(0), gtsam::imuBias::ConstantBias(init_state->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e2));
 
     smoother->update(new_factors, new_values, new_stamps);
 

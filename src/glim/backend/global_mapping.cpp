@@ -13,7 +13,7 @@
 #include <gtsam_ext/types/frame_gpu.hpp>
 #include <gtsam_ext/types/voxelized_frame_cpu.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
-#include <gtsam_ext/factors/loose_prior_factor.hpp>
+#include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/rotate_vector3_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
@@ -136,7 +136,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   submap->drop_frame_points();
 
   if (current == 0) {
-    new_factors->emplace_shared<gtsam_ext::LoosePriorFactor<gtsam::Pose3>>(X(0), current_T_world_submap, gtsam::noiseModel::Isotropic::Precision(6, 1e12));
+    new_factors->emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, 1e10);
   } else {
     new_factors->add(*create_between_factors(current));
     new_factors->add(*create_matching_cost_factors(current));
