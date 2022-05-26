@@ -49,6 +49,8 @@ SubMappingParams::SubMappingParams() {
   registration_error_factor_type = config.param<std::string>("sub_mapping", "registration_error_factor_type", "VGICP");
   keyframe_randomsampling_rate = config.param<double>("sub_mapping", "keyframe_randomsampling_rate", 0.1);
   keyframe_voxel_resolution = config.param<double>("sub_mapping", "keyframe_voxel_resolution", 0.5);
+  keyframe_voxelmap_levels = config.param<int>("sub_mapping", "keyframe_voxelmap_levels", 3);
+  keyframe_voxelmap_scaling_factor = config.param<double>("sub_mapping", "keyframe_voxelmap_scaling_factor", 2.0);
 
   submap_downsample_resolution = config.param<double>("sub_mapping", "submap_downsample_resolution", 0.25);
   submap_voxel_resolution = config.param<double>("sub_mapping", "submap_voxel_resolution", 0.5);
@@ -183,6 +185,11 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
         graph->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), voxelized_keyframes[i], keyframes.back()->frame, stream, buffer);
+
+        for (const auto& voxelmap : keyframes[i]->voxelmap_pyramid) {
+          auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame, stream, buffer);
+          graph->add(factor);
+        }
       }
 #endif
       else {
@@ -245,6 +252,13 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   if (params.enable_gpu) {
     voxelized_keyframe = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.keyframe_voxel_resolution, *deskewed_frame);
     keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
+
+    for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
+      const double resolution = params.keyframe_voxel_resolution * params.keyframe_voxelmap_scaling_factor * (i + 1);
+      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+      voxelmap->insert(*voxelized_keyframe);
+      keyframe->voxelmap_pyramid.push_back(voxelmap);
+    }
   }
 #endif
   if (!voxelized_keyframe) {

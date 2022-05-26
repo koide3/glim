@@ -43,6 +43,8 @@ public:
   std::string registration_error_factor_type;
   double keyframe_randomsampling_rate;
   double keyframe_voxel_resolution;
+  int keyframe_voxelmap_levels;
+  double keyframe_voxelmap_scaling_factor;
 
   double submap_downsample_resolution;
   double submap_voxel_resolution;

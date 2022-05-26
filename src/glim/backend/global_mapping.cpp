@@ -131,6 +131,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
   new_values->insert(X(current), current_T_world_submap);
   submap->T_world_origin = Eigen::Isometry3d(current_T_world_submap.matrix());
+
   Callbacks::on_insert_submap(submap);
 
   submap->drop_frame_points();
@@ -224,7 +225,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
     voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame, false);
 
     for (int i = 0; i < params.submap_voxelmap_levels - 1; i++) {
-      const double resolution = params.submap_voxel_resolution * (i + 2);
+      const double resolution = params.submap_voxel_resolution * params.submap_voxelmap_scaling_factor * (i + 1);
       auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
       voxelmap->insert(*subsampled_submap);
       multilevel_voxelmap.push_back(voxelmap);

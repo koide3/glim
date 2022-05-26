@@ -173,7 +173,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     new_frame->frame = frame;
 
     for (int i = 0; i < params.voxelmap_levels - 1; i++) {
-      const double resolution = params.voxel_resolution * (i + 2);
+      const double resolution = params.voxel_resolution * params.voxelmap_scaling_factor * (i + 1);
       auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
       voxelmap->insert(*new_frame->frame);
       new_frame->voxelmap_pyramid.push_back(voxelmap);
@@ -295,7 +295,7 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   frame->add_normals(deskewed_normals);
   new_frame->frame = frame;
   for (int i = 0; i < params.voxelmap_levels - 1; i++) {
-    const double resolution = params.voxel_resolution * (i + 2);
+    const double resolution = params.voxel_resolution * params.voxelmap_scaling_factor * (i + 1);
     auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
     voxelmap->insert(*new_frame->frame);
     new_frame->voxelmap_pyramid.push_back(voxelmap);

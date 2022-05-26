@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <Eigen/Core>
+#include <glim/util/raw_points.hpp>
 
 namespace glim {
 
@@ -31,6 +32,8 @@ public:
 
   int k_neighbors;             // Number of neighbors of each point
   std::vector<int> neighbors;  // k-nearest neighbors of each point
+
+  RawPoints::ConstPtr raw_points;
 };
 
 }  // namespace glim
