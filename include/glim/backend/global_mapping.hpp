@@ -20,6 +20,9 @@ namespace glim {
 
 class IMUIntegration;
 
+/**
+ * @brief Global mapping parameters
+ */
 struct GlobalMappingParams {
 public:
   GlobalMappingParams();
@@ -46,6 +49,10 @@ public:
   double isam2_relinearize_thresh;
 };
 
+
+/**
+ * @brief Global mapping
+ */
 class GlobalMapping : public GlobalMappingBase {
 public:
   GlobalMapping(const GlobalMappingParams& params = GlobalMappingParams());
@@ -59,6 +66,10 @@ public:
   virtual void save(const std::string& path) override;
   virtual std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points() override;
 
+  /**
+   * @brief Load a mapping result from a dumped directory
+   * @param path Input dump path
+   */
   bool load(const std::string& path);
 
 private:

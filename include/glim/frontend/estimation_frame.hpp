@@ -87,21 +87,21 @@ struct EstimationFrame {
   }
 
 public:
-  long id;       // Frame ID
-  double stamp;  // Timestamp
+  long id;       ///< Frame ID
+  double stamp;  ///< Timestamp
 
-  Eigen::Isometry3d T_lidar_imu;    // LiDAR-IMU transformation
-  Eigen::Isometry3d T_world_lidar;  // LiDAR pose in the world space
-  Eigen::Isometry3d T_world_imu;    // IMU pose in the world space
+  Eigen::Isometry3d T_lidar_imu;    ///< LiDAR-IMU transformation
+  Eigen::Isometry3d T_world_lidar;  ///< LiDAR pose in the world space
+  Eigen::Isometry3d T_world_imu;    ///< IMU pose in the world space
 
-  Eigen::Vector3d v_world_imu;           // IMU velocity in the world frame
-  Eigen::Matrix<double, 6, 1> imu_bias;  // IMU bias
+  Eigen::Vector3d v_world_imu;           ///< IMU velocity in the world frame
+  Eigen::Matrix<double, 6, 1> imu_bias;  ///< IMU bias
 
-  PreprocessedFrame::ConstPtr raw_frame;             // Raw input point cloud
-  Eigen::Matrix<double, 8, -1> imu_rate_trajectory;  // IMU-rate trajectory 8 x N  [t, x, y, z, qx, qy, qz, qw]
+  PreprocessedFrame::ConstPtr raw_frame;             ///< Raw input point cloud
+  Eigen::Matrix<double, 8, -1> imu_rate_trajectory;  ///< IMU-rate trajectory 8 x N  [t, x, y, z, qx, qy, qz, qw]
 
-  FrameID frame_id;                  // Coordinate frame of $frame
-  gtsam_ext::Frame::ConstPtr frame;  // Deskewed points for state estimation
+  FrameID frame_id;                  ///< Coordinate frame of $frame
+  gtsam_ext::Frame::ConstPtr frame;  ///< Deskewed points for state estimation
 
   std::vector<gtsam_ext::GaussianVoxelMap::Ptr> voxelmap_pyramid;
 };

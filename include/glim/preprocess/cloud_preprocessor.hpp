@@ -9,22 +9,25 @@
 
 namespace glim {
 
+/**
+ * @brief Point cloud preprocessing parameters
+ */
 struct CloudPreprocessorParams {
 public:
   CloudPreprocessorParams();
   ~CloudPreprocessorParams();
 
 public:
-  Eigen::Isometry3d T_lidar_offset;
+  Eigen::Isometry3d T_lidar_offset;     ///< Transformation between the base frame and LiDAR
 
-  bool use_random_grid_downsampling;
-  double distance_near_thresh;
-  double distance_far_thresh;
-  double downsample_resolution;
-  double downsample_rate;
-  int k_correspondences;
+  bool use_random_grid_downsampling;    ///< If true, use random grid downsampling, otherwise, use the conventional voxel grid
+  double distance_near_thresh;          ///< Minimum distance threshold
+  double distance_far_thresh;           ///< Maximum distance threshold
+  double downsample_resolution;         ///< Downsampling resolution
+  double downsample_rate;               ///< Downsamping rate (used for random grid downsampling)
+  int k_correspondences;                ///< Number of neighboring points
 
-  int num_threads;
+  int num_threads;                      ///< Number of threads
 };
 
 /**
@@ -37,13 +40,9 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   /**
-   * @brief Construct a new Cloud Preprocessor object
+   * @brief Constructor
    */
   CloudPreprocessor(const CloudPreprocessorParams& params = CloudPreprocessorParams());
-
-  /**
-   * @brief Destroy the Cloud Preprocessor object
-   */
   virtual ~CloudPreprocessor();
 
   /**

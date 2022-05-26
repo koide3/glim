@@ -13,6 +13,9 @@ class ProgressInterface;
 
 namespace glim {
 
+/**
+ * @brief ImGUI modal for manually creating loop factors
+ */
 class ManualLoopCloseModal {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

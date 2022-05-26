@@ -22,7 +22,7 @@ class LevenbergMarquardtOptimizationStatus;
 namespace glim {
 
 /**
- * @brief Sub mapping-related callback
+ * @brief Sub mapping-related callbacks
  *
  */
 struct SubMappingCallbacks {

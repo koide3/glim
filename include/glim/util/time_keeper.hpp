@@ -5,6 +5,9 @@
 
 namespace glim {
 
+/**
+ * @brief Parameter to control the absolute point time handling behavior
+ */
 struct AbsPointTimeParams {
 public:
   AbsPointTimeParams() {
@@ -12,8 +15,8 @@ public:
     wrt_first_frame_timestamp = true;
   }
 
-  bool replace_frame_timestamp;
-  bool wrt_first_frame_timestamp;
+  bool replace_frame_timestamp;     ///< If true, replace the frame timestamp with point timestamp
+  bool wrt_first_frame_timestamp;   ///< If true, use the timestamp with respect to the very first points msg
 };
 
 /**
@@ -43,15 +46,15 @@ private:
 private:
   const AbsPointTimeParams abs_params;
 
-  bool first_warning;        // Flag to show warning messages only once
-  double last_points_stamp;  // Timestamp of the last LiDAR frame
-  double last_imu_stamp;     // Timestamp of the last IMU data
+  bool first_warning;        ///< Flag to show warning messages only once
+  double last_points_stamp;  ///< Timestamp of the last LiDAR frame
+  double last_imu_stamp;     ///< Timestamp of the last IMU data
 
-  int num_scans;                   // Number of frames for scan duration estimation
-  double first_points_stamp;       // Timestamp of the first frame for scan duration estimation
-  double estimated_scan_duration;  // Estimated scan duration
+  int num_scans;                   ///< Number of frames for scan duration estimation
+  double first_points_stamp;       ///< Timestamp of the first frame for scan duration estimation
+  double estimated_scan_duration;  ///< Estimated scan duration
 
-  double point_time_offset;  // Offset to correct time shift of point times
+  double point_time_offset;  ///< Offset to correct time shift of point times
 };
 
 }  // namespace glim

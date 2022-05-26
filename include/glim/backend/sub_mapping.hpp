@@ -21,6 +21,9 @@ class IMUIntegration;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
 
+/**
+ * @brief Sub mapping parameters
+ */
 struct SubMappingParams {
 public:
   SubMappingParams();
@@ -50,6 +53,9 @@ public:
   double submap_voxel_resolution;
 };
 
+/**
+ * @brief Sub mapping
+ */
 class SubMapping : public SubMappingBase {
 public:
   SubMapping(const SubMappingParams& params = SubMappingParams());
