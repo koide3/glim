@@ -498,10 +498,11 @@ bool GlobalMapping::load(const std::string& path) {
     gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, params.randomsampling_rate, mt);
 
     submaps[i] = submap;
+    submaps[i]->voxelmaps.clear();
     subsampled_submaps[i] = subsampled_submap;
 
-#ifdef BUILD_GTSAM_EXT_GPU
     if (params.enable_gpu) {
+#ifdef BUILD_GTSAM_EXT_GPU
       subsampled_submaps[i] = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submaps[i]);
 
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
@@ -510,10 +511,10 @@ bool GlobalMapping::load(const std::string& path) {
         voxelmap->insert(*subsampled_submaps[i]);
         submaps[i]->voxelmaps.push_back(voxelmap);
       }
-    }
+#else
+      std::cerr << console::yellow << "warning: GPU is enabled for global_mapping but gtsam_ext was built without CUDA!!" << console::reset << std::endl;
 #endif
-
-    if(submaps[i]->voxelmaps.empty()) {
+    } else {
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
         const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
         auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapCPU>(resolution);

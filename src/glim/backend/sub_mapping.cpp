@@ -167,7 +167,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     for (int i = 0; i < keyframes.size() - 1; i++) {
       if (params.registration_error_factor_type == "VGICP") {
         for(const auto& voxelmap: keyframes[i]->voxelmaps) {
-          graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), std::dynamic_pointer_cast<const gtsam_ext::GaussianVoxelMapCPU>(voxelmap), keyframes.back()->frame);
+          graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame);
         }
       }
 #ifdef BUILD_GTSAM_EXT_GPU
@@ -243,9 +243,10 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   EstimationFrame::Ptr keyframe(new EstimationFrame);
   *keyframe = *odom_frame;
 
-#ifdef BUILD_GTSAM_EXT_GPU
   if (params.enable_gpu) {
+#ifdef BUILD_GTSAM_EXT_GPU
     keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
+    keyframe->voxelmaps.clear();
 
     for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
       const double resolution = params.keyframe_voxel_resolution * std::pow(params.keyframe_voxelmap_scaling_factor, i);
@@ -253,9 +254,11 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
       voxelmap->insert(*keyframe->frame);
       keyframe->voxelmaps.push_back(voxelmap);
     }
-  }
+#else
+    std::cerr << console::yellow << "warning: GPU is enabled for sub_mapping but gtsam_ext was built without CUDA!!" << console::reset << std::endl;
 #endif
-  if (keyframe->voxelmaps.empty()) {
+  } else {
+    keyframe->voxelmaps.clear();
     for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
       const double resolution = params.keyframe_voxel_resolution * std::pow(params.keyframe_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapCPU>(resolution);
