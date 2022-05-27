@@ -92,12 +92,11 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   const int current = odom_frames.size();
   const int last = current - 1;
   odom_frames.push_back(odom_frame);
+  values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
   if (params.enable_imu && odom_frame->frame_id != FrameID::IMU) {
     std::cerr << console::yellow << "warning: odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation" << console::reset << std::endl;
   }
-
-  values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
   // Fix the first frame
   if (current == 0) {
@@ -192,6 +191,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   }
 
   if (odom_frames.size() >= 2) {
+    // Drop unnecessary points data
+    // The last frame may be required to compute the relative pose factor
     odom_frames[odom_frames.size() - 2] = odom_frames[odom_frames.size() - 2]->clone_wo_points();
   }
 
@@ -348,7 +349,12 @@ std::vector<SubMap::Ptr> SubMapping::get_submaps() {
 std::vector<SubMap::Ptr> SubMapping::submit_end_of_sequence() {
   std::vector<SubMap::Ptr> submaps;
   if (!odom_frames.empty()) {
-    submaps.push_back(create_submap(true));
+    auto new_submap = create_submap(true);
+
+    if(new_submap) {
+      new_submap->id = submap_count++;
+      submaps.push_back(new_submap);
+    }
   }
 
   return submaps;

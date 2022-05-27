@@ -224,7 +224,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
     subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap, true);
 
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
-      const double resolution = params.submap_voxel_resolution * params.submap_voxelmap_scaling_factor * (i + 1);
+      const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
       voxelmap->insert(*subsampled_submap);
       submap->voxelmaps.push_back(voxelmap);
@@ -234,7 +234,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
 
   if (submap->voxelmaps.empty()) {
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
-      const double resolution = params.submap_voxel_resolution * params.submap_voxelmap_scaling_factor * (i + 1);
+      const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapCPU>(resolution);
       voxelmap->insert(*subsampled_submap);
       submap->voxelmaps.push_back(voxelmap);
@@ -269,8 +269,10 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   const int last = current - 1;
   const gtsam::Pose3 init_delta = gtsam::Pose3((submaps[last]->T_world_origin.inverse() * submaps[current]->T_world_origin).matrix());
 
-  factors->add(gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), init_delta, gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
-  return factors;
+  if(params.between_registration_type == "NONE") {
+    factors->add(gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), init_delta, gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+    return factors;
+  }
 
   gtsam::Values values;
   values.insert(X(0), gtsam::Pose3::identity());
@@ -280,7 +282,8 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(0), X(1), submaps[last]->frame, submaps[current]->frame);
-  factor->set_num_threads(4);
+  factor->set_max_corresponding_distance(0.5);
+  factor->set_num_threads(2);
   graph.add(factor);
 
   notify(INFO, "--- LM optimization ---");
@@ -297,7 +300,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
 
   const gtsam::Pose3 estimated_delta = values.at<gtsam::Pose3>(X(1));
   const auto linearized = factor->linearize(values);
-  const auto H = linearized->hessianBlockDiagonal()[X(1)];
+  const auto H = linearized->hessianBlockDiagonal()[X(1)] + 1e6 * gtsam::Matrix6::Identity();
 
   factors->add(gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), estimated_delta, gtsam::noiseModel::Gaussian::Information(H)));
   return factors;
@@ -329,7 +332,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
         factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(
           X(i),
           X(current),
-          std::dynamic_pointer_cast<const gtsam_ext::GaussianVoxelMapCPU>(submaps[i]->voxelmaps.front()),
+          voxelmap,
           subsampled_submaps[current]);
       }
     }
@@ -361,19 +364,25 @@ void GlobalMapping::save(const std::string& path) {
   boost::filesystem::create_directories(path);
 
   gtsam::NonlinearFactorGraph serializable_factors;
-  gtsam::NonlinearFactorGraph matching_cost_factors;
+  std::unordered_map<std::string, gtsam::NonlinearFactor::shared_ptr> matching_cost_factors;
+
   for (const auto& factor : isam2->getFactorsUnsafe()) {
-    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedMatchingCostFactor>(factor)) {
-      matching_cost_factors.push_back(factor);
-      continue;
-    }
+    bool serializable = !boost::dynamic_pointer_cast<gtsam_ext::IntegratedMatchingCostFactor>(factor)
 #ifdef BUILD_GTSAM_EXT_GPU
-    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
-      matching_cost_factors.push_back(factor);
-      continue;
-    }
+                        && !boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)
 #endif
-    serializable_factors.push_back(factor);
+      ;
+
+    if (serializable) {
+      serializable_factors.push_back(factor);
+    }
+    else {
+      const gtsam::Symbol symbol0(factor->keys()[0]);
+      const gtsam::Symbol symbol1(factor->keys()[1]);
+      const std::string key = std::to_string(symbol0.index()) + "_" + std::to_string(symbol1.index());
+
+      matching_cost_factors[key] = factor;
+    }
   }
   gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
   gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
@@ -386,19 +395,19 @@ void GlobalMapping::save(const std::string& path) {
   for (const auto& factor : matching_cost_factors) {
     std::string type;
 
-    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedGICPFactor>(factor)) {
+    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedGICPFactor>(factor.second)) {
       type = "gicp";
-    } else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactor>(factor)) {
+    } else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactor>(factor.second)) {
       type = "vgicp";
     }
 #ifdef BUILD_GTSAM_EXT_GPU
-    else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
+    else if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor.second)) {
       type = "vgicp_gpu";
     }
 #endif
 
-    gtsam::Symbol symbol0(factor->keys()[0]);
-    gtsam::Symbol symbol1(factor->keys()[1]);
+    gtsam::Symbol symbol0(factor.second->keys()[0]);
+    gtsam::Symbol symbol1(factor.second->keys()[1]);
     ofs << "matching_cost " << type << " " << symbol0.index() << " " << symbol1.index() << std::endl;
   }
 
@@ -461,7 +470,6 @@ bool GlobalMapping::load(const std::string& path) {
     return false;
   }
 
-  bool gpu_enabled = false;
   std::string token;
   int num_submaps, num_all_frames, num_matching_cost_factors;
 
@@ -473,33 +481,46 @@ bool GlobalMapping::load(const std::string& path) {
   for (int i = 0; i < num_matching_cost_factors; i++) {
     auto& factor = matching_cost_factors[i];
     ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
-
-    if (std::get<0>(factor).find("gpu") != std::string::npos) {
-      gpu_enabled = true;
-    }
   }
 
   submaps.resize(num_submaps);
   subsampled_submaps.resize(num_submaps);
   for (int i = 0; i < num_submaps; i++) {
+    std::cout << "submap" << i << std::endl;
+
     auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
     if (!submap) {
       return false;
     }
+
+    std::cout << "submap_id:" << submap->id << std::endl;
+
+    gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, params.randomsampling_rate, mt);
+
     submaps[i] = submap;
-    subsampled_submaps[i] = submap->frame;
+    subsampled_submaps[i] = subsampled_submap;
 
-    if (gpu_enabled) {
 #ifdef BUILD_GTSAM_EXT_GPU
+    if (params.enable_gpu) {
       subsampled_submaps[i] = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submaps[i]);
-#else
-      std::cerr << console::yellow << "warning: Loaded graph constains GPU factors while glim was built without GPU features!!" << console::reset << std::endl;
-#endif
-    }
 
-    // if (voxelized_submaps[i] == nullptr) {
-    //   voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.submap_voxel_resolution, *submap->frame);
-    // }
+      for (int j = 0; j < params.submap_voxelmap_levels; j++) {
+        const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
+        auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+        voxelmap->insert(*subsampled_submaps[i]);
+        submaps[i]->voxelmaps.push_back(voxelmap);
+      }
+    }
+#endif
+
+    if(submaps[i]->voxelmaps.empty()) {
+      for (int j = 0; j < params.submap_voxelmap_levels; j++) {
+        const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
+        auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapCPU>(resolution);
+        voxelmap->insert(*subsampled_submaps[i]);
+        submaps[i]->voxelmaps.push_back(voxelmap);
+      }
+    }
 
     Callbacks::on_insert_submap(submap);
   }
@@ -515,17 +536,29 @@ bool GlobalMapping::load(const std::string& path) {
     const auto first = std::get<1>(factor);
     const auto second = std::get<2>(factor);
 
-    if (type == "vgicp") {
-      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(first), X(second), std::dynamic_pointer_cast<const gtsam_ext::GaussianVoxelMapCPU>(submaps[first]->voxelmaps.front()), subsampled_submaps[second]);
-    }
+    if (type == "vgicp" || type == "vgicp_gpu") {
+      if (params.enable_gpu) {
 #ifdef BUILD_GTSAM_EXT_GPU
-    else if (type == "vgicp_gpu") {
-      const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
-      const auto& stream = stream_buffer.first;
-      const auto& buffer = stream_buffer.second;
-      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), submaps[first]->voxelmaps.front(), subsampled_submaps[second], stream, buffer);
-    }
+        const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
+        const auto& stream = stream_buffer.first;
+        const auto& buffer = stream_buffer.second;
+
+        for(const auto& voxelmap: submaps[first]->voxelmaps) {
+          graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), voxelmap, subsampled_submaps[second], stream, buffer);
+        }
+#else
+        std::cerr << console::yellow << "warning: GPU is enabled but gtsam_ext was built without CUDA!!" << console::reset << std::endl;
 #endif
+      } else {
+        for(const auto& voxelmap : submaps[first]->voxelmaps) {
+          graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(
+            X(first),
+            X(second),
+            voxelmap,
+            subsampled_submaps[second]);
+        }
+      }
+    }
     else {
       std::cerr << console::yellow << "warning: unsupported matching cost factor type " << type << console::reset << std::endl;
     }
