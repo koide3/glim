@@ -8,24 +8,48 @@
   // ZED2i: [-0.002, -0.023, 0.000, -0.002, -0.001, -0.002, 1.000]
   // Newer college: [-0.006, 0.012, 0.029, 0.0, 0.0, 1.0, 0.0]
   // rooftop: [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
-  // hilti : [-0.022, 0.013, 0.019, 0.0, 0.0, 0.0, 1.0]
-  // hilti2022 : [-0.00855, -0.00100, 0.05500, 0.70711, -0.70711, 0.00000, 0.00000]
   //
   // "T_lidar_imu" transforms points in the "imu" frame into the "lidar" frame
   // e.g., p_lidar = T_lidar_imu * p_imu, T_world_imu = T_world_lidar * T_lidar_imu
   */
   "sensors": {
-    "T_lidar_imu": [
-      -0.00855,
-      -0.00100,
-      0.05500,
-      0.70711,
-      -0.70711,
-      0.00000,
-      0.00000
-    ],
+    // IMU config
     "imu_acc_noise": 0.01,
     "imu_gyro_noise": 0.0001,
-    "imu_int_noise": 0.0001
+    "imu_int_noise": 0.0001,
+    // LiDAR config
+    "T_lidar_imu": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    // Camera config (required for only extension modules)
+    "T_lidar_camera": [
+      -0.00320,
+      -0.05292,
+      0.00108,
+      0.00837,
+      0.72559,
+      -0.00328,
+      0.68807
+    ],
+    "intrinsics": [
+      815.498895336274,
+      817.4904316140473,
+      830.3149255906893,
+      639.4531613962971
+    ],
+    "distortion_model": "plumb_bob",
+    "distortion_coeffs": [
+      -0.02295507941388206,
+      0.0681131726659881,
+      -0.0005798510962983399,
+      0.00128686963241809,
+      -0.03279627881588615
+    ]
   }
 }

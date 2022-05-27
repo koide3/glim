@@ -11,7 +11,7 @@
 
   // --- Relative pose factors ---
   // create_between_factors         : If true, create SE3 relative pose factors between consecutive frames (i.e., odom_factor)
-  // between_registration_type      : Registration factor type for information matrix evaluation of relative pose factors (GICP)
+  // between_registration_type      : Registration factor type for information matrix evaluation of relative pose factors (NONE/GICP)
 
   // --- Registration error factors ---
   // registration_error_factor_type : Registration factor type for matching cost minimization (VGICP/VGICP_GPU)
@@ -48,20 +48,22 @@
     "registration_error_factor_type": "VGICP_GPU",
     "keyframe_randomsampling_rate": 1.0,
     "keyframe_voxel_resolution": 0.5,
+    "keyframe_voxelmap_levels": 2,
+    "keyframe_voxelmap_scaling_factor": 2.0,
     // Post processing
     "submap_downsample_resolution": 0.1,
     "submap_voxel_resolution": 0.5
   },
   "global_mapping": {
     "enable_imu": true,
-    "enable_optimization": false,
+    "enable_optimization": true,
     // Relative pose factors
-    "create_between_factors": true,
+    "create_between_factors": false,
     "between_registration_type": "GICP",
     // Registration error factors
     "registration_error_factor_type": "VGICP_GPU",
     "submap_voxel_resolution": 0.5,
-    "submap_voxelmap_levels": 3,
+    "submap_voxelmap_levels": 2,
     "submap_voxelmap_scaling_factor": 2.0,
     "randomsampling_rate": 1.0,
     "max_implicit_loop_distance": 100.0,
