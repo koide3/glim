@@ -11,6 +11,7 @@
   - RGB-D camera (e.g., Microsoft Azure Kinect)
 - ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/SMRT-AIST/glim_ext) that offers several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial frontend).
 
+Tested on Ubuntu 20.04 with CUDA 11.6 / NVIDIA Jetson Xavier (JetPack 5.0.1).
 
 ## Dependencies
 ### Mandatory
