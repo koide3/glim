@@ -90,7 +90,6 @@ private:
 
   std::vector<int> keyframe_indices;
   std::vector<EstimationFrame::Ptr> keyframes;
-  std::vector<gtsam_ext::VoxelizedFrame::Ptr> voxelized_keyframes;
 
   std::unique_ptr<gtsam::Values> values;
   std::unique_ptr<gtsam::NonlinearFactorGraph> graph;

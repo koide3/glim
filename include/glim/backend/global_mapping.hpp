@@ -91,8 +91,6 @@ private:
 
   std::vector<SubMap::Ptr> submaps;
   std::vector<gtsam_ext::Frame::Ptr> subsampled_submaps;
-  std::vector<gtsam_ext::VoxelizedFrame::Ptr> voxelized_submaps;
-  std::vector<std::vector<gtsam_ext::GaussianVoxelMap::Ptr>> multilevel_voxelized_submaps;
 
   std::unique_ptr<gtsam::Values> new_values;
   std::unique_ptr<gtsam::NonlinearFactorGraph> new_factors;

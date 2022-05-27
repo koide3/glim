@@ -211,9 +211,9 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 }
 
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
+  submap->voxelmaps.clear();
+
   gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, params.randomsampling_rate, mt);
-  gtsam_ext::VoxelizedFrame::Ptr voxelized_submap;
-  std::vector<gtsam_ext::GaussianVoxelMap::Ptr> multilevel_voxelmap;
 
 #ifdef BUILD_GTSAM_EXT_GPU
   if (params.enable_gpu && !submap->frame->points_gpu) {
@@ -222,25 +222,27 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
 
   if (params.enable_gpu) {
     subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap, true);
-    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame, false);
 
-    for (int i = 0; i < params.submap_voxelmap_levels - 1; i++) {
+    for (int i = 0; i < params.submap_voxelmap_levels; i++) {
       const double resolution = params.submap_voxel_resolution * params.submap_voxelmap_scaling_factor * (i + 1);
       auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
       voxelmap->insert(*subsampled_submap);
-      multilevel_voxelmap.push_back(voxelmap);
+      submap->voxelmaps.push_back(voxelmap);
     }
   }
 #endif
 
-  if (!voxelized_submap) {
-    voxelized_submap = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.submap_voxel_resolution, *submap->frame);
+  if (submap->voxelmaps.empty()) {
+    for (int i = 0; i < params.submap_voxelmap_levels; i++) {
+      const double resolution = params.submap_voxel_resolution * params.submap_voxelmap_scaling_factor * (i + 1);
+      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapCPU>(resolution);
+      voxelmap->insert(*subsampled_submap);
+      submap->voxelmaps.push_back(voxelmap);
+    }
   }
 
   submaps.push_back(submap);
   subsampled_submaps.push_back(subsampled_submap);
-  voxelized_submaps.push_back(voxelized_submap);
-  multilevel_voxelized_submaps.push_back(multilevel_voxelmap);
 }
 
 void GlobalMapping::optimize() {
@@ -316,22 +318,27 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     }
 
     const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * current_submap->T_world_origin;
-    const double overlap = gtsam_ext::overlap_auto(voxelized_submaps[i], current_submap->frame, delta);
+    const double overlap = gtsam_ext::overlap_auto(submaps[i]->voxelmaps.front(), current_submap->frame, delta);
 
     if (overlap < params.min_implicit_loop_overlap) {
       continue;
     }
 
     if (params.registration_error_factor_type == "VGICP") {
-      factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current]);
+      for (const auto& voxelmap : submaps[i]->voxelmaps) {
+        factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(
+          X(i),
+          X(current),
+          std::dynamic_pointer_cast<const gtsam_ext::GaussianVoxelMapCPU>(submaps[i]->voxelmaps.front()),
+          subsampled_submaps[current]);
+      }
     }
 #ifdef BUILD_GTSAM_EXT_GPU
     else if (params.registration_error_factor_type == "VGICP_GPU") {
       const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
-      factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelized_submaps[i], subsampled_submaps[current], stream, buffer);
-      for (const auto& voxelmap : multilevel_voxelized_submaps[i]) {
+      for (const auto& voxelmap : submaps[i]->voxelmaps) {
         factors->emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(current), voxelmap, subsampled_submaps[current], stream, buffer);
       }
     }
@@ -474,7 +481,6 @@ bool GlobalMapping::load(const std::string& path) {
 
   submaps.resize(num_submaps);
   subsampled_submaps.resize(num_submaps);
-  voxelized_submaps.resize(num_submaps);
   for (int i = 0; i < num_submaps; i++) {
     auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
     if (!submap) {
@@ -486,15 +492,14 @@ bool GlobalMapping::load(const std::string& path) {
     if (gpu_enabled) {
 #ifdef BUILD_GTSAM_EXT_GPU
       subsampled_submaps[i] = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submaps[i]);
-      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameGPU>(params.submap_voxel_resolution, *submap->frame);
 #else
       std::cerr << console::yellow << "warning: Loaded graph constains GPU factors while glim was built without GPU features!!" << console::reset << std::endl;
 #endif
     }
 
-    if (voxelized_submaps[i] == nullptr) {
-      voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.submap_voxel_resolution, *submap->frame);
-    }
+    // if (voxelized_submaps[i] == nullptr) {
+    //   voxelized_submaps[i] = std::make_shared<gtsam_ext::VoxelizedFrameCPU>(params.submap_voxel_resolution, *submap->frame);
+    // }
 
     Callbacks::on_insert_submap(submap);
   }
@@ -511,14 +516,14 @@ bool GlobalMapping::load(const std::string& path) {
     const auto second = std::get<2>(factor);
 
     if (type == "vgicp") {
-      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(first), X(second), voxelized_submaps[first], subsampled_submaps[second]);
+      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(first), X(second), std::dynamic_pointer_cast<const gtsam_ext::GaussianVoxelMapCPU>(submaps[first]->voxelmaps.front()), subsampled_submaps[second]);
     }
 #ifdef BUILD_GTSAM_EXT_GPU
     else if (type == "vgicp_gpu") {
       const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
-      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), voxelized_submaps[first], subsampled_submaps[second], stream, buffer);
+      graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), submaps[first]->voxelmaps.front(), subsampled_submaps[second], stream, buffer);
     }
 #endif
     else {

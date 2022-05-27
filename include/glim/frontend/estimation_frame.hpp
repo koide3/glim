@@ -30,20 +30,8 @@ struct EstimationFrame {
     *cloned = *this;
     cloned->raw_frame.reset();
     cloned->frame.reset();
+    cloned->voxelmaps.clear();
     return cloned;
-  }
-
-  /**
-   * @brief  Cast Frame to VoxelizedFrame
-   * @note   TODO: Check if it's valid operation
-   * @return gtsam_ext::VoxelizedFrame::ConstPtr
-   */
-  gtsam_ext::VoxelizedFrame::ConstPtr voxelized_frame() const {
-    const auto voxelized = std::dynamic_pointer_cast<const gtsam_ext::VoxelizedFrame>(frame);
-    if (!voxelized) {
-      std::cerr << "warning: invalid upcasting!!" << std::endl;
-    }
-    return voxelized;
   }
 
   /**
@@ -103,6 +91,6 @@ public:
   FrameID frame_id;                  ///< Coordinate frame of $frame
   gtsam_ext::Frame::ConstPtr frame;  ///< Deskewed points for state estimation
 
-  std::vector<gtsam_ext::GaussianVoxelMap::Ptr> voxelmap_pyramid;
+  std::vector<gtsam_ext::GaussianVoxelMap::Ptr> voxelmaps;  ///< Multi-resolution voxelmaps
 };
 }  // namespace glim
