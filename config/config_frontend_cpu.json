@@ -1,0 +1,41 @@
+{
+  /*** Keyframe-based VGICP frontend ***
+  // smoother_lag                : Fixed-lag smoothing window size [sec]
+  // use_isam2_dogleg            : Use the dogleg optimizer as the backend of ISAM2 that is slow but more robust
+  // isam2_relinearize_skip      :
+  // isam2_relinearize_thresh    :
+  // voxel_resolution            : Resolution for VGICP voxels (0.25 ~ 0.5 for indoor, 0.5 ~ 2.0 for outdoor)
+  // full_connection_window_size : Latest sensor pose variable is connected with all of the past $full_connection_window_size poses
+  //                             : Must be >1. Increase this param for aggressive motion data (3~5)
+  // keyframe_update_strategy    : "OVERLAP" / "DISPLACEMENT" / "ENTROPY"
+  // max_num_keyframes           : Maximum number of keyframes
+  // keyframe_min_overlap        : Keyframes that overlap to the latest keyframe with a rate smaller than this will be eliminated
+  // keyframe_max_overlap        : If the overlap between the latest frame and keyframes is smaller than this,
+  //                             : it is inserted into the keyframe list (lager = more frequent keyframe insertion)
+  // keyframe_delta_(trans|rot)  : Keyframe displacement threshold [m / rad]
+  */
+  "odometry_estimation": {
+    "frontend_mode": "CPU",
+    // Optimizer params
+    "smoother_lag": 5.0,
+    "use_isam2_dogleg": false,
+    "isam2_relinearize_skip": 1,
+    "isam2_relinearize_thresh": 0.1,
+    "fix_imu_bias": false,
+    // Registration settings
+    "registration_type": "GICP",
+    "max_iterations": 5,
+    "lru_thresh": 100,
+    "target_downsampling_rate": 0.1,
+    // GICP + iVox params
+    "ivox_resolution": 0.5,
+    "ivox_min_dist": 0.1,
+    // VGICP params
+    "vgicp_resolution": 0.25,
+    "vgicp_voxelmap_levels": 1,
+    "vgicp_voxelmap_scaling_factor": 2.0,
+    // Optimizer params
+    "save_imu_rate_trajectory": true,
+    "num_threads": 2
+  }
+}

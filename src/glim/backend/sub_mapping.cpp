@@ -86,8 +86,16 @@ void SubMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_ac
   }
 }
 
-void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
-  Callbacks::on_insert_frame(odom_frame);
+void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
+  Callbacks::on_insert_frame(odom_frame_);
+
+  EstimationFrame::ConstPtr odom_frame = odom_frame_;
+  if (params.enable_gpu && !odom_frame->frame->points_gpu) {
+    EstimationFrame::Ptr frame(new EstimationFrame);
+    *frame = *odom_frame;
+    frame->frame = std::make_shared<gtsam_ext::FrameGPU>(*frame->frame);
+    odom_frame = frame;
+  }
 
   const int current = odom_frames.size();
   const int last = current - 1;
@@ -143,7 +151,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   if (!insert_as_keyframe) {
     // Overlap-based keyframe update
     if (params.keyframe_update_strategy == "OVERLAP") {
-      const double overlap = gtsam_ext::overlap_auto(keyframes.back()->voxelmaps.front(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
+      const double overlap =
+        gtsam_ext::overlap_auto(keyframes.back()->voxelmaps.front(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
       insert_as_keyframe = overlap < params.max_keyframe_overlap;
     }
     // Displacement-based keyframe update
@@ -166,7 +175,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
     // Create registration error factors (fully connected)
     for (int i = 0; i < keyframes.size() - 1; i++) {
       if (params.registration_error_factor_type == "VGICP") {
-        for(const auto& voxelmap: keyframes[i]->voxelmaps) {
+        for (const auto& voxelmap : keyframes[i]->voxelmaps) {
           graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame);
         }
       }
@@ -354,7 +363,7 @@ std::vector<SubMap::Ptr> SubMapping::submit_end_of_sequence() {
   if (!odom_frames.empty()) {
     auto new_submap = create_submap(true);
 
-    if(new_submap) {
+    if (new_submap) {
       new_submap->id = submap_count++;
       submaps.push_back(new_submap);
     }

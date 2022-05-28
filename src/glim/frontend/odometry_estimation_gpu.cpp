@@ -203,7 +203,10 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     // Prior for initial IMU states
     new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, 1e10);
     new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0));
-    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(0), gtsam::imuBias::ConstantBias(init_state->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e2));
+    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(
+      B(0),
+      gtsam::imuBias::ConstantBias(init_state->imu_bias),
+      gtsam::noiseModel::Isotropic::Precision(6, 1e2));
 
     smoother->update(new_factors, new_values, new_stamps);
 

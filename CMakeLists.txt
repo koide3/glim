@@ -15,6 +15,7 @@ option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
 
 if(BUILD_WITH_MARCH_NATIVE)
   add_definitions(-march=native)
+  add_definitions(-DBUILD_WITH_MARCH_NATIVE)
   set(CMAKE_C_FLAGS "-march=native ${CMAKE_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "-march=native ${CMAKE_CXX_FLAGS}")
 endif()
@@ -66,6 +67,7 @@ add_library(glim SHARED
   src/glim/frontend/odometry_estimation_base.cpp
   src/glim/frontend/async_odometry_estimation.cpp
   src/glim/frontend/odometry_estimation_ct.cpp
+  src/glim/frontend/odometry_estimation_cpu.cpp
   # backend
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_map.cpp
