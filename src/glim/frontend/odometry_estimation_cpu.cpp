@@ -2,6 +2,7 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/nonlinear/LinearContainerFactor.h>
 
 #include <gtsam_ext/ann/ivox.hpp>
 #include <gtsam_ext/types/frame_cpu.hpp>
@@ -334,62 +335,64 @@ std::vector<EstimationFrame::ConstPtr> OdometryEstimationCPU::get_remaining_fram
 gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor) {
   const int last = current - 1;
 
-  Eigen::Isometry3d T_world_imu = frames[current]->T_world_imu;
+  gtsam::NonlinearFactorGraph matching_cost_factors;
+  gtsam::NonlinearFactorGraph graph;
+  gtsam::Values values;
 
-  if (current != 0) {
-    gtsam::NonlinearFactorGraph graph;
-    gtsam::Values values;
+  const gtsam::Pose3 last_T_world_imu(frames[last]->T_world_imu.matrix());
+  const gtsam::Vector3 last_v_world_imu = frames[last]->v_world_imu;
+  const gtsam::imuBias::ConstantBias last_imu_bias(frames[last]->imu_bias);
 
-    const gtsam::Pose3 last_T_world_imu(frames[last]->T_world_imu.matrix());
-    const gtsam::Vector3 last_v_world_imu = frames[last]->v_world_imu;
-    const gtsam::imuBias::ConstantBias last_imu_bias(frames[last]->imu_bias);
+  values.insert(X(last), gtsam::Pose3(last_T_world_imu));
+  values.insert(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
 
-    values.insert(X(last), gtsam::Pose3(last_T_world_imu));
-    values.insert(X(current), gtsam::Pose3(T_world_imu.matrix()));
+  values.insert(V(last), last_v_world_imu);
+  values.insert(V(current), frames[current]->v_world_imu);
+  values.insert(B(last), last_imu_bias);
+  values.insert(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
 
-    values.insert(V(last), last_v_world_imu);
-    values.insert(V(current), frames[current]->v_world_imu);
-    values.insert(B(last), last_imu_bias);
-    values.insert(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+  graph.add(imu_factor);
+  graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(last), last_T_world_imu, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  graph.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(last), last_v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e6));
+  graph.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(last), last_imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  graph.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
-    graph.add(imu_factor);
-    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(last), last_T_world_imu, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-    graph.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(last), last_v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e6));
-    graph.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(last), last_imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-    graph.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-
-    if (params.registration_type == "GICP") {
-      auto gicp_factor =
-        gtsam::make_shared<gtsam_ext::IntegratedGICPFactor_<gtsam_ext::iVox, gtsam_ext::Frame>>(gtsam::Pose3(), X(current), target_ivox, frames[current]->frame, target_ivox);
-      gicp_factor->set_max_corresponding_distance(params.ivox_resolution * 2.0);
-      gicp_factor->set_num_threads(params.num_threads);
-      graph.add(gicp_factor);
-    } else if (params.registration_type == "VGICP") {
-      for (const auto& voxelmap : target_voxelmaps) {
-        auto vgicp_factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactor>(gtsam::Pose3(), X(current), voxelmap, frames[current]->frame);
-        vgicp_factor->set_num_threads(params.num_threads);
-        graph.add(vgicp_factor);
-      }
+  if (params.registration_type == "GICP") {
+    auto gicp_factor =
+      gtsam::make_shared<gtsam_ext::IntegratedGICPFactor_<gtsam_ext::iVox, gtsam_ext::Frame>>(gtsam::Pose3(), X(current), target_ivox, frames[current]->frame, target_ivox);
+    gicp_factor->set_max_corresponding_distance(params.ivox_resolution * 2.0);
+    gicp_factor->set_num_threads(params.num_threads);
+    matching_cost_factors.add(gicp_factor);
+  } else if (params.registration_type == "VGICP") {
+    for (const auto& voxelmap : target_voxelmaps) {
+      auto vgicp_factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactor>(gtsam::Pose3(), X(current), voxelmap, frames[current]->frame);
+      vgicp_factor->set_num_threads(params.num_threads);
+      matching_cost_factors.add(vgicp_factor);
     }
-
-    gtsam_ext::LevenbergMarquardtExtParams lm_params;
-    lm_params.setMaxIterations(params.max_iterations);
-    // lm_params.set_verbose();
-    // lm_params.setDiagonalDamping(true);
-    gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
-    values = optimizer.optimize();
-
-    T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
   }
 
-  auto subsampled = gtsam_ext::random_sampling(frames[current]->frame, params.target_downsampling_rate, mt);
+  graph.add(matching_cost_factors);
+
+  gtsam_ext::LevenbergMarquardtExtParams lm_params;
+  lm_params.setMaxIterations(params.max_iterations);
+  // lm_params.set_verbose();
+  // lm_params.setDiagonalDamping(true);
+  gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
+  values = optimizer.optimize();
+
+  const Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
+  const auto subsampled = gtsam_ext::random_sampling(frames[current]->frame, params.target_downsampling_rate, mt);
   update_target(T_world_imu, subsampled);
 
-  Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * T_world_imu;
-  T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
-
   gtsam::NonlinearFactorGraph factors;
-  factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+
+  for (const auto& factor : matching_cost_factors) {
+    factors.emplace_shared<gtsam::LinearContainerFactor>(factor->linearize(values), values);
+  }
+
+  // Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * T_world_imu;
+  // T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
+  // factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   return factors;
 }
