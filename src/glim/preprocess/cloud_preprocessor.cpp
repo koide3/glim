@@ -1,11 +1,13 @@
 #include <glim/preprocess/cloud_preprocessor.hpp>
 
+#include <fstream>
 #include <iostream>
 #include <gtsam_ext/ann/kdtree.hpp>
 
+#include <gtsam_ext/types/frame_cpu.hpp>
+
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
-#include <glim/preprocess/downsampling.hpp>
 
 namespace glim {
 
@@ -24,6 +26,7 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   distance_near_thresh = config.param<double>("preprocess", "distance_near_thresh", 1.0);
   distance_far_thresh = config.param<double>("preprocess", "distance_far_thresh", 100.0);
   downsample_resolution = config.param<double>("preprocess", "downsample_resolution", 0.15);
+  downsample_target = config.param<int>("preprocess", "random_downsample_target", 0);
   downsample_rate = config.param<double>("preprocess", "random_downsample_rate", 0.3);
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
 
@@ -36,113 +39,50 @@ CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : pa
 
 CloudPreprocessor::~CloudPreprocessor() {}
 
-PreprocessedFrame::Ptr CloudPreprocessor::preprocess(double stamp, const std::vector<double>& times, const Points& points) const {
-  PreprocessedFrame::Ptr frame(new PreprocessedFrame);
-  frame->times = times;
-  frame->points.resize(points.size());
-  std::transform(points.begin(), points.end(), frame->points.begin(), [this](const Eigen::Vector4d& p) { return params.T_lidar_offset * p; });
+PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
+  gtsam_ext::Frame::Ptr frame(new gtsam_ext::Frame);
+  frame->num_points = raw_points->size();
+  frame->times = const_cast<double*>(raw_points->times.data());
+  frame->points = const_cast<Eigen::Vector4d*>(raw_points->points.data());
+  if (raw_points->intensities.size()) {
+    frame->intensities = const_cast<double*>(raw_points->intensities.data());
+  }
 
-  frame = distance_filter(frame->times, frame->points);
+  // Downsampling
   if (params.use_random_grid_downsampling) {
-    frame = downsample_randomgrid(frame->times, frame->points, mt, params.downsample_resolution, params.downsample_rate);
+    const double rate = params.downsample_target > 0 ? static_cast<double>(params.downsample_target) / frame->size() : params.downsample_rate;
+    frame = gtsam_ext::randomgrid_sampling(frame, params.downsample_resolution, rate, mt);
   } else {
-    frame = downsample(frame->times, frame->points, params.downsample_resolution);
-  }
-  frame = sort_by_time(frame->times, frame->points);
-
-  frame->stamp = stamp;
-  frame->scan_end_time = stamp + frame->times.back();
-  frame->k_neighbors = params.k_correspondences;
-  frame->neighbors = find_neighbors(frame->points, params.k_correspondences);
-
-  return frame;
-}
-
-PreprocessedFrame::Ptr CloudPreprocessor::preprocess(double stamp, const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const {
-  if (!intensities.empty() && points.size() != intensities.size()) {
-    std::cerr << console::bold_red << "error: # of intensities is not the same as # of points!!" << console::reset << std::endl;
+    frame = gtsam_ext::voxelgrid_sampling(frame, params.downsample_resolution);
   }
 
-  PreprocessedFrame::Ptr frame(new PreprocessedFrame);
-  frame->times = times;
-  frame->points.resize(points.size());
-  std::transform(points.begin(), points.end(), frame->points.begin(), [this](const Eigen::Vector4d& p) { return params.T_lidar_offset * p; });
-  frame->intensities.resize(intensities.size());
-  std::copy(intensities.begin(), intensities.end(), frame->intensities.begin());
-
-  frame = distance_filter(frame->times, frame->points, frame->intensities);
-  if (params.use_random_grid_downsampling) {
-    frame = downsample_randomgrid(frame->times, frame->points, frame->intensities, mt, params.downsample_resolution, params.downsample_rate);
-  } else {
-    frame = downsample(frame->times, frame->points, frame->intensities, params.downsample_resolution);
-  }
-  frame = sort_by_time(frame->times, frame->points, frame->intensities);
-
-  frame->stamp = stamp;
-  frame->scan_end_time = stamp + frame->times.back();
-  frame->k_neighbors = params.k_correspondences;
-  frame->neighbors = find_neighbors(frame->points, params.k_correspondences);
-
-  return frame;
-}
-
-PreprocessedFrame::Ptr CloudPreprocessor::sort_by_time(const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const {
-  // sort by time
-  std::vector<int> indices(times.size());
-  std::iota(indices.begin(), indices.end(), 0);
-  std::sort(indices.begin(), indices.end(), [&](const int& lhs, const int& rhs) { return times[lhs] < times[rhs]; });
-
-  PreprocessedFrame::Ptr sorted(new PreprocessedFrame());
-  sorted->times.resize(times.size());
-  sorted->points.resize(points.size());
-  sorted->intensities.resize(intensities.size());
-  for (int i = 0; i < times.size(); i++) {
-    const int index = indices[i];
-    sorted->times[i] = times[index];
-    sorted->points[i] = points[index];
-    if (!intensities.empty()) {
-      sorted->intensities[i] = intensities[index];
+  // Distance filter
+  std::vector<int> indices;
+  indices.reserve(frame->size());
+  for (int i = 0; i < frame->size(); i++) {
+    const double dist = (Eigen::Vector4d() << frame->points[i].head<3>(), 0.0).finished().norm();
+    if (dist > params.distance_near_thresh && dist < params.distance_far_thresh) {
+      indices.push_back(i);
     }
   }
 
-  return sorted;
-}
+  // Sort by time
+  std::sort(indices.begin(), indices.end(), [&](const int lhs, const int rhs) { return frame->times[lhs] < frame->times[rhs]; });
+  frame = gtsam_ext::sample(frame, indices);
 
-PreprocessedFrame::Ptr CloudPreprocessor::sort_by_time(const std::vector<double>& times, const Points& points) const {
-  std::vector<double> intensities;
-  return sort_by_time(times, points, intensities);
-}
+  // Create a preprocessed frame
+  PreprocessedFrame::Ptr preprocessed(new PreprocessedFrame);
+  preprocessed->stamp = raw_points->stamp;
+  preprocessed->scan_end_time = raw_points->stamp + frame->times[frame->size() - 1];
+  preprocessed->times.assign(frame->times, frame->times + frame->size());
+  preprocessed->points.assign(frame->points, frame->points + frame->size());
+  preprocessed->intensities.assign(frame->intensities, frame->intensities + frame->size());
 
-PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<double>& times, const Points& points) const {
-  std::vector<double> intensities;
-  return distance_filter(times, points, intensities);
-}
+  // Nearest neighbor search
+  preprocessed->k_neighbors = params.k_correspondences;
+  preprocessed->neighbors = find_neighbors(preprocessed->points, params.k_correspondences);
 
-PreprocessedFrame::Ptr CloudPreprocessor::distance_filter(const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const {
-  PreprocessedFrame::Ptr filtered(new PreprocessedFrame());
-  filtered->times.reserve(times.size());
-  filtered->points.reserve(points.size());
-  filtered->intensities.reserve(intensities.size());
-
-  for (int i = 0; i < points.size(); i++) {
-    const double dist = (Eigen::Vector4d() << points[i].head<3>(), 0.0).finished().norm();
-    if (!std::isfinite(dist)) {
-      std::cout << console::yellow << "warning: an invalid point found!! " << points[i].transpose() << console::reset << std::endl;
-      continue;
-    }
-
-    if (dist < params.distance_near_thresh || dist > params.distance_far_thresh) {
-      continue;
-    }
-
-    filtered->times.push_back(times[i]);
-    filtered->points.push_back(points[i]);
-    if (!intensities.empty()) {
-      filtered->intensities.push_back(intensities[i]);
-    }
-  }
-
-  return filtered;
+  return preprocessed;
 }
 
 std::vector<int> CloudPreprocessor::find_neighbors(const Points& points, int k) const {

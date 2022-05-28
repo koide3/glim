@@ -18,16 +18,17 @@ public:
   ~CloudPreprocessorParams();
 
 public:
-  Eigen::Isometry3d T_lidar_offset;     ///< Transformation between the base frame and LiDAR
+  Eigen::Isometry3d T_lidar_offset;  ///< Transformation between the base frame and LiDAR
 
-  bool use_random_grid_downsampling;    ///< If true, use random grid downsampling, otherwise, use the conventional voxel grid
-  double distance_near_thresh;          ///< Minimum distance threshold
-  double distance_far_thresh;           ///< Maximum distance threshold
-  double downsample_resolution;         ///< Downsampling resolution
-  double downsample_rate;               ///< Downsamping rate (used for random grid downsampling)
-  int k_correspondences;                ///< Number of neighboring points
+  bool use_random_grid_downsampling;  ///< If true, use random grid downsampling, otherwise, use the conventional voxel grid
+  double distance_near_thresh;        ///< Minimum distance threshold
+  double distance_far_thresh;         ///< Maximum distance threshold
+  double downsample_resolution;       ///< Downsampling resolution
+  int downsample_target;              ///< Target number of points for downsampling
+  double downsample_rate;             ///< Downsamping rate (used for random grid downsampling)
+  int k_correspondences;              ///< Number of neighboring points
 
-  int num_threads;                      ///< Number of threads
+  int num_threads;  ///< Number of threads
 };
 
 /**
@@ -48,30 +49,12 @@ public:
   /**
    * @brief Preprocess a raw point cloud
    *
-   * @param stamp     Timestamp
-   * @param times     Timestamps of input points (w.r.t. the first point)
-   * @param points    Points (homogeneous coordinates)
-   * @return PreprocessedFrame::Ptr  Preprocessed point cloud
+   * @param raw_points  Raw points
+   * @return Preprocessed points
    */
-  virtual PreprocessedFrame::Ptr preprocess(double stamp, const std::vector<double>& times, const Points& points) const;
-
-  /**
-   * @brief Preprocess a raw point cloud
-   *
-   * @param stamp       Timestamp
-   * @param times       Timestamps of input points (w.r.t. the first point)
-   * @param intensities Intensities of input points
-   * @param points      Points (homogeneous coordinates)
-   * @return PreprocessedFrame::Ptr  Preprocessed point cloud
-   */
-  virtual PreprocessedFrame::Ptr preprocess(double stamp, const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const;
+  virtual PreprocessedFrame::Ptr preprocess(const RawPoints::ConstPtr& raw_points);
 
 private:
-  PreprocessedFrame::Ptr sort_by_time(const std::vector<double>& times, const Points& points) const;
-  PreprocessedFrame::Ptr sort_by_time(const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const;
-
-  PreprocessedFrame::Ptr distance_filter(const std::vector<double>& times, const Points& points) const;
-  PreprocessedFrame::Ptr distance_filter(const std::vector<double>& times, const Points& points, const std::vector<double>& intensities) const;
   std::vector<int> find_neighbors(const Points& points, int k) const;
 
 private:

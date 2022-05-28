@@ -100,6 +100,7 @@ private:
   std::vector<EstimationFrame::Ptr> frames;
 
   std::mt19937 mt;
+  Eigen::Isometry3d target_updated_pose;
   std::vector<std::shared_ptr<gtsam_ext::GaussianVoxelMapCPU>> target_voxelmaps;
   std::shared_ptr<gtsam_ext::iVox> target_ivox;
   EstimationFrame::ConstPtr target_ivox_frame;

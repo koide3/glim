@@ -86,6 +86,7 @@ OdometryEstimationCPU::OdometryEstimationCPU(const OdometryEstimationCPUParams& 
   }
   this->init_estimation.reset(init_estimation);
 
+  target_updated_pose.setIdentity();
   if (params.registration_type == "GICP") {
     target_ivox.reset(new gtsam_ext::iVox(params.ivox_resolution, params.ivox_min_dist, params.lru_thresh));
     target_ivox->set_neighbor_voxel_mode(1);
@@ -295,6 +296,10 @@ EstimationFrame::ConstPtr OdometryEstimationCPU::insert_frame(const Preprocessed
   auto factors = create_factors(current, imu_factor);
   new_factors.add(factors);
 
+  new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+  new_values.insert_or_assign(V(current), frames[current]->v_world_imu);
+  new_values.insert_or_assign(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+
   // Update smoother
   Callbacks::on_smoother_update(*smoother, new_factors, new_values, new_stamps);
   smoother->update(new_factors, new_values, new_stamps);
@@ -381,6 +386,10 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   values = optimizer.optimize();
 
   const Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
+  frames[current]->T_world_imu = T_world_imu;
+  frames[current]->v_world_imu = values.at<gtsam::Vector3>(V(current));
+  frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
+
   const auto subsampled = gtsam_ext::random_sampling(frames[current]->frame, params.target_downsampling_rate, mt);
   update_target(T_world_imu, subsampled);
 
@@ -398,6 +407,16 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
 }
 
 void OdometryEstimationCPU::update_target(const Eigen::Isometry3d& T_world_frame, const gtsam_ext::Frame::ConstPtr& frame) {
+  if (frames.size() >= 2) {
+    const Eigen::Isometry3d delta = T_world_frame.inverse() * target_updated_pose;
+    const double delta_t = delta.translation().norm();
+    const double delta_r = Eigen::AngleAxisd(delta.linear()).angle();
+
+    if (delta_t < 0.05 && delta_r < 0.5 * M_PI / 180.0) {
+      return;
+    }
+  }
+
   auto transformed = std::make_shared<gtsam_ext::FrameCPU>();
   transformed->num_points = frame->size();
   transformed->points_storage.resize(frame->size());
