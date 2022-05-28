@@ -15,7 +15,7 @@ enum class RegularizationMethod { NONE, PLANE, NORMALIZED_MIN_EIG, FROBENIUS };
  */
 class CloudCovarianceEstimation {
 public:
-  CloudCovarianceEstimation();
+  CloudCovarianceEstimation(const int num_threads = 1);
   ~CloudCovarianceEstimation();
 
   /**
@@ -38,7 +38,8 @@ public:
    * @param k_neighbors Number of neighbors used for estimation (must be <= m)
    * @param normals     [output] Estimated normals
    * @param covs        [output] Estimated covariances
-   */  void estimate(
+   */
+  void estimate(
     const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
     const std::vector<int>& neighbors,
     const int k_neighbors,
@@ -64,7 +65,8 @@ public:
   Eigen::Matrix4d regularize(const Eigen::Matrix4d& cov, Eigen::Vector3d* eigenvalues = nullptr, Eigen::Matrix3d* eigenvectors = nullptr) const;
 
 private:
-  RegularizationMethod regularization_method;
+  const RegularizationMethod regularization_method;
+  const int num_threads;
 };
 
 }  // namespace glim

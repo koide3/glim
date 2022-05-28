@@ -55,7 +55,6 @@ add_library(glim SHARED
   src/glim/util/extension_module.cpp
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
-  src/glim/preprocess/downsampling.cpp
   # common process
   src/glim/common/callbacks.cpp
   src/glim/common/imu_integration.cpp

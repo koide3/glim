@@ -8,9 +8,7 @@
 
 namespace glim {
 
-CloudCovarianceEstimation::CloudCovarianceEstimation() {
-  regularization_method = RegularizationMethod::PLANE;
-}
+CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads) : regularization_method(RegularizationMethod::PLANE), num_threads(num_threads) {}
 
 CloudCovarianceEstimation::~CloudCovarianceEstimation() {}
 
@@ -41,6 +39,7 @@ void CloudCovarianceEstimation::estimate(
   assert(k_neighbors <= k_correspondences);
 
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> pt_cross(points.size());
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
   for (int i = 0; i < points.size(); i++) {
     pt_cross[i] = points[i] * points[i].transpose();
   }
@@ -49,6 +48,7 @@ void CloudCovarianceEstimation::estimate(
   covs.resize(points.size());
 
   // Calculate covariances
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
   for (int i = 0; i < points.size(); i++) {
     Eigen::Vector4d sum_points = Eigen::Vector4d::Zero();
     Eigen::Matrix4d sum_cross = Eigen::Matrix4d::Zero();
@@ -61,7 +61,7 @@ void CloudCovarianceEstimation::estimate(
     }
 
     const Eigen::Vector4d mean = sum_points / k_neighbors;
-    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / (k_neighbors - 1);
+    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / k_neighbors;
 
     Eigen::Matrix3d eigenvectors;
     covs[i] = regularize(cov, nullptr, &eigenvectors);

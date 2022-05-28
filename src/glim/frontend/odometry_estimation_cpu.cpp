@@ -104,7 +104,7 @@ OdometryEstimationCPU::OdometryEstimationCPU(const OdometryEstimationCPUParams& 
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
-  covariance_estimation.reset(new CloudCovarianceEstimation);
+  covariance_estimation.reset(new CloudCovarianceEstimation(params.num_threads));
 
   gtsam::ISAM2Params isam2_params;
   if (params.use_isam2_dogleg) {
@@ -380,7 +380,24 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
 
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setMaxIterations(params.max_iterations);
-  // lm_params.set_verbose();
+  lm_params.setAbsoluteErrorTol(0.1);
+
+  gtsam::Pose3 last_pose = values.at<gtsam::Pose3>(X(current));
+  lm_params.termination_criteria = [&](const gtsam::Values& values) {
+    const gtsam::Pose3 current_pose = values.at<gtsam::Pose3>(X(current));
+    const gtsam::Pose3 delta = last_pose.inverse() * current_pose;
+
+    const double delta_t = delta.translation().norm();
+    const double delta_r = Eigen::AngleAxisd(delta.rotation().matrix()).angle();
+    last_pose = current_pose;
+
+    if (delta_t < 1e-10 && delta_r < 1e-10) {
+      return false;
+    }
+
+    return delta_t < 1e-3 && delta_r < 1e-3 * M_PI / 180.0;
+  };
+
   // lm_params.setDiagonalDamping(true);
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();
@@ -391,13 +408,19 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
 
   const auto subsampled = gtsam_ext::random_sampling(frames[current]->frame, params.target_downsampling_rate, mt);
+
   update_target(T_world_imu, subsampled);
 
   gtsam::NonlinearFactorGraph factors;
+  const auto linearized = optimizer.last_linearized();
 
-  for (const auto& factor : matching_cost_factors) {
-    factors.emplace_shared<gtsam::LinearContainerFactor>(factor->linearize(values), values);
+  for (int i = linearized->size() - matching_cost_factors.size(); i < linearized->size(); i++) {
+    factors.emplace_shared<gtsam::LinearContainerFactor>(linearized->at(i));
   }
+
+  // for (const auto& factor : matching_cost_factors) {
+  //   factors.emplace_shared<gtsam::LinearContainerFactor>(factor->linearize(values), values);
+  // }
 
   // Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * T_world_imu;
   // T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
