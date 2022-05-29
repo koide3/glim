@@ -4,8 +4,8 @@
   // use_random_grid_downsampling: If false, use the conventional voxelgrid downsampling
   //                             : Otherwise, use voxel-based random sampling (recommended for Livox)
   // downsample_resolution       : Voxel grid resolution for downsampling
-  // random_downsample_target    : Target number of points for voxel-based random sampling (Disabled when <= 0)
-  // random_downsample_rate      : Sampling rate for voxel-based random sampling (Enabled when target > 0)
+  // random_downsample_target    : Target number of points for voxel-based random sampling (Enabled when > 0)
+  // random_downsample_rate      : Sampling rate for voxel-based random sampling (Enabled when target <= 0)
   // k_correspondences           : Number of neighbors for covariance estimation
   */
   "preprocess": {

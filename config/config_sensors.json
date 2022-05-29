@@ -19,13 +19,13 @@
     "imu_int_noise": 0.0001,
     // LiDAR config
     "T_lidar_imu": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
     ],
     // Camera config (required for only extension modules)
     "T_lidar_camera": [

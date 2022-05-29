@@ -4,7 +4,10 @@
   // use_isam2_dogleg            : Use the dogleg optimizer as the backend of ISAM2 that is slow but more robust
   // isam2_relinearize_skip      :
   // isam2_relinearize_thresh    :
+  // fix_imu_bias                : If true, disable IMU bias estimation and use the initial IMU bias
   // voxel_resolution            : Resolution for VGICP voxels (0.25 ~ 0.5 for indoor, 0.5 ~ 2.0 for outdoor)
+  // voxelmap_levels             : Multi-resolution voxelmap levels
+  // voxelmap_scaling_factor     : Multi-resolution voxelmap scaling factor
   // full_connection_window_size : Latest sensor pose variable is connected with all of the past $full_connection_window_size poses
   //                             : Must be >1. Increase this param for aggressive motion data (3~5)
   // keyframe_update_strategy    : "OVERLAP" / "DISPLACEMENT" / "ENTROPY"
@@ -16,15 +19,18 @@
   */
   "odometry_estimation": {
     "frontend_mode": "GPU",
+    // Optimization params
     "smoother_lag": 5.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
     "fix_imu_bias": false,
+    // Voxel params
     "voxel_resolution": 0.25,
     "voxelmap_levels": 2,
     "voxelmap_scaling_factor": 2.0,
     "full_connection_window_size": 2,
+    // Keyframe params
     "keyframe_update_strategy": "OVERLAP",
     "max_num_keyframes": 15,
     "keyframe_min_overlap": 0.01,

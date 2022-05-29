@@ -14,9 +14,11 @@
   // between_registration_type      : Registration factor type for information matrix evaluation of relative pose factors (NONE/GICP)
 
   // --- Registration error factors ---
-  // registration_error_factor_type : Registration factor type for matching cost minimization (VGICP/VGICP_GPU)
-  // keyframe_randomsampling_rate   : Random sampling rate for registration error factors (1.0 = use all points)
-  // keyframe_voxel_resolution      : Voxel resolution for registration error factors
+  // registration_error_factor_type   : Registration factor type for matching cost minimization (VGICP/VGICP_GPU)
+  // keyframe_randomsampling_rate     : Random sampling rate for registration error factors (1.0 = use all points)
+  // keyframe_voxel_resolution        : Voxel resolution for registration error factors
+  // keyframe_voxelmap_levels         : Multi-resolution voxelmap levels (must be >= 1)
+  // keyframe_voxelmap_scaling_factor : Multi-resolution voxelmap scaling factor
 
   // --- Post processing ---
   // submap_downsample_resolution   : Resolution of voxel grid downsampling for created submaps
@@ -34,13 +36,13 @@
   */
   "sub_mapping": {
     "enable_imu": true,
-    "enable_optimization": false,
+    "enable_optimization": true,
     // Keyframe update strategy
     "max_num_keyframes": 15,
     "keyframe_update_strategy": "OVERLAP",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
-    "max_keyframe_overlap": 0.8,
+    "max_keyframe_overlap": 0.6,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",

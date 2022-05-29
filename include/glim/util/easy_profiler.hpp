@@ -2,12 +2,15 @@
 
 #include <chrono>
 #include <vector>
+#include <fstream>
 #include <iostream>
 
 namespace glim {
 
 class EasyProfiler {
 public:
+  EasyProfiler(const std::string& prof_label, std::ostream& ost) : EasyProfiler(prof_label, true, false, ost) {}
+
   EasyProfiler(const std::string& prof_label, bool enabled = true, bool debug = false, std::ostream& ost = std::cout)
   : enabled(enabled),
     debug(debug),
@@ -73,5 +76,6 @@ private:
   std::vector<std::chrono::high_resolution_clock::time_point> times;
 
   std::ostream& ost;
+  std::ofstream ofs;
 };
 }  // namespace glim

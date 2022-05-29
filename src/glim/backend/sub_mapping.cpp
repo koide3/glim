@@ -2,6 +2,7 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/nonlinear/LinearContainerFactor.h>
 
 #include <gtsam_ext/types/frame.hpp>
 #include <gtsam_ext/types/frame_cpu.hpp>
@@ -112,13 +113,20 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   }
   // Create a relative pose factor between consecutive frames
   else if (params.create_between_factors) {
-    // auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), odom_frames[last]->frame, odom_frames[current]->frame);
-    // auto linearized = factor->linearize(*values);
-    // auto H = linearized->hessianBlockDiagonal()[X(current)];
-    // graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
-
     const Eigen::Isometry3d delta = odom_frames[last]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
-    graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+
+    if (params.between_registration_type == "GICP") {
+      auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), odom_frames[last]->frame, odom_frames[current]->frame);
+      auto linearized = factor->linearize(*values);
+      // graph->emplace_shared<gtsam::LinearContainerFactor>(linearized, *values);
+
+      auto H = linearized->hessianBlockDiagonal()[X(current)];
+      graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
+    } else if (params.between_registration_type == "NONE") {
+      graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+    } else {
+      std::cerr << console::yellow << "warning: unknown between registration type:" << params.between_registration_type << console::reset << std::endl;
+    }
   }
 
   // Create an IMU preintegration factor
