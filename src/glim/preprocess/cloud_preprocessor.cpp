@@ -76,7 +76,10 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   preprocessed->scan_end_time = raw_points->stamp + frame->times[frame->size() - 1];
   preprocessed->times.assign(frame->times, frame->times + frame->size());
   preprocessed->points.assign(frame->points, frame->points + frame->size());
-  preprocessed->intensities.assign(frame->intensities, frame->intensities + frame->size());
+
+  if (frame->intensities) {
+    preprocessed->intensities.assign(frame->intensities, frame->intensities + frame->size());
+  }
 
   // Nearest neighbor search
   preprocessed->k_neighbors = params.k_correspondences;
