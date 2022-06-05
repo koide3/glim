@@ -4,7 +4,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <gtsam_ext/types/voxelized_frame.hpp>
+#include <gtsam_ext/types/frame.hpp>
+#include <gtsam_ext/types/gaussian_voxelmap.hpp>
 #include <glim/preprocess/preprocessed_frame.hpp>
 
 namespace glim {

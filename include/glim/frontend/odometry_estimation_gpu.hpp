@@ -16,6 +16,7 @@ class VoxelizedFrame;
 class IncrementalFixedLagSmootherExt;
 class IncrementalFixedLagSmootherExtWithFallback;
 class StreamTempBufferRoundRobin;
+class CUDAStream;
 }  // namespace gtsam_ext
 
 namespace glim {
@@ -116,6 +117,8 @@ private:
   std::unique_ptr<IMUIntegration> imu_integration;
   std::unique_ptr<CloudDeskewing> deskewing;
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
+
+  std::unique_ptr<gtsam_ext::CUDAStream> stream;
   std::unique_ptr<gtsam_ext::StreamTempBufferRoundRobin> stream_buffer_roundrobin;
 
   // Optimizer

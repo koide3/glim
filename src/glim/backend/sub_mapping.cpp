@@ -7,13 +7,14 @@
 #include <gtsam_ext/types/frame.hpp>
 #include <gtsam_ext/types/frame_cpu.hpp>
 #include <gtsam_ext/types/frame_gpu.hpp>
-#include <gtsam_ext/types/voxelized_frame.hpp>
+#include <gtsam_ext/types/gaussian_voxelmap.hpp>
 #include <gtsam_ext/types/voxelized_frame_cpu.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
 #include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
+#include <gtsam_ext/cuda/cuda_stream.hpp>
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 
 #include <glim/util/config.hpp>
@@ -74,7 +75,8 @@ SubMapping::SubMapping(const SubMappingParams& params) : params(params) {
   graph.reset(new gtsam::NonlinearFactorGraph);
 
 #ifdef BUILD_GTSAM_EXT_GPU
-  stream_buffer_roundrobin = std::make_shared<gtsam_ext::StreamTempBufferRoundRobin>(32);
+  stream = std::make_shared<gtsam_ext::CUDAStream>();
+  stream_buffer_roundrobin = std::make_shared<gtsam_ext::StreamTempBufferRoundRobin>(8);
 #endif
 }
 
@@ -94,7 +96,15 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   if (params.enable_gpu && !odom_frame->frame->points_gpu) {
     EstimationFrame::Ptr frame(new EstimationFrame);
     *frame = *odom_frame;
-    frame->frame = std::make_shared<gtsam_ext::FrameGPU>(*frame->frame);
+
+#ifdef BUILD_GTSAM_EXT_GPU
+    if (params.enable_gpu) {
+      auto stream = std::static_pointer_cast<gtsam_ext::CUDAStream>(this->stream);
+      auto frame_gpu = std::make_shared<gtsam_ext::FrameGPU>(*frame->frame, *stream);
+      frame->frame = frame_gpu;
+    }
+#endif
+
     odom_frame = frame;
   }
 
@@ -189,7 +199,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       }
 #ifdef BUILD_GTSAM_EXT_GPU
       else if (params.registration_error_factor_type == "VGICP_GPU") {
-        auto roundrobin = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin);
+        auto roundrobin = std::static_pointer_cast<gtsam_ext::StreamTempBufferRoundRobin>(stream_buffer_roundrobin);
         auto stream_buffer = roundrobin->get_stream_buffer();
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
@@ -262,12 +272,13 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
 
   if (params.enable_gpu) {
 #ifdef BUILD_GTSAM_EXT_GPU
-    keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, true);
+    auto stream = std::static_pointer_cast<gtsam_ext::CUDAStream>(this->stream);
+    keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, *stream);
     keyframe->voxelmaps.clear();
 
     for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
       const double resolution = params.keyframe_voxel_resolution * std::pow(params.keyframe_voxelmap_scaling_factor, i);
-      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
       voxelmap->insert(*keyframe->frame);
       keyframe->voxelmaps.push_back(voxelmap);
     }
@@ -349,12 +360,12 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   // TODO: improve merging process
 #ifdef BUILD_GTSAM_EXT_GPU
   if (params.enable_gpu) {
-    // submap->frame = gtsam_ext::merge_voxelized_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution, submap_voxel_resolution, true);
+    // submap->frame = gtsam_ext::merge_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution);
   }
 #endif
 
   if (submap->frame == nullptr) {
-    submap->frame = gtsam_ext::merge_voxelized_frames(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution, params.submap_voxel_resolution);
+    submap->frame = gtsam_ext::merge_frames_auto(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution);
   }
 
   return submap;

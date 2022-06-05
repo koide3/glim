@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <glim/util/callback_slot.hpp>
 #include <glim/frontend/estimation_frame.hpp>
 

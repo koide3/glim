@@ -3,7 +3,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 
-#include <gtsam_ext/cuda/cuda_device_sync.hpp>
+#include <gtsam_ext/cuda/cuda_stream.hpp>
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
 #include <gtsam_ext/types/frame_gpu.hpp>
 #include <gtsam_ext/types/voxelized_frame_gpu.hpp>
@@ -115,6 +115,7 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
   smoother.reset(new FixedLagSmootherExt(params.smoother_lag, isam2_params));
 
+  stream.reset(new gtsam_ext::CUDAStream());
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
 }
 
@@ -168,19 +169,19 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
     std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> covs;
     covariance_estimation->estimate(points_imu, raw_frame->neighbors, normals, covs);
 
-    auto frame = std::make_shared<gtsam_ext::FrameGPU>(points_imu);
-    frame->add_covs(covs);
-    frame->add_normals(normals);
+    auto frame = std::make_shared<gtsam_ext::FrameGPU>();
+    frame->add_points(points_imu, *stream);
+    frame->add_covs(covs, *stream);
+    frame->add_normals(normals, *stream);
     new_frame->frame = frame;
+    new_frame->frame_id = FrameID::IMU;
 
     for (int i = 0; i < params.voxelmap_levels; i++) {
       const double resolution = params.voxel_resolution * std::pow(params.voxelmap_scaling_factor, i);
-      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
       voxelmap->insert(*new_frame->frame);
       new_frame->voxelmaps.push_back(voxelmap);
     }
-
-    new_frame->frame_id = FrameID::IMU;
 
     Callbacks::on_new_frame(new_frame);
     frames.push_back(new_frame);
@@ -295,13 +296,14 @@ EstimationFrame::ConstPtr OdometryEstimationGPU::insert_frame(const Preprocessed
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> deskewed_covs;
   covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
 
-  auto frame = std::make_shared<gtsam_ext::FrameGPU>(deskewed);
-  frame->add_covs(deskewed_covs);
-  frame->add_normals(deskewed_normals);
+  auto frame = std::make_shared<gtsam_ext::FrameGPU>();
+  frame->add_points(deskewed, *stream);
+  frame->add_covs(deskewed_covs, *stream);
+  frame->add_normals(deskewed_normals, *stream);
   new_frame->frame = frame;
   for (int i = 0; i < params.voxelmap_levels; i++) {
     const double resolution = params.voxel_resolution * std::pow(params.voxelmap_scaling_factor, i);
-    auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution);
+    auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
     voxelmap->insert(*new_frame->frame);
     new_frame->voxelmaps.push_back(voxelmap);
   }
@@ -540,7 +542,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
     delta_from_keyframes[i] = keyframes[i]->T_world_imu.inverse() * frames[current]->T_world_imu;
   }
 
-  const double overlap = gtsam_ext::overlap_gpu(keyframes_, frames[current]->frame, delta_from_keyframes);
+  const double overlap = gtsam_ext::overlap_gpu(keyframes_, frames[current]->frame, delta_from_keyframes, *stream);
   if (overlap > params.keyframe_max_overlap) {
     return;
   }
@@ -557,7 +559,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   // Remove keyframes without overlap to the new keyframe
   for (int i = 0; i < keyframes.size(); i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelmaps.front(), new_keyframe->frame, delta);
+    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelmaps.front(), new_keyframe->frame, delta, *stream);
     if (overlap < params.keyframe_min_overlap) {
       marginalized_keyframes.push_back(keyframes[i]);
       keyframes.erase(keyframes.begin() + i);
@@ -574,7 +576,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   std::vector<double> scores(keyframes.size() - 1, 0.0);
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const auto& keyframe = keyframes[i];
-    const double overlap_latest = gtsam_ext::overlap_gpu(keyframe->voxelmaps.front(), new_keyframe->frame, keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu);
+    const double overlap_latest = gtsam_ext::overlap_gpu(keyframe->voxelmaps.front(), new_keyframe->frame, keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu, *stream);
 
     std::vector<gtsam_ext::GaussianVoxelMap::ConstPtr> other_keyframes;
     std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> delta_from_others;
@@ -588,7 +590,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
       delta_from_others.push_back(other->T_world_imu.inverse() * keyframe->T_world_imu);
     }
 
-    const double overlap_others = gtsam_ext::overlap_gpu(other_keyframes, keyframe->frame, delta_from_others);
+    const double overlap_others = gtsam_ext::overlap_gpu(other_keyframes, keyframe->frame, delta_from_others, *stream);
     scores[i] = overlap_latest * (1.0 - overlap_others);
   }
 
@@ -633,7 +635,7 @@ void OdometryEstimationGPU::update_keyframes_displacement(int current) {
 
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelmaps.front(), new_keyframe->frame, delta);
+    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelmaps.front(), new_keyframe->frame, delta, *stream);
 
     if (overlap < 0.01) {
       std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;

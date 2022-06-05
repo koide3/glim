@@ -221,7 +221,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   }
 
   if (params.enable_gpu) {
-    subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap, true);
+    subsampled_submap = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_submap);
 
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
       const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
@@ -269,7 +269,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   const int last = current - 1;
   const gtsam::Pose3 init_delta = gtsam::Pose3((submaps[last]->T_world_origin.inverse() * submaps[current]->T_world_origin).matrix());
 
-  if(params.between_registration_type == "NONE") {
+  if (params.between_registration_type == "NONE") {
     factors->add(gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), init_delta, gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
     return factors;
   }
@@ -329,11 +329,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
 
     if (params.registration_error_factor_type == "VGICP") {
       for (const auto& voxelmap : submaps[i]->voxelmaps) {
-        factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(
-          X(i),
-          X(current),
-          voxelmap,
-          subsampled_submaps[current]);
+        factors->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(i), X(current), voxelmap, subsampled_submaps[current]);
       }
     }
 #ifdef BUILD_GTSAM_EXT_GPU
@@ -375,8 +371,7 @@ void GlobalMapping::save(const std::string& path) {
 
     if (serializable) {
       serializable_factors.push_back(factor);
-    }
-    else {
+    } else {
       const gtsam::Symbol symbol0(factor->keys()[0]);
       const gtsam::Symbol symbol1(factor->keys()[1]);
       const std::string key = std::to_string(symbol0.index()) + "_" + std::to_string(symbol1.index());
@@ -544,23 +539,18 @@ bool GlobalMapping::load(const std::string& path) {
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
 
-        for(const auto& voxelmap: submaps[first]->voxelmaps) {
+        for (const auto& voxelmap : submaps[first]->voxelmaps) {
           graph.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(first), X(second), voxelmap, subsampled_submaps[second], stream, buffer);
         }
 #else
         std::cerr << console::yellow << "warning: GPU is enabled but gtsam_ext was built without CUDA!!" << console::reset << std::endl;
 #endif
       } else {
-        for(const auto& voxelmap : submaps[first]->voxelmaps) {
-          graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(
-            X(first),
-            X(second),
-            voxelmap,
-            subsampled_submaps[second]);
+        for (const auto& voxelmap : submaps[first]->voxelmaps) {
+          graph.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(first), X(second), voxelmap, subsampled_submaps[second]);
         }
       }
-    }
-    else {
+    } else {
       std::cerr << console::yellow << "warning: unsupported matching cost factor type " << type << console::reset << std::endl;
     }
   }

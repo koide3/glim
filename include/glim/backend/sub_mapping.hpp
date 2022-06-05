@@ -11,10 +11,6 @@ class NonlinearFactorGraph;
 class PreintegratedImuMeasurements;
 }  // namespace gtsam
 
-namespace gtsam_ext {
-class StreamTempBufferRoundRobin;
-}
-
 namespace glim {
 
 class IMUIntegration;
@@ -84,7 +80,8 @@ private:
   std::unique_ptr<CloudDeskewing> deskewing;
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
-  std::any stream_buffer_roundrobin;
+  std::shared_ptr<void> stream;
+  std::shared_ptr<void> stream_buffer_roundrobin;
 
   std::vector<EstimationFrame::ConstPtr> odom_frames;
 
