@@ -9,9 +9,11 @@
   - Non-repetitive scan LiDAR (e.g., Livox Avia)
   - Solid-state LiDAR (e.g., Intel Realsense L515)
   - RGB-D camera (e.g., Microsoft Azure Kinect)
-- ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/SMRT-AIST/glim_ext) that offers several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial frontend).
+- ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/koide3/glim_ext) that offers several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial frontend).
 
 Tested on Ubuntu 20.04 with CUDA 11.6 / NVIDIA Jetson Xavier (JetPack 5.0.1).
+
+[![Build](https://github.com/koide3/glim/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
 
 ## Dependencies
 ### Mandatory
@@ -19,7 +21,7 @@ Tested on Ubuntu 20.04 with CUDA 11.6 / NVIDIA Jetson Xavier (JetPack 5.0.1).
 - [nanoflann](https://github.com/jlblancoc/nanoflann)
 - [OpenCV](https://opencv.org/)
 - [GTSAM](https://github.com/borglab/gtsam)
-- [gtsam_ext]()
+- [gtsam_ext](https://github.com/koide3/gtsam_ext)
 
 ### Optional
 - [CUDA](https://developer.nvidia.com/cuda-toolkit)
@@ -62,11 +64,11 @@ sudo make install
 
 ```bash
 cd ~/catkin_ws/src
-git clone https://github.com/SMRT-AIST/glim --recursive
-git clone https://github.com/SMRT-AIST/glim_ros1
+git clone https://github.com/koide3/glim --recursive
+git clone https://github.com/koide3/glim_ros1
 
 # Optional extension library
-git clone https://github.com/SMRT-AIST/glim_ext --recursive
+git clone https://github.com/koide3/glim_ext --recursive
 
 cd ~/catkin_ws
 catkin_make
@@ -76,11 +78,11 @@ catkin_make
 
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/SMRT-AIST/glim --recursive
-git clone https://github.com/SMRT-AIST/glim_ros
+git clone https://github.com/koide3/glim --recursive
+git clone https://github.com/koide3/glim_ros2
 
 # Optional extension library
-git clone https://github.com/SMRT-AIST/glim_ext --recursive
+git clone https://github.com/koide3/glim_ext --recursive
 
 cd ~/ros2_ws
 colcon_build
