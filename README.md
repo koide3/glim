@@ -79,7 +79,7 @@ catkin_make
 ```bash
 cd ~/ros2_ws/src
 git clone https://github.com/koide3/glim --recursive
-git clone https://github.com/koide3/glim_ros
+git clone https://github.com/koide3/glim_ros2
 
 # Optional extension library
 git clone https://github.com/koide3/glim_ext --recursive
