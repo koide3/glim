@@ -1,6 +1,7 @@
 {
   /*** Preprocessing parameters ***
   // distance_(near|far)_thresh  : Points out of this range will be filtered out
+  // global_shutter              : Assume all points in a scan are takes at the same moment and replace per-point timestamps with zero (disable deskewing)
   // use_random_grid_downsampling: If false, use the conventional voxelgrid downsampling
   //                             : Otherwise, use voxel-based random sampling (recommended for Livox)
   // downsample_resolution       : Voxel grid resolution for downsampling
@@ -11,6 +12,7 @@
   "preprocess": {
     "distance_near_thresh": 0.5,
     "distance_far_thresh": 100.0,
+    "global_shutter": false,
     "use_random_grid_downsampling": true,
     "downsample_resolution": 0.25,
     "random_downsample_target": 10000,

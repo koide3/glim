@@ -15,16 +15,10 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   Config config(GlobalConfig::get_config_path("config_preprocess"));
   Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
 
-  T_lidar_offset.setIdentity();
-  auto lidar_offset = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_offset");
-  if (lidar_offset) {
-    T_lidar_offset = *lidar_offset;
-  }
-
-  use_random_grid_downsampling = config.param<bool>("preprocess", "use_random_grid_downsampling", false);
-
   distance_near_thresh = config.param<double>("preprocess", "distance_near_thresh", 1.0);
   distance_far_thresh = config.param<double>("preprocess", "distance_far_thresh", 100.0);
+  global_shutter = config.param<bool>("preprocess", "global_shutter", false);
+  use_random_grid_downsampling = config.param<bool>("preprocess", "use_random_grid_downsampling", false);
   downsample_resolution = config.param<double>("preprocess", "downsample_resolution", 0.15);
   downsample_target = config.param<int>("preprocess", "random_downsample_target", 0);
   downsample_rate = config.param<double>("preprocess", "random_downsample_rate", 0.3);
@@ -69,6 +63,10 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   // Sort by time
   std::sort(indices.begin(), indices.end(), [&](const int lhs, const int rhs) { return frame->times[lhs] < frame->times[rhs]; });
   frame = gtsam_ext::sample(frame, indices);
+
+  if(params.global_shutter) {
+    std::fill(frame->times, frame->times + frame->size(), 0.0);
+  }
 
   // Create a preprocessed frame
   PreprocessedFrame::Ptr preprocessed(new PreprocessedFrame);
