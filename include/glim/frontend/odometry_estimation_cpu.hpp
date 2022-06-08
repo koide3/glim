@@ -1,119 +1,58 @@
 #pragma once
 
-#include <memory>
-#include <random>
-
-#include <boost/shared_ptr.hpp>
-#include <glim/frontend/odometry_estimation_base.hpp>
-#include <glim/frontend/initial_state_estimation.hpp>
-
-namespace gtsam {
-class ImuFactor;
-class NonlinearFactorGraph;
-}  // namespace gtsam
+#include <glim/frontend/odometry_estimation_imu.hpp>
 
 namespace gtsam_ext {
 class iVox;
 class GaussianVoxelMapCPU;
-class IncrementalFixedLagSmootherExt;
-class IncrementalFixedLagSmootherExtWithFallback;
 }  // namespace gtsam_ext
 
 namespace glim {
 
-class IMUIntegration;
-class CloudDeskewing;
-class CloudCovarianceEstimation;
-
-struct OdometryEstimationCPUParams {
+struct OdometryEstimationCPUParams : public OdometryEstimationIMUParams {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   OdometryEstimationCPUParams();
   ~OdometryEstimationCPUParams();
 
-  enum class KeyframeUpdateStrategy { OVERLAP, DISPLACEMENT, ENTROPY };
-
 public:
-  // Sensor params;
-  bool fix_imu_bias;
-  Eigen::Isometry3d T_lidar_imu;
-  Eigen::Matrix<double, 6, 1> imu_bias;
+  // Registration params
+  std::string registration_type;    ///< Registration type (GICP or VGICP)
+  int max_iterations;               ///< Maximum number of iterations
+  int lru_thresh;                   ///< LRU cache threshold
+  double target_downsampling_rate;  ///< Downsampling rate for points to be inserted into the target
 
-  // Init state
-  bool estimate_init_state;
-  Eigen::Isometry3d init_T_world_imu;
-  Eigen::Vector3d init_v_world_imu;
+  double ivox_resolution;  ///< iVox resolution (for GICP)
+  double ivox_min_dist;    ///< Minimum distance between points in an iVox cell (for GICP)
 
-  std::string registration_type;
-  int max_iterations;
-
-  int lru_thresh;
-  double target_downsampling_rate;
-
-  double ivox_resolution;
-  double ivox_min_dist;
-
-  double vgicp_resolution;
-  int vgicp_voxelmap_levels;
-  double vgicp_voxelmap_scaling_factor;
-
-  // Optimization params
-  double smoother_lag;
-  bool use_isam2_dogleg;
-  double isam2_relinearize_skip;
-  double isam2_relinearize_thresh;
-
-  // Logging params
-  bool save_imu_rate_trajectory;
-
-  int num_threads;
+  double vgicp_resolution;               ///< Voxelmap resolution (for VGICP)
+  int vgicp_voxelmap_levels;             ///< Multi-resolution voxelmap levesl (for VGICP)
+  double vgicp_voxelmap_scaling_factor;  ///< Multi-resolution voxelmap scaling factor (for VGICP)
 };
 
-class OdometryEstimationCPU : public OdometryEstimationBase {
+class OdometryEstimationCPU : public OdometryEstimationIMU {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   OdometryEstimationCPU(const OdometryEstimationCPUParams& params = OdometryEstimationCPUParams());
   virtual ~OdometryEstimationCPU() override;
 
-  virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
-  virtual EstimationFrame::ConstPtr insert_frame(const PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
-  virtual std::vector<EstimationFrame::ConstPtr> get_remaining_frames() override;
+private:
+  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) override;
+
+  virtual void fallback_smoother() override;
+  virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors) override;
+
+  void update_target(const int current);
 
 private:
-  gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor);
-
-  void update_target(const Eigen::Isometry3d& T_world_frame, const gtsam_ext::Frame::ConstPtr& frame);
-  void update_frames(const int current);
-
-private:
-  using Params = OdometryEstimationCPUParams;
-  Params params;
-
-  // Sensor extrinsic params
-  Eigen::Isometry3d T_lidar_imu;
-  Eigen::Isometry3d T_imu_lidar;
-
-  // Frames & keyframes
-  int marginalized_cursor;
-  std::vector<EstimationFrame::Ptr> frames;
-
-  std::mt19937 mt;
-  Eigen::Isometry3d target_updated_pose;
-  std::vector<std::shared_ptr<gtsam_ext::GaussianVoxelMapCPU>> target_voxelmaps;
-  std::shared_ptr<gtsam_ext::iVox> target_ivox;
-  EstimationFrame::ConstPtr target_ivox_frame;
-
-  // Utility classes
-  std::unique_ptr<InitialStateEstimation> init_estimation;
-  std::unique_ptr<IMUIntegration> imu_integration;
-  std::unique_ptr<CloudDeskewing> deskewing;
-  std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
-
-  // Optimizer
-  using FixedLagSmootherExt = gtsam_ext::IncrementalFixedLagSmootherExtWithFallback;
-  std::unique_ptr<FixedLagSmootherExt> smoother;
+  // Registration params
+  std::mt19937 mt;                                                                ///< RNG
+  Eigen::Isometry3d last_target_update_pose;                                      ///< Sensor post at the last target update
+  std::vector<std::shared_ptr<gtsam_ext::GaussianVoxelMapCPU>> target_voxelmaps;  ///< VGICP target voxelmap
+  std::shared_ptr<gtsam_ext::iVox> target_ivox;                                   ///< GICP target iVox
+  EstimationFrame::ConstPtr target_ivox_frame;                                    ///< Target points (just for visualization)
 };
 
 }  // namespace glim
