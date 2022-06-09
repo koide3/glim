@@ -66,6 +66,7 @@ add_library(glim SHARED
   src/glim/frontend/odometry_estimation_base.cpp
   src/glim/frontend/async_odometry_estimation.cpp
   src/glim/frontend/odometry_estimation_ct.cpp
+  src/glim/frontend/odometry_estimation_imu.cpp
   src/glim/frontend/odometry_estimation_cpu.cpp
   # backend
   src/glim/backend/callbacks.cpp

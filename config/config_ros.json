@@ -1,0 +1,24 @@
+{
+  "glim_ros": {
+    "config_path": "/config",
+    // Viewer
+    "enable_viewer": true,
+    "enable_rviz": false,
+    // IMU config
+    "imu_time_offset": 0.0,
+    "acc_scale": 1.0,
+    // Extension modules
+    "extension_modules": [
+      // "libscan_context_loop_detector.so",
+      // "libdbow_loop_detector.so",
+      // "liborb_slam_frontend.so",
+      // "libgnss_backend.so",
+      // "libvelocity_suppressor.so",
+      // "libglim_callback_demo.so"
+    ],
+    // Topics
+    "imu_topic": "/imu_raw",
+    "points_topic": "/points_raw",
+    "image_topic": "/image"
+  }
+}
