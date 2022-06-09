@@ -14,6 +14,8 @@
 Tested on Ubuntu 20.04 with CUDA 11.6 / NVIDIA Jetson Xavier (JetPack 5.0.1).
 
 [![Build](https://github.com/koide3/glim/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
+[![ROS1](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml/badge.svg)](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml)
+[![ROS2](https://github.com/koide3/glim_ros2/actions/workflows/docker_push.yml/badge.svg)](https://github.com/koide3/glim_ros2/actions/workflows/docker_push.yml)
 
 ## Dependencies
 ### Mandatory
