@@ -34,10 +34,11 @@
     "keyframe_update_strategy": "OVERLAP",
     "max_num_keyframes": 15,
     "keyframe_min_overlap": 0.01,
-    "keyframe_max_overlap": 0.85,
+    "keyframe_max_overlap": 0.65,
     "keyframe_delta_trans": 2.0,
     "keyframe_delta_rot": 0.5,
     "keyframe_entropy_thresh": 0.99,
-    "save_imu_rate_trajectory": true
+    "save_imu_rate_trajectory": true,
+    "num_threads": 2
   }
 }

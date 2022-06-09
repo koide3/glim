@@ -1,6 +1,5 @@
 {
   "glim_ros": {
-    "config_path": "/config",
     // Viewer
     "enable_viewer": true,
     "enable_rviz": false,
