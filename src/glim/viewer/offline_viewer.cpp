@@ -77,7 +77,7 @@ void OfflineViewer::main_menu() {
     if (!(*open_result)) {
       pfd::message("Error", "Failed to load map").result();
     } else {
-      async_global_mapping.reset(new glim::AsyncGlobalMapping(*open_result));
+      async_global_mapping.reset(new glim::AsyncGlobalMapping(*open_result, 1e6));
     }
   }
 
@@ -117,7 +117,11 @@ std::shared_ptr<GlobalMapping> OfflineViewer::load_map(guik::ProgressInterface& 
   progress.set_maximum(1);
 
   glim::GlobalMappingParams params;
-  params.enable_optimization = false;
+  params.isam2_relinearize_skip = 1;
+  params.isam2_relinearize_thresh = 0.0;
+  // params.enable_optimization = false;
+
+  std::cout << "enable_optimization:" << params.enable_optimization << std::endl;
   std::shared_ptr<glim::GlobalMapping> global_mapping(new glim::GlobalMapping(params));
   if (!global_mapping->load(path)) {
     std::cerr << console::bold_red << "error: failed to load " << path << console::reset << std::endl;

@@ -22,7 +22,8 @@ ManualLoopCloseModal::ManualLoopCloseModal() : request_to_open(false) {
   target_pose.setIdentity();
   source_pose.setIdentity();
 
-  max_correspondence_distance = 3.0f;
+  information_scale = 1.0f;
+  max_correspondence_distance = 1.0f;
 
   canvas.reset(new guik::GLCanvas(Eigen::Vector2i(512, 512)));
   progress_modal.reset(new guik::ProgressModal("manual_loop_close_progress"));
@@ -86,6 +87,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
     model_control->draw_gizmo_ui();
 
     ImGui::DragFloat("max_corr_dist", &max_correspondence_distance, 0.01f, 0.01f, 100.0f);
+    ImGui::DragFloat("inf_scale", &information_scale, 0.0f, 1.0f, 10000.0f);
 
     bool open_modal = false;
     if (ImGui::Button("Align")) {
@@ -166,7 +168,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
   const auto linearized = factor->linearize(values);
   const auto H = linearized->hessianBlockDiagonal()[1];
 
-  return gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(target_key, source_key, relative, gtsam::noiseModel::Gaussian::Information(H));
+  return gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(target_key, source_key, relative, gtsam::noiseModel::Gaussian::Information(information_scale * H));
 }
 
 void ManualLoopCloseModal::draw_canvas() {

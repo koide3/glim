@@ -39,6 +39,7 @@ private:
   std::unique_ptr<guik::ProgressModal> progress_modal;
   std::unique_ptr<guik::ModelControl> model_control;
 
+  float information_scale;
   float max_correspondence_distance;
 
   gtsam::Key target_key;

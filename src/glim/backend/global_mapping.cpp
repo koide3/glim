@@ -254,6 +254,7 @@ void GlobalMapping::optimize() {
   gtsam::Values new_values;
   Callbacks::on_smoother_update(*isam2, new_factors, new_values);
   auto result = isam2->update(new_factors, new_values);
+
   Callbacks::on_smoother_update_result(*isam2, result);
 
   update_submaps();
@@ -481,14 +482,10 @@ bool GlobalMapping::load(const std::string& path) {
   submaps.resize(num_submaps);
   subsampled_submaps.resize(num_submaps);
   for (int i = 0; i < num_submaps; i++) {
-    std::cout << "submap" << i << std::endl;
-
     auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
     if (!submap) {
       return false;
     }
-
-    std::cout << "submap_id:" << submap->id << std::endl;
 
     gtsam_ext::Frame::Ptr subsampled_submap = gtsam_ext::random_sampling(submap->frame, params.randomsampling_rate, mt);
 

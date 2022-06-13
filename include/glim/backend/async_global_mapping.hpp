@@ -16,9 +16,10 @@ class AsyncGlobalMapping {
 public:
   /**
    * @brief Construct a new Async Global Mapping object
-   * @param global_mapping  Global mapping object
+   * @param global_mapping         Global mapping object
+   * @param optimization_interval  Optimizer is updated every this interval even if no additional values and factors are given
    */
-  AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping);
+  AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping, const int optimization_interval_sec = 5);
 
   /**
    * @brief Destroy the Async Global Mapping object
@@ -85,6 +86,7 @@ private:
   ConcurrentVector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>> input_imu_queue;
   ConcurrentVector<SubMap::Ptr> input_submap_queue;
 
+  int optimization_interval;
   std::atomic_bool request_to_optimize;
 
   std::shared_ptr<glim::GlobalMappingBase> global_mapping;

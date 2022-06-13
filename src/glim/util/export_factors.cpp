@@ -14,17 +14,6 @@
 #include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/rotate_vector3_factor.hpp>
 
-/*
-namespace boost { namespace serialization {
-   struct U;  // forward-declaration for Bug 1676
-} } // boost::serialization
-
-namespace Eigen { namespace internal {
-  // Workaround for bug 1676
-  template<>
-  struct traits<boost::serialization::U> {enum {Flags=0};};
-} }
-*/
 
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Isotropic, "gtsam::noiseModel::Isotropic");
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Gaussian, "gtsam::noiseModel::Gaussian");
@@ -33,6 +22,12 @@ BOOST_CLASS_EXPORT_GUID(gtsam::SharedNoiseModel, "gtsam::SharedNoiseModel");
 GTSAM_VALUE_EXPORT(gtsam::Pose3);
 GTSAM_VALUE_EXPORT(gtsam::Vector3);
 GTSAM_VALUE_EXPORT(gtsam::imuBias::ConstantBias);
+
+BOOST_CLASS_EXPORT_GUID(gtsam::GaussianFactor, "gtsam::GaussianFactor");
+BOOST_CLASS_EXPORT_GUID(gtsam::JacobianFactor, "gtsam::JacobianFactor");
+BOOST_CLASS_EXPORT_GUID(gtsam::HessianFactor, "gtsam::HessianFactor");
+BOOST_CLASS_EXPORT_GUID(gtsam::NonlinearFactor, "gtsam::NonlinearFactor");
+BOOST_CLASS_EXPORT_GUID(gtsam::LinearContainerFactor, "gtsam::LinearContainerFactor");
 
 BOOST_CLASS_EXPORT_GUID(gtsam::PriorFactor<gtsam::Pose3>, "gtsam::PriorFactor<gtsam::Pose3>");
 BOOST_CLASS_EXPORT_GUID(gtsam::PriorFactor<gtsam::Vector3>, "gtsam::PriorFactor<gtsam::Vector3>");

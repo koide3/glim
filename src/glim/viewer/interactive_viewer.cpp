@@ -21,6 +21,7 @@
 
 #include <gtsam_ext/factors/integrated_matching_cost_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
+#include <gtsam_ext/optimizers/isam2_result_ext.hpp>
 
 #include <glk/thin_lines.hpp>
 #include <glk/pointcloud_buffer.hpp>
@@ -39,11 +40,13 @@ InteractiveViewer::InteractiveViewer() {
   request_to_clear = false;
 
   coord_scale = 1.0f;
-  sphere_scale = 1.0f;
+  sphere_scale = 0.5f;
 
   draw_points = true;
   draw_factors = true;
   draw_spheres = true;
+
+  cont_optimize = false;
 
   enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
   partial_rendering_budget = config.param("interactive_viewer", "partial_rendering_budget", 1024);
@@ -54,10 +57,11 @@ InteractiveViewer::InteractiveViewer() {
   using std::placeholders::_2;
   using std::placeholders::_3;
 
-  // CommonCallbacks::on_notification.add(std::bind(&InteractiveViewer::common_notification, this, _1, _2));
+  CommonCallbacks::on_notification.add([this](NotificationLevel level, const std::string& message) { guik::LightViewer::instance()->append_text(message); });
   GlobalMappingCallbacks::on_insert_submap.add(std::bind(&InteractiveViewer::globalmap_on_insert_submap, this, _1));
   GlobalMappingCallbacks::on_update_submaps.add(std::bind(&InteractiveViewer::globalmap_on_update_submaps, this, _1));
   GlobalMappingCallbacks::on_smoother_update.add(std::bind(&InteractiveViewer::globalmap_on_smoother_update, this, _1, _2, _3));
+  GlobalMappingCallbacks::on_smoother_update_result.add(std::bind(&InteractiveViewer::globalmap_on_smoother_update_result, this, _1, _2));
 
   thread = std::thread([this] { viewer_loop(); });
 }
@@ -111,6 +115,8 @@ void InteractiveViewer::viewer_loop() {
 
   setup_ui();
 
+  viewer->append_text("Starting interactive viewer");
+
   while (!kill_switch) {
     if (!viewer->spin_once()) {
       request_to_terminate = true;
@@ -145,8 +151,30 @@ void InteractiveViewer::invoke(const std::function<void()>& task) {
 void InteractiveViewer::drawable_selection() {
   ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   ImGui::Checkbox("Points", &draw_points);
+  ImGui::SameLine();
   ImGui::Checkbox("Factors", &draw_factors);
+  ImGui::SameLine();
   ImGui::Checkbox("Spheres", &draw_spheres);
+
+  bool do_update_viewer = false;
+  do_update_viewer |= ImGui::DragFloat("coord scale", &coord_scale, 0.01f, 0.01f, 100.0f);
+  do_update_viewer |= ImGui::DragFloat("sphere scale", &sphere_scale, 0.01f, 0.01f, 100.0f);
+
+  if (do_update_viewer) {
+    update_viewer();
+  }
+
+  if (ImGui::Button("Optimize")) {
+    notify(NotificationLevel::INFO, "Optimizing...");
+    GlobalMappingCallbacks::request_to_optimize();
+  }
+
+  ImGui::SameLine();
+  ImGui::Checkbox("##Cont optimize", &cont_optimize);
+  if (cont_optimize) {
+    GlobalMappingCallbacks::request_to_optimize();
+  }
+
   ImGui::End();
 }
 
@@ -208,6 +236,7 @@ void InteractiveViewer::run_modals() {
   factors.erase(std::remove(factors.begin(), factors.end(), nullptr), factors.end());
 
   if (factors.size()) {
+    notify(NotificationLevel::INFO, "Optimizing...");
     new_factors.insert(factors);
     GlobalMappingCallbacks::request_to_optimize();
   }
@@ -363,6 +392,14 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2,
   }
 
   invoke([this, inserted_factors] { global_factors.insert(global_factors.end(), inserted_factors.begin(), inserted_factors.end()); });
+}
+
+/**
+ * @brief Smoother update result callback
+ */
+void InteractiveViewer::globalmap_on_smoother_update_result(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result) {
+  const std::string text = result.to_string();
+  guik::LightViewer::instance()->append_text(text);
 }
 
 bool InteractiveViewer::ok() const {

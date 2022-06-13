@@ -4,7 +4,7 @@
 
 namespace glim {
 
-AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping) : global_mapping(global_mapping) {
+AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping, const int optimization_interval) : global_mapping(global_mapping), optimization_interval(optimization_interval) {
   saving = false;
   request_to_optimize = false;
   GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
@@ -83,7 +83,7 @@ void AsyncGlobalMapping::run() {
         break;
       }
 
-      if (request_to_optimize || std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(5)) {
+      if (request_to_optimize || std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(optimization_interval)) {
         request_to_optimize = false;
         global_mapping->optimize();
         last_optimization_time = std::chrono::high_resolution_clock::now();
