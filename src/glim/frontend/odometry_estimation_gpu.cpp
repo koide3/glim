@@ -72,7 +72,11 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
   stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
 }
 
-OdometryEstimationGPU::~OdometryEstimationGPU() {}
+OdometryEstimationGPU::~OdometryEstimationGPU() {
+  frames.clear();
+  keyframes.clear();
+  smoother.reset();
+}
 
 void OdometryEstimationGPU::create_frame(EstimationFrame::Ptr& new_frame) {
   const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
