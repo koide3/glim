@@ -1,12 +1,16 @@
 #include <glim/common/imu_integration.hpp>
 
+#include <glim/util/config.hpp>
+
 namespace glim {
 
 IMUIntegration::IMUIntegration() {
+  glim::Config config_sensors(glim::GlobalConfig::get_config_path("config_sensors"));
+
   auto imu_params = gtsam::PreintegrationParams::MakeSharedU();
-  imu_params->accelerometerCovariance = gtsam::Matrix3::Identity() * std::pow(0.005, 2);
-  imu_params->gyroscopeCovariance = gtsam::Matrix3::Identity() * std::pow(0.005, 2);
-  imu_params->integrationCovariance = gtsam::Matrix3::Identity() * pow(0.005, 2);
+  imu_params->accelerometerCovariance = gtsam::Matrix3::Identity() * std::pow(config_sensors.param<double>("sensors", "imu_acc_noise", 0.01), 2);
+  imu_params->gyroscopeCovariance = gtsam::Matrix3::Identity() * std::pow(config_sensors.param<double>("sensors", "imu_gyro_noise", 0.001), 2);
+  imu_params->integrationCovariance = gtsam::Matrix3::Identity() * pow(config_sensors.param<double>("sensors", "imu_int_noise", 0.001), 2);
   imu_measurements.reset(new gtsam::PreintegratedImuMeasurements(imu_params));
 }
 
@@ -45,6 +49,14 @@ int IMUIntegration::integrate_imu(double start_time, double end_time, const gtsa
 
     last_stamp = imu_stamp;
     (*num_integrated)++;
+  }
+
+  const double dt = end_time - last_stamp;
+  if(dt > 0.0) {
+    Eigen::Matrix<double, 7, 1> last_imu_frame = imu_itr == imu_queue.end() ? *(imu_itr - 1) : *imu_itr;
+    const auto& a = last_imu_frame.block<3, 1>(1, 0);
+    const auto& w = last_imu_frame.block<3, 1>(4, 0);
+    imu_measurements->integrateMeasurement(a, w, dt);
   }
 
   return cursor;

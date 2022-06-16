@@ -147,13 +147,13 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
 
   // Get linearized matching cost factors
   for (int i = linearized->size() - matching_cost_factors.size(); i < linearized->size(); i++) {
-    factors.emplace_shared<gtsam::LinearContainerFactor>(linearized->at(i));
+    // factors.emplace_shared<gtsam::LinearContainerFactor>(linearized->at(i), values);
   }
 
   // TODO: Extract a relative pose covariance from a frame-to-model matching result? How?
-  // Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * T_world_imu;
-  // T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
-  // factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * T_world_imu;
+  T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
+  factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
   new_values.insert_or_assign(V(current), frames[current]->v_world_imu);
