@@ -87,6 +87,12 @@ public:
   template <typename T>
   bool override_param(const std::string& module_name, const std::string& param_name, const T& value);
 
+  /**
+   * @brief Save config parameters as a JSON file
+   * @param path  Destination path
+   */
+  void save(const std::string& path) const;
+
 private:
   std::any config;
 };

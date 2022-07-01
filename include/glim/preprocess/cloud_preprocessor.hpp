@@ -25,6 +25,9 @@ public:
   double downsample_resolution;       ///< Downsampling resolution
   int downsample_target;              ///< Target number of points for downsampling
   double downsample_rate;             ///< Downsamping rate (used for random grid downsampling)
+  bool enable_outlier_removal;        ///< If true, apply statistical outlier removal
+  int outlier_removal_k;              ///< Number of neighbors used for outlier removal
+  double outlier_std_mul_factor;      ///< Statistical outlier removal std dev threshold multiplication factor
   int k_correspondences;              ///< Number of neighboring points
 
   int num_threads;  ///< Number of threads
@@ -54,7 +57,7 @@ public:
   virtual PreprocessedFrame::Ptr preprocess(const RawPoints::ConstPtr& raw_points);
 
 private:
-  std::vector<int> find_neighbors(const Points& points, int k) const;
+  std::vector<int> find_neighbors(const Eigen::Vector4d* points, const int num_points, const int k) const;
 
 private:
   using Params = CloudPreprocessorParams;

@@ -358,6 +358,8 @@ void GlobalMapping::update_submaps() {
 }
 
 void GlobalMapping::save(const std::string& path) {
+  optimize();
+
   boost::filesystem::create_directories(path);
 
   gtsam::NonlinearFactorGraph serializable_factors;
@@ -430,11 +432,11 @@ void GlobalMapping::save(const std::string& path) {
     const Eigen::Isometry3d T_odom_imu0 = submaps[i]->frames.front()->T_world_imu;
 
     for (const auto& frame : submaps[i]->frames) {
-      const Eigen::Isometry3d T_world_lidar = T_world_endpoint_L * T_odom_lidar0.inverse() * frame->T_world_lidar;
       const Eigen::Isometry3d T_world_imu = T_world_endpoint_L * T_odom_imu0.inverse() * frame->T_world_imu;
+      const Eigen::Isometry3d T_world_lidar = T_world_imu * frame->T_lidar_imu.inverse();
 
-      write_tum_frame(traj_lidar_ofs, frame->stamp, T_world_lidar);
       write_tum_frame(traj_imu_ofs, frame->stamp, T_world_imu);
+      write_tum_frame(traj_lidar_ofs, frame->stamp, T_world_lidar);
     }
 
     submaps[i]->save((boost::format("%s/%06d") % path % i).str());

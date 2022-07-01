@@ -15,13 +15,18 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   Config config(GlobalConfig::get_config_path("config_preprocess"));
   Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
 
+  global_shutter = sensor_config.param<bool>("sensors", "global_shutter_lidar", false);
+
   distance_near_thresh = config.param<double>("preprocess", "distance_near_thresh", 1.0);
   distance_far_thresh = config.param<double>("preprocess", "distance_far_thresh", 100.0);
-  global_shutter = config.param<bool>("preprocess", "global_shutter", false);
   use_random_grid_downsampling = config.param<bool>("preprocess", "use_random_grid_downsampling", false);
   downsample_resolution = config.param<double>("preprocess", "downsample_resolution", 0.15);
   downsample_target = config.param<int>("preprocess", "random_downsample_target", 0);
   downsample_rate = config.param<double>("preprocess", "random_downsample_rate", 0.3);
+  enable_outlier_removal = config.param<bool>("preprocess", "enable_outlier_removal", false);
+  outlier_removal_k = config.param<int>("preprocess", "outlier_removal_k", 10);
+  outlier_std_mul_factor = config.param<double>("preprocess", "outlier_std_mul_factor", 2.0);
+
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
 
   num_threads = config.param<int>("preprocess", "num_threads", 10);
@@ -68,31 +73,35 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
     std::fill(frame->times, frame->times + frame->size(), 0.0);
   }
 
+  // Nearest neighbor search
+  if(params.enable_outlier_removal) {
+    frame = gtsam_ext::remove_outliers(frame, params.outlier_removal_k, params.outlier_std_mul_factor, params.num_threads);
+  }
+
   // Create a preprocessed frame
   PreprocessedFrame::Ptr preprocessed(new PreprocessedFrame);
   preprocessed->stamp = raw_points->stamp;
   preprocessed->scan_end_time = raw_points->stamp + frame->times[frame->size() - 1];
+
   preprocessed->times.assign(frame->times, frame->times + frame->size());
   preprocessed->points.assign(frame->points, frame->points + frame->size());
-
-  if (frame->intensities) {
+  if(frame->intensities) {
     preprocessed->intensities.assign(frame->intensities, frame->intensities + frame->size());
   }
 
-  // Nearest neighbor search
   preprocessed->k_neighbors = params.k_correspondences;
-  preprocessed->neighbors = find_neighbors(preprocessed->points, params.k_correspondences);
+  preprocessed->neighbors = find_neighbors(frame->points, frame->size(), params.k_correspondences);
 
   return preprocessed;
 }
 
-std::vector<int> CloudPreprocessor::find_neighbors(const Points& points, int k) const {
-  gtsam_ext::KdTree tree(points.data(), points.size());
+std::vector<int> CloudPreprocessor::find_neighbors(const Eigen::Vector4d* points, const int num_points, const int k) const {
+  gtsam_ext::KdTree tree(points, num_points);
 
-  std::vector<int> neighbors(points.size() * k);
+  std::vector<int> neighbors(num_points * k);
 
 #pragma omp parallel for num_threads(params.num_threads) schedule(guided, 8)
-  for (int i = 0; i < points.size(); i++) {
+  for (int i = 0; i < num_points; i++) {
     std::vector<size_t> k_indices(k);
     std::vector<double> k_sq_dists(k);
     tree.knn_search(points[i].data(), k, k_indices.data(), k_sq_dists.data());

@@ -33,7 +33,7 @@ void NaiveInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d
 }
 
 EstimationFrame::ConstPtr NaiveInitialStateEstimation::initial_pose() {
-  if (!force_init && sum_acc.squaredNorm() < 1000.0) {
+  if (!force_init && sum_acc.squaredNorm() < 10.0) {
     return nullptr;
   }
 

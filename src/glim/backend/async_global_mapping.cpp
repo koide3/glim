@@ -38,6 +38,10 @@ void AsyncGlobalMapping::join() {
   if (thread.joinable()) {
     thread.join();
   }
+
+  // for (int i = 0; i < 64; i++) {
+  //   global_mapping->optimize();
+  // }
 }
 
 int AsyncGlobalMapping::input_queue_size() const {
