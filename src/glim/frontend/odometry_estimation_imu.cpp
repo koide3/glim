@@ -295,6 +295,12 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 }
 
 std::vector<EstimationFrame::ConstPtr> OdometryEstimationIMU::get_remaining_frames() {
+  // Perform a few optimization iterations at the end
+  // for(int i=0; i<5; i++) {
+  //   smoother->update();
+  // }
+  // OdometryEstimationIMU::update_frames(frames.size() - 1, gtsam::NonlinearFactorGraph());
+
   std::vector<EstimationFrame::ConstPtr> marginalized_frames;
   for (int i = marginalized_cursor; i < frames.size(); i++) {
     marginalized_frames.push_back(frames[i]);

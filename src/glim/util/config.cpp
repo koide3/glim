@@ -98,7 +98,7 @@ struct traits<std::vector<Eigen::Isometry3d>> {
     for (int i = 0; i < poses.size(); i++) {
       poses[i].setIdentity();
       poses[i].translation() << in[i * 7], in[i * 7 + 1], in[i * 7 + 2];
-      poses[i].linear() = Eigen::Quaterniond(in[i * 7 + 3], in[i * 7 + 4], in[i * 7 + 5], in[i * 7 + 6]).normalized().toRotationMatrix();
+      poses[i].linear() = Eigen::Quaterniond(in[i * 7 + 6], in[i * 7 + 3], in[i * 7 + 4], in[i * 7 + 5]).normalized().toRotationMatrix();
     }
 
     return poses;

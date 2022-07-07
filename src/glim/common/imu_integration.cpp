@@ -4,13 +4,26 @@
 
 namespace glim {
 
-IMUIntegration::IMUIntegration() {
+IMUIntegrationParams::IMUIntegrationParams(const bool upright) {
   glim::Config config_sensors(glim::GlobalConfig::get_config_path("config_sensors"));
 
+  this->upright = upright;
+  this->acc_noise = config_sensors.param<double>("sensors", "imu_acc_noise", 0.01);
+  this->gyro_noise = config_sensors.param<double>("sensors", "imu_gyro_noise", 0.001);
+  this->int_noise = config_sensors.param<double>("sensors", "imu_int_noise", 0.001);
+}
+
+IMUIntegrationParams::~IMUIntegrationParams() {}
+
+IMUIntegration::IMUIntegration(const IMUIntegrationParams& params) {
   auto imu_params = gtsam::PreintegrationParams::MakeSharedU();
-  imu_params->accelerometerCovariance = gtsam::Matrix3::Identity() * std::pow(config_sensors.param<double>("sensors", "imu_acc_noise", 0.01), 2);
-  imu_params->gyroscopeCovariance = gtsam::Matrix3::Identity() * std::pow(config_sensors.param<double>("sensors", "imu_gyro_noise", 0.001), 2);
-  imu_params->integrationCovariance = gtsam::Matrix3::Identity() * pow(config_sensors.param<double>("sensors", "imu_int_noise", 0.001), 2);
+  if(!params.upright) {
+    imu_params = gtsam::PreintegrationParams::MakeSharedD();
+  }
+
+  imu_params->accelerometerCovariance = gtsam::Matrix3::Identity() * std::pow(params.acc_noise, 2);
+  imu_params->gyroscopeCovariance = gtsam::Matrix3::Identity() * std::pow(params.gyro_noise, 2);
+  imu_params->integrationCovariance = gtsam::Matrix3::Identity() * pow(params.int_noise, 2);
   imu_measurements.reset(new gtsam::PreintegratedImuMeasurements(imu_params));
 }
 

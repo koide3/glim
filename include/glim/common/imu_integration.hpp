@@ -8,11 +8,24 @@
 namespace glim {
 
 /**
+ * @brief IMU integration parameters
+ */
+struct IMUIntegrationParams {
+  IMUIntegrationParams(const bool upright=true);
+  ~IMUIntegrationParams();
+
+  bool upright;         // If true, +Z = up
+  double acc_noise;     // Linear acceleration noise
+  double gyro_noise;    // Angular velocity noise
+  double int_noise;     // Integration noise
+};
+
+/**
  * @brief Utility class to integrate IMU measurements
  */
 class IMUIntegration {
 public:
-  IMUIntegration();
+  IMUIntegration(const IMUIntegrationParams& params = IMUIntegrationParams());
   ~IMUIntegration();
 
   /**
