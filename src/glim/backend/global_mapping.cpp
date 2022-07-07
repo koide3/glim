@@ -322,7 +322,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     }
 
     const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * current_submap->T_world_origin;
-    const double overlap = gtsam_ext::overlap_auto(submaps[i]->voxelmaps.front(), current_submap->frame, delta);
+    const double overlap = gtsam_ext::overlap_auto(submaps[i]->voxelmaps.back(), current_submap->frame, delta);
 
     if (overlap < params.min_implicit_loop_overlap) {
       continue;
