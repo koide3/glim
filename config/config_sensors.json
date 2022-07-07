@@ -18,6 +18,7 @@
     "imu_gyro_noise": 0.0001,
     "imu_int_noise": 0.0001,
     // LiDAR config
+    "global_shutter_lidar": false,
     "T_lidar_imu": [
       0.0,
       0.0,
@@ -28,6 +29,7 @@
       0.0
     ],
     // Camera config (required for only extension modules)
+    "global_shutter_camera": true,
     "T_lidar_camera": [
       -0.00320,
       -0.05292,
