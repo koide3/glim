@@ -82,16 +82,19 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   values.insert(X(last), gtsam::Pose3(last_T_world_imu));
   values.insert(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
 
-  values.insert(V(last), last_v_world_imu);
-  values.insert(V(current), frames[current]->v_world_imu);
-  values.insert(B(last), last_imu_bias);
-  values.insert(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
-
-  graph.add(imu_factor);
   graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(last), last_T_world_imu, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-  graph.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(last), last_v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e6));
-  graph.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(last), last_imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
-  graph.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+
+  if(imu_factor) {
+    values.insert(V(last), last_v_world_imu);
+    values.insert(V(current), frames[current]->v_world_imu);
+    values.insert(B(last), last_imu_bias);
+    values.insert(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+
+    graph.add(imu_factor);
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(last), last_v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e6));
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(last), last_imu_bias, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+    graph.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  }
 
   // Create frame-to-model matching factor
   if (params->registration_type == "GICP") {
@@ -139,8 +142,11 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
 
   const Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
   frames[current]->T_world_imu = T_world_imu;
-  frames[current]->v_world_imu = values.at<gtsam::Vector3>(V(current));
-  frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
+
+  if(imu_factor) {
+    frames[current]->v_world_imu = values.at<gtsam::Vector3>(V(current));
+    frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
+  }
 
   gtsam::NonlinearFactorGraph factors;
   const auto linearized = optimizer.last_linearized();
