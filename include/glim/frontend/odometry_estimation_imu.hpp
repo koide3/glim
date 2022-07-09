@@ -24,6 +24,9 @@ class IMUIntegration;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
 
+/**
+ * @brief Parameters for OdometryEstimationIMU
+ */
 struct OdometryEstimationIMUParams {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -54,6 +57,9 @@ public:
   int num_threads;
 };
 
+/**
+ * @brief Base class for LiDAR-IMU odometry estimation
+ */
 class OdometryEstimationIMU : public OdometryEstimationBase {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

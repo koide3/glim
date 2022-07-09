@@ -9,6 +9,9 @@ class GaussianVoxelMapCPU;
 
 namespace glim {
 
+/**
+ * @brief Parameters for OdometryEstimationCPU
+ */
 struct OdometryEstimationCPUParams : public OdometryEstimationIMUParams {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -31,6 +34,9 @@ public:
   double vgicp_voxelmap_scaling_factor;  ///< Multi-resolution voxelmap scaling factor (for VGICP)
 };
 
+/**
+ * @brief CPU-based semi-tightly coupled LiDAR-IMU frontend
+ */
 class OdometryEstimationCPU : public OdometryEstimationIMU {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

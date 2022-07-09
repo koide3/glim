@@ -10,6 +10,9 @@ class CUDAStream;
 
 namespace glim {
 
+/**
+ * @brief Parameters for OdometryEstimationGPU
+ */
 struct OdometryEstimationGPUParams : public OdometryEstimationIMUParams {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
