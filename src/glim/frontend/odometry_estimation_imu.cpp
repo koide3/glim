@@ -13,7 +13,6 @@
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
-
 #include <glim/frontend/callbacks.hpp>
 
 namespace glim {
