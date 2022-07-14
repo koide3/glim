@@ -13,29 +13,39 @@ class Values;
 
 namespace gtsam_ext {
 class iVox;
-}
+class IncrementalFixedLagSmootherExt;
+class IncrementalFixedLagSmootherExtWithFallback;
+}  // namespace gtsam_ext
 
 namespace glim {
 
 class CloudCovarianceEstimation;
 
+/**
+ * @brief Parameters for OdometryEstimationCT
+ */
 struct OdometryEstimationCTParams {
 public:
   OdometryEstimationCTParams();
   ~OdometryEstimationCTParams();
 
 public:
-  int num_threads;
-  double max_correspondence_distance;
+  int num_threads;  ///< Number of threads
 
-  double ivox_resolution;
-  double ivox_min_points_dist;
-  int ivox_lru_thresh;
+  double ivox_resolution;       ///< iVox resolution
+  double ivox_min_points_dist;  ///< Minimum distance between points in an iVox cell
+  int ivox_lru_thresh;          ///< iVox LRU cache threshold
 
-  double stiffness_scale_first;
-  double stiffness_scale_second;
-  int lm_max_iterations_first;
-  int lm_max_iterations_second;
+  double max_correspondence_distance;     ///< Maximum distance between corresponding points
+  double location_consistency_inf_scale;  ///< Weight for location consistency constraints
+  double constant_velocity_inf_scale;     ///< Weight for constant velocity constraints
+  int lm_max_iterations;                  ///< Maximum number of iterations for LM optimization
+
+  // iSAM2 params
+  double smoother_lag;    ///< Fixed-lag smoothing window [sec]
+  bool use_isam2_dogleg;  ///< If true, use dogleg optimizer
+  double isam2_relinearize_skip;
+  double isam2_relinearize_thresh;
 };
 
 /**
@@ -56,10 +66,14 @@ private:
 
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
-  EstimationFrame::Ptr last_frame;
-  std::deque<Eigen::Matrix<double, 6, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 6, 1>>> v_last_current_history;
+  int marginalized_cursor;
+  std::vector<EstimationFrame::Ptr> frames;      ///< Estimation frames
+  std::shared_ptr<gtsam_ext::iVox> target_ivox;  ///< Target iVox
+  EstimationFrame::ConstPtr target_ivox_frame;   ///< Target iVox points (just for visualization)
 
-  std::shared_ptr<gtsam_ext::iVox> target_ivox;
+  // Optimizer
+  using FixedLagSmootherExt = gtsam_ext::IncrementalFixedLagSmootherExtWithFallback;
+  std::unique_ptr<FixedLagSmootherExt> smoother;
 };
 
 }  // namespace glim
