@@ -42,7 +42,7 @@
     "keyframe_update_strategy": "OVERLAP",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
-    "max_keyframe_overlap": 0.6,
+    "max_keyframe_overlap": 0.99,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",
@@ -57,7 +57,7 @@
     "submap_voxel_resolution": 0.5
   },
   "global_mapping": {
-    "enable_imu": true,
+    "enable_imu": false,
     "enable_optimization": true,
     // Relative pose factors
     "create_between_factors": false,

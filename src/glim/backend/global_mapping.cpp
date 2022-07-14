@@ -186,7 +186,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
       imu_integration->erase_imu_data(imu_read_cursor);
 
       if (num_integrated < 2) {
-        std::cerr << "warning: efficient IMU data between submaps (global_mapping)!!" << std::endl;
+        std::cerr << "warning: insufficient IMU data between submaps (global_mapping)!!" << std::endl;
         new_factors->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last * 2 + 1), V(current * 2), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       } else {
         new_factors
@@ -382,8 +382,14 @@ void GlobalMapping::save(const std::string& path) {
       matching_cost_factors[key] = factor;
     }
   }
-  gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
-  gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
+
+  try {
+    gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
+    gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
+  } catch (boost::archive::archive_exception e) {
+    std::cerr << console::yellow << "warning: failed to serialize factor graph!!" << console::reset << std::endl;
+    std::cerr << console::yellow << "       : " << e.what() << console::reset << std::endl;
+  }
 
   std::ofstream ofs(path + "/graph.txt");
   ofs << "num_submaps: " << submaps.size() << std::endl;

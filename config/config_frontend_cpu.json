@@ -19,7 +19,7 @@
     "lru_thresh": 100,
     "target_downsampling_rate": 0.1,
     // GICP + iVox params
-    "ivox_resolution": 0.5,
+    "ivox_resolution": 1.0,
     "ivox_min_dist": 0.1,
     // VGICP params
     "vgicp_resolution": 0.5,

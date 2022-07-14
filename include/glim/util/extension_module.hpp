@@ -13,6 +13,11 @@ public:
   virtual ~ExtensionModule() {}
 
   /**
+   * @brief Check if the module is behind the main mapping process.
+   */
+  virtual bool needs_wait() const { return false; }
+
+  /**
    * @brief Load an extension module from a dynamic library
    * @param so_name  Dynamic library name
    * @return         Loaded extension module

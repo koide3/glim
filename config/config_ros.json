@@ -14,10 +14,12 @@
       // "libgnss_backend.so",
       // "libvelocity_suppressor.so",
       // "libglim_callback_demo.so"
+      "libglim_alphasense.so"
+      // "libglim_ablation.so"
     ],
     // Topics
-    "imu_topic": "/imu_raw",
-    "points_topic": "/points_raw",
+    "imu_topic": "/alphasense_driver_ros/imu",
+    "points_topic": "/os_cloud_node/points",
     "image_topic": "/image"
   }
 }
