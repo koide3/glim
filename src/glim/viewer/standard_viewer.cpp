@@ -39,6 +39,7 @@ StandardViewer::StandardViewer() {
 
   show_frontend_status = false;
   last_id = last_num_points = 0;
+  last_point_stamps = std::make_pair(0.0, 0.0);
   last_imu_vel.setZero();
   last_imu_bias.setZero();
 
@@ -131,6 +132,10 @@ void StandardViewer::set_callbacks() {
 
       last_id = new_frame->id;
       last_num_points = new_frame->frame->size();
+      if (new_frame->raw_frame) {
+        last_point_stamps.first = new_frame->raw_frame->times.front();
+        last_point_stamps.second = new_frame->raw_frame->times.back();
+      }
       last_imu_vel = new_frame->v_world_imu;
       last_imu_bias = new_frame->imu_bias;
 
@@ -518,7 +523,8 @@ void StandardViewer::drawable_selection() {
   if (show_frontend_status) {
     ImGui::Begin("frontend status", &show_frontend_status, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("frame ID:%d", last_id);
-    ImGui::Text("#points:%d", last_num_points);
+    ImGui::Text("points:%d", last_num_points);
+    ImGui::Text("stamp:%.3f ~ %.3f", last_point_stamps.first, last_point_stamps.second);
     ImGui::Text("vel:%.3f %.3f %.3f", last_imu_vel[0], last_imu_vel[1], last_imu_vel[2]);
     ImGui::Text("bias:%.3f %.3f %.3f %.3f %.3f %.3f", last_imu_bias[0], last_imu_bias[1], last_imu_bias[2], last_imu_bias[3], last_imu_bias[4], last_imu_bias[5]);
     ImGui::End();

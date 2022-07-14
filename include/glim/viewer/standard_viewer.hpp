@@ -55,6 +55,7 @@ private:
   bool show_frontend_status;
   int last_id;
   int last_num_points;
+  std::pair<double, double> last_point_stamps;
   Eigen::Vector3d last_imu_vel;
   Eigen::Matrix<double, 6, 1> last_imu_bias;
 
