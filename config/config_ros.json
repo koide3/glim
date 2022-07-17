@@ -2,7 +2,7 @@
   "glim_ros": {
     // Viewer
     "enable_viewer": true,
-    "enable_rviz": false,
+    "enable_rviz": true,
     // IMU config
     "imu_time_offset": 0.0,
     "acc_scale": 1.0,
@@ -14,11 +14,9 @@
       // "libgnss_backend.so",
       // "libvelocity_suppressor.so",
       // "libglim_callback_demo.so"
-      "libglim_alphasense.so"
-      // "libglim_ablation.so"
     ],
     // Topics
-    "imu_topic": "/alphasense_driver_ros/imu",
+    "imu_topic": "/os_cloud_node/imu",
     "points_topic": "/os_cloud_node/points",
     "image_topic": "/image"
   }

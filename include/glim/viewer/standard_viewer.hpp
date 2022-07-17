@@ -46,7 +46,8 @@ private:
 
   bool track;
   bool show_current;
-  bool show_intensity;
+  int current_color_mode;
+
   bool show_frontend_scans;
   bool show_frontend_keyframes;
   bool show_submaps;

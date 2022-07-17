@@ -69,12 +69,12 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   std::sort(indices.begin(), indices.end(), [&](const int lhs, const int rhs) { return frame->times[lhs] < frame->times[rhs]; });
   frame = gtsam_ext::sample(frame, indices);
 
-  if(params.global_shutter) {
+  if (params.global_shutter) {
     std::fill(frame->times, frame->times + frame->size(), 0.0);
   }
 
   // Nearest neighbor search
-  if(params.enable_outlier_removal) {
+  if (params.enable_outlier_removal) {
     frame = gtsam_ext::remove_outliers(frame, params.outlier_removal_k, params.outlier_std_mul_factor, params.num_threads);
   }
 
@@ -85,7 +85,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   preprocessed->times.assign(frame->times, frame->times + frame->size());
   preprocessed->points.assign(frame->points, frame->points + frame->size());
-  if(frame->intensities) {
+  if (frame->intensities) {
     preprocessed->intensities.assign(frame->intensities, frame->intensities + frame->size());
   }
 

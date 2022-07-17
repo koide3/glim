@@ -20,21 +20,21 @@
   "odometry_estimation": {
     "frontend_mode": "GPU",
     // Optimization params
-    "smoother_lag": 10.0,
+    "smoother_lag": 5.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
     "fix_imu_bias": false,
     // Voxel params
-    "voxel_resolution": 0.10797803271794199,
-    "voxelmap_levels": 3,
+    "voxel_resolution": 0.25,
+    "voxelmap_levels": 2,
     "voxelmap_scaling_factor": 2.0,
     "full_connection_window_size": 2,
     // Keyframe params
     "keyframe_update_strategy": "OVERLAP",
-    "max_num_keyframes": 19,
+    "max_num_keyframes": 15,
     "keyframe_min_overlap": 0.01,
-    "keyframe_max_overlap": 0.4172493979011065,
+    "keyframe_max_overlap": 0.7,
     "keyframe_delta_trans": 2.0,
     "keyframe_delta_rot": 0.5,
     "keyframe_entropy_thresh": 0.99,

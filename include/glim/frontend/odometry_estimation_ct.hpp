@@ -13,6 +13,7 @@ class Values;
 
 namespace gtsam_ext {
 class iVox;
+class iVoxCovarianceEstimation;
 class IncrementalFixedLagSmootherExt;
 class IncrementalFixedLagSmootherExtWithFallback;
 }  // namespace gtsam_ext

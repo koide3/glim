@@ -7,6 +7,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 
 #include <gtsam_ext/ann/ivox.hpp>
+#include <gtsam_ext/ann/ivox_covariance_estimation.hpp>
 #include <gtsam_ext/ann/kdtree.hpp>
 #include <gtsam_ext/types/frame_cpu.hpp>
 #include <gtsam_ext/factors/integrated_ct_gicp_factor.hpp>
@@ -78,12 +79,15 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   new_frame->imu_bias.setZero();
   new_frame->raw_frame = raw_frame;
 
-  new_frame->frame_id = FrameID::LIDAR;
-
   gtsam_ext::FrameCPU::Ptr frame_cpu(new gtsam_ext::FrameCPU(raw_frame->points));
   frame_cpu->add_times(raw_frame->times);
-  frame_cpu->add_covs(covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors));
+
+  covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors, frame_cpu->normals_storage, frame_cpu->covs_storage);
+  frame_cpu->normals = frame_cpu->normals_storage.data();
+  frame_cpu->covs = frame_cpu->covs_storage.data();
+
   new_frame->frame = frame_cpu;
+  new_frame->frame_id = FrameID::LIDAR;
 
   // New values and factors to be inserted into the smoother
   // note: X(i) and Y(i) respectively represent the sensor poses at the scan beginning and ending of i-th frame
@@ -106,8 +110,9 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     if (current >= 2) {
       const double delta_time = (frames[last]->stamp + frames[last]->frame->times[frames[last]->frame->size() - 1]) - frames[last - 1]->stamp;
       const gtsam::Pose3 delta_pose = smoother->calculateEstimate<gtsam::Pose3>(X(last - 1)).inverse() * smoother->calculateEstimate<gtsam::Pose3>(Y(last));
-      last_twist = gtsam::Pose3::Logmap(delta_pose) / delta_time;
+      last_twist = 0.5 * gtsam::Pose3::Logmap(delta_pose) / delta_time;
     }
+
     const auto& last_frame = frames[last];
     const double last_time_begin = last_frame->stamp + last_frame->frame->times[0];
     const double last_time_end = last_frame->stamp + last_frame->frame->times[last_frame->frame->size() - 1];
@@ -140,10 +145,10 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     gtsam_ext::LevenbergMarquardtExtParams lm_params;
     lm_params.setlambdaInitial(1e-10);
     lm_params.setAbsoluteErrorTol(1e-2);
+    lm_params.setMaxIterations(params.lm_max_iterations);
     // lm_params.set_verbose();
 
     try {
-      lm_params.setMaxIterations(params.lm_max_iterations);
       values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
     } catch (std::exception& e) {
       std::cerr << console::bold_red << "error: an exception was caught during odometry estimation" << console::reset << std::endl;
@@ -152,12 +157,6 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
     const gtsam::Pose3 T_world_lidar_begin = values.at<gtsam::Pose3>(X(current));
     const gtsam::Pose3 T_world_lidar_end = values.at<gtsam::Pose3>(Y(current));
-
-    const gtsam::Pose3 err_begin = last_T_world_lidar_end.inverse() * T_world_lidar_begin;
-    const gtsam::Pose3 err_end = last_T_world_lidar_end.inverse() * T_world_lidar_end;
-    const gtsam::Pose3 pred_err_begin = predicted_T_world_lidar_begin.inverse() * T_world_lidar_begin;
-    const gtsam::Pose3 pred_err_end = predicted_T_world_lidar_end.inverse() * T_world_lidar_end;
-    const gtsam::Pose3 delta = T_world_lidar_begin.inverse() * T_world_lidar_end;
 
     new_frame->v_world_imu = (T_world_lidar_begin.translation() - last_T_world_lidar_begin.translation()) / (current_time_begin - last_time_begin);
     new_frame->set_T_world_sensor(FrameID::LIDAR, Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix()));
@@ -186,6 +185,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
       Y(current),
       T_world_lidar_begin.inverse() * T_world_lidar_end,
       gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), T_world_lidar_begin, gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(Y(current), T_world_lidar_end, gtsam::noiseModel::Isotropic::Precision(6, 1e3));
   }
 
   Callbacks::on_new_frame(new_frame);
@@ -220,8 +221,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   for (int i = marginalized_cursor; i < frames.size(); i++) {
     try {
       Eigen::Isometry3d T_world_lidar = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
-      frames[i]->T_world_lidar = T_world_lidar;
-      frames[i]->T_world_imu = T_world_lidar;
+      frames[i]->set_T_world_sensor(FrameID::LIDAR, T_world_lidar);
     } catch (std::out_of_range& e) {
       std::cerr << "caught " << e.what() << std::endl;
       std::cerr << "current:" << current << std::endl;

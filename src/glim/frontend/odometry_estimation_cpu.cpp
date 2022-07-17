@@ -84,7 +84,8 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
 
   graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(last), last_T_world_imu, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
-  if(imu_factor) {
+  // Inserting IMU did harm
+  if (imu_factor && false) {
     values.insert(V(last), last_v_world_imu);
     values.insert(V(current), frames[current]->v_world_imu);
     values.insert(B(last), last_imu_bias);
@@ -143,7 +144,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   const Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
   frames[current]->T_world_imu = T_world_imu;
 
-  if(imu_factor) {
+  if (imu_factor && false) {
     frames[current]->v_world_imu = values.at<gtsam::Vector3>(V(current));
     frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
   }
@@ -160,6 +161,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * T_world_imu;
   T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
   factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
   new_values.insert_or_assign(V(current), frames[current]->v_world_imu);
@@ -250,6 +252,5 @@ void OdometryEstimationCPU::update_target(const int current) {
     target_ivox_frame = frame;
   }
 }
-
 
 }  // namespace glim
