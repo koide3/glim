@@ -38,11 +38,11 @@
     "enable_imu": true,
     "enable_optimization": false,
     // Keyframe update strategy
-    "max_num_keyframes": 15,
+    "max_num_keyframes": 20,
     "keyframe_update_strategy": "OVERLAP",
     "keyframe_update_interval_rot": 3.14,
     "keyframe_update_interval_trans": 1.0,
-    "max_keyframe_overlap": 0.6,
+    "max_keyframe_overlap": 0.5,
     // Relative pose factors
     "create_between_factors": true,
     "between_registration_type": "GICP",
@@ -69,7 +69,7 @@
     "submap_voxelmap_levels": 2,
     "submap_voxelmap_scaling_factor": 2.0,
     "max_implicit_loop_distance": 100.0,
-    "min_implicit_loop_overlap": 0.2,
+    "min_implicit_loop_overlap": 0.15,
     // Optimizer settings
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,

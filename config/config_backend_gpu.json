@@ -36,7 +36,7 @@
   */
   "sub_mapping": {
     "enable_imu": true,
-    "enable_optimization": true,
+    "enable_optimization": false,
     // Keyframe update strategy
     "max_num_keyframes": 15,
     "keyframe_update_strategy": "OVERLAP",
