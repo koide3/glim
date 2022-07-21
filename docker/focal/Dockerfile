@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
+FROM nvidia/cuda:11.2.2-devel-ubuntu20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
