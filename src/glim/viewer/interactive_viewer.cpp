@@ -29,7 +29,6 @@
 #include <guik/viewer/light_viewer.hpp>
 
 namespace glim {
-
 using gtsam::symbol_shorthand::X;
 
 InteractiveViewer::InteractiveViewer() {
@@ -42,6 +41,7 @@ InteractiveViewer::InteractiveViewer() {
   coord_scale = 1.0f;
   sphere_scale = 0.5f;
 
+  draw_traj = false;
   draw_points = true;
   draw_factors = true;
   draw_spheres = true;
@@ -97,6 +97,10 @@ void InteractiveViewer::viewer_loop() {
       return name.size() < pattern.size() ? false : std::equal(pattern.begin(), pattern.end(), name.begin());
     };
 
+    if (!draw_traj && starts_with(name, "traj")) {
+      return false;
+    }
+
     if (!draw_points && starts_with(name, "submap_")) {
       return false;
     }
@@ -150,8 +154,10 @@ void InteractiveViewer::invoke(const std::function<void()>& task) {
  */
 void InteractiveViewer::drawable_selection() {
   ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-  ImGui::Checkbox("Points", &draw_points);
+  ImGui::Checkbox("Trajectory", &draw_traj);
   ImGui::SameLine();
+  ImGui::Checkbox("Points", &draw_points);
+
   ImGui::Checkbox("Factors", &draw_factors);
   ImGui::SameLine();
   ImGui::Checkbox("Spheres", &draw_spheres);
@@ -336,6 +342,20 @@ void InteractiveViewer::update_viewer() {
   }
 
   viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(factor_lines, factor_colors), guik::VertexColor());
+
+  std::vector<Eigen::Vector3f> traj;
+  for (const auto& submap : submaps) {
+    const Eigen::Isometry3d T_world_endpoint_L = submap->T_world_origin * submap->T_origin_endpoint_L;
+    const Eigen::Isometry3d T_odom_imu0 = submap->frames.front()->T_world_imu;
+    for (const auto& frame : submap->frames) {
+      const Eigen::Isometry3d T_world_imu = T_world_endpoint_L * T_odom_imu0.inverse() * frame->T_world_imu;
+      traj.emplace_back(T_world_imu.translation().cast<float>());
+    }
+  }
+
+  auto traj_line = std::make_shared<glk::ThinLines>(traj, true);
+  traj_line->set_line_width(2.0f);
+  viewer->update_drawable("traj", traj_line, guik::FlatGreen());
 }
 
 /**
