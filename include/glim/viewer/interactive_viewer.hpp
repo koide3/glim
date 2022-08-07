@@ -75,6 +75,7 @@ protected:
   float coord_scale;
   float sphere_scale;
 
+  bool draw_traj;
   bool draw_points;
   bool draw_factors;
   bool draw_spheres;

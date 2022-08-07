@@ -487,6 +487,7 @@ bool GlobalMapping::load(const std::string& path) {
     ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
   }
 
+  std::cout << "loading submaps" << std::endl;
   submaps.resize(num_submaps);
   subsampled_submaps.resize(num_submaps);
   for (int i = 0; i < num_submaps; i++) {
@@ -529,9 +530,11 @@ bool GlobalMapping::load(const std::string& path) {
   gtsam::Values values;
   gtsam::NonlinearFactorGraph graph;
 
+  std::cout << "deserializing factor graph" << std::endl;
   gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
   gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
 
+  std::cout << "creating matching cost factors" << std::endl;
   for (const auto& factor : matching_cost_factors) {
     const auto type = std::get<0>(factor);
     const auto first = std::get<1>(factor);
@@ -560,12 +563,15 @@ bool GlobalMapping::load(const std::string& path) {
     }
   }
 
+  std::cout << "optimize" << std::endl;
   Callbacks::on_smoother_update(*isam2, graph, values);
   auto result = isam2->update(graph, values);
   Callbacks::on_smoother_update_result(*isam2, result);
 
   update_submaps();
   Callbacks::on_update_submaps(submaps);
+
+  std::cout << "done" << std::endl;
 
   return true;
 }
