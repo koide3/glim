@@ -48,14 +48,13 @@ private:
   virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) override;
 
   virtual void fallback_smoother() override;
-  virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors) override;
 
-  void update_target(const int current);
+  void update_target(const int current, const Eigen::Isometry3d& T_target_imu);
 
 private:
   // Registration params
   std::mt19937 mt;                                                                ///< RNG
-  Eigen::Isometry3d last_target_update_pose;                                      ///< Sensor post at the last target update
+  Eigen::Isometry3d last_T_target_imu;                                            ///< Last IMU pose w.r.t. target model
   std::vector<std::shared_ptr<gtsam_ext::GaussianVoxelMapCPU>> target_voxelmaps;  ///< VGICP target voxelmap
   std::shared_ptr<gtsam_ext::iVox> target_ivox;                                   ///< GICP target iVox
   EstimationFrame::ConstPtr target_ivox_frame;                                    ///< Target points (just for visualization)

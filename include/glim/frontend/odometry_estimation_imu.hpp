@@ -76,7 +76,7 @@ protected:
   virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) = 0;
 
   virtual void fallback_smoother() {}
-  virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors) = 0;
+  virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors);
 
 protected:
   std::unique_ptr<OdometryEstimationIMUParams> params;
