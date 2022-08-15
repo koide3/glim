@@ -40,6 +40,11 @@ add_subdirectory(thirdparty/gtsam_ext)
 ## Build ##
 ###########
 
+# Viewer
+if(BUILD_WITH_VIEWER)
+  find_package(Iridescence REQUIRED)
+endif()
+
 # GPU-related
 if(BUILD_WITH_CUDA)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
@@ -88,6 +93,7 @@ target_include_directories(glim PUBLIC
   ${EIGEN3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIRS}
+  ${Iridescence_INCLUDE_DIRS}
 )
 target_link_libraries(glim
   gtsam_ext
@@ -103,8 +109,6 @@ install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 
 if(BUILD_WITH_VIEWER)
-  find_package(Iridescence REQUIRED)
-
   add_library(glim_vis SHARED
     src/glim/viewer/standard_viewer.cpp
     src/glim/viewer/interactive_viewer.cpp

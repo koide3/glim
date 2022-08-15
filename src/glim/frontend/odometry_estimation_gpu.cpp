@@ -110,6 +110,10 @@ void OdometryEstimationGPU::update_frames(const int current, const gtsam::Nonlin
 }
 
 gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) {
+  if (current == 0) {
+    return gtsam::NonlinearFactorGraph();
+  }
+
   const auto create_binary_factor = [this](
                                       gtsam::NonlinearFactorGraph& factors,
                                       gtsam::Key target_key,
