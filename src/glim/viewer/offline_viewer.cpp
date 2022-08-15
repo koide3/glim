@@ -119,7 +119,7 @@ std::shared_ptr<GlobalMapping> OfflineViewer::load_map(guik::ProgressInterface& 
   glim::GlobalMappingParams params;
   params.isam2_relinearize_skip = 1;
   params.isam2_relinearize_thresh = 0.0;
-  // params.enable_optimization = false;
+  params.enable_optimization = pfd::message("Confirm", "Do optimization?", pfd::choice::yes_no).result() == pfd::button::yes;
 
   std::cout << "enable_optimization:" << params.enable_optimization << std::endl;
   std::shared_ptr<glim::GlobalMapping> global_mapping(new glim::GlobalMapping(params));
