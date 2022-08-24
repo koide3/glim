@@ -82,9 +82,9 @@ void AsyncOdometryEstimation::run() {
     }
 
     while (!images.empty()) {
-      if (!end_of_sequence && enable_imu && images.front().first > last_imu_time) {
-        break;
-      }
+      // if (!end_of_sequence && enable_imu && images.front().first > last_imu_time) {
+      //   break;
+      // }
 
       const auto image = images.front();
       odometry_estimation->insert_image(image.first, image.second);
