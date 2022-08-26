@@ -127,7 +127,7 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align(guik::ProgressInt
 
   progress.set_text("Creating graph");
   gtsam::NonlinearFactorGraph graph;
-  graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(0, gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(0, gtsam::Pose3::Identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(0, 1, target, source);
   factor->set_num_threads(4);
@@ -135,7 +135,7 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align(guik::ProgressInt
   graph.add(factor);
 
   gtsam::Values values;
-  values.insert(0, gtsam::Pose3::identity());
+  values.insert(0, gtsam::Pose3::Identity());
   values.insert(1, gtsam::Pose3(model_control->model_matrix().cast<double>()));
 
   progress.set_text("Optimizing");
@@ -158,7 +158,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
   const gtsam::Pose3 relative(model_control->model_matrix().cast<double>());
 
   gtsam::Values values;
-  values.insert(0, gtsam::Pose3::identity());
+  values.insert(0, gtsam::Pose3::Identity());
   values.insert(1, relative);
 
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(0, 1, target, source);

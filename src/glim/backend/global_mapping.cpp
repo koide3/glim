@@ -109,8 +109,8 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   const int last = current - 1;
   insert_submap(current, submap);
 
-  gtsam::Pose3 current_T_world_submap = gtsam::Pose3::identity();
-  gtsam::Pose3 last_T_world_submap = gtsam::Pose3::identity();
+  gtsam::Pose3 current_T_world_submap = gtsam::Pose3::Identity();
+  gtsam::Pose3 last_T_world_submap = gtsam::Pose3::Identity();
 
   if (current != 0) {
     if (isam2->valueExists(X(last))) {
@@ -276,11 +276,11 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   }
 
   gtsam::Values values;
-  values.insert(X(0), gtsam::Pose3::identity());
+  values.insert(X(0), gtsam::Pose3::Identity());
   values.insert(X(1), init_delta);
 
   gtsam::NonlinearFactorGraph graph;
-  graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3::identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3::Identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
   auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(0), X(1), submaps[last]->frame, submaps[current]->frame);
   factor->set_max_corresponding_distance(0.5);
