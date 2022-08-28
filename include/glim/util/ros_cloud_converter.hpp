@@ -60,7 +60,7 @@ Eigen::Vector4d get_vec4(const void* x, const void* y, const void* z) {
   return Eigen::Vector4d(*reinterpret_cast<const T*>(x), *reinterpret_cast<const T*>(y), *reinterpret_cast<const T*>(z), 1.0);
 }
 
-static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg) {
+static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, const std::string& intensity_channel = "intensity") {
   int num_points = points_msg->width * points_msg->height;
 
   int x_type = 0;
@@ -83,7 +83,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg) 
   fields["time"] = std::make_pair(&time_type, &time_offset);
   fields["time_stamp"] = std::make_pair(&time_type, &time_offset);
   fields["timestamp"] = std::make_pair(&time_type, &time_offset);
-  fields["intensity"] = std::make_pair(&intensity_type, &intensity_offset);
+  fields[intensity_channel] = std::make_pair(&intensity_type, &intensity_offset);
 
   for (const auto& field : points_msg->fields) {
     auto found = fields.find(field.name);
@@ -119,8 +119,6 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg) 
     }
   }
 
-  double stamp = -1.0;
-
   std::vector<double> times;
   if (time_offset >= 0) {
     times.resize(num_points);
@@ -150,21 +148,30 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg) 
 
     for (int i = 0; i < num_points; i++) {
       const auto* intensity_ptr = &points_msg->data[points_msg->point_step * i + intensity_offset];
-      if (intensity_type == PointField::FLOAT32) {
-        intensities[i] = *reinterpret_cast<const float*>(intensity_ptr);
-      } else if (intensity_type == PointField::FLOAT64) {
-        intensities[i] = *reinterpret_cast<const double*>(intensity_ptr);
-      } else {
-        std::cerr << "warning: unsupported intensity type" << std::endl;
-        return nullptr;
+      switch (intensity_type) {
+        case PointField::UINT8:
+          intensities[i] = *reinterpret_cast<const std::uint8_t*>(intensity_ptr);
+          break;
+        case PointField::UINT16:
+          intensities[i] = *reinterpret_cast<const std::uint16_t*>(intensity_ptr);
+          break;
+        case PointField::UINT32:
+          intensities[i] = *reinterpret_cast<const std::uint32_t*>(intensity_ptr);
+          break;
+        case PointField::FLOAT32:
+          intensities[i] = *reinterpret_cast<const float*>(intensity_ptr);
+          break;
+        case PointField::FLOAT64:
+          intensities[i] = *reinterpret_cast<const double*>(intensity_ptr);
+          break;
+        default:
+          std::cerr << "warning: unsupported intensity type" << std::endl;
+          return nullptr;
       }
     }
   }
 
-  if (stamp < 0.0) {
-    stamp = to_sec(points_msg->header.stamp);
-  }
-
+  const double stamp = to_sec(points_msg->header.stamp);
   return RawPoints::Ptr(new RawPoints{stamp, times, intensities, points});
 }
 
