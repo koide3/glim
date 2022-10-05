@@ -272,18 +272,19 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   Callbacks::on_smoother_update(*smoother, new_factors, new_values, new_stamps);
   smoother->update(new_factors, new_values, new_stamps);
   smoother->update();
+  Callbacks::on_smoother_update_finish(*smoother);
 
-    // Find out marginalized frames
-    while (marginalized_cursor < current) {
-      double span = frames[current]->stamp - frames[marginalized_cursor]->stamp;
-      if (span < params->smoother_lag - 0.1) {
-        break;
-      }
-
-      marginalized_frames.push_back(frames[marginalized_cursor]);
-      frames[marginalized_cursor].reset();
-      marginalized_cursor++;
+  // Find out marginalized frames
+  while (marginalized_cursor < current) {
+    double span = frames[current]->stamp - frames[marginalized_cursor]->stamp;
+    if (span < params->smoother_lag - 0.1) {
+      break;
     }
+
+    marginalized_frames.push_back(frames[marginalized_cursor]);
+    frames[marginalized_cursor].reset();
+    marginalized_cursor++;
+  }
   Callbacks::on_marginalized_frames(marginalized_frames);
 
   // Update frames

@@ -203,6 +203,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   // Update smoother
   Callbacks::on_smoother_update(*smoother, new_factors, new_values, new_stamps);
   smoother->update(new_factors, new_values, new_stamps);
+  Callbacks::on_smoother_update_finish(*smoother);
 
   // Find out marginalized frames
   while (marginalized_cursor < current) {

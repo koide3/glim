@@ -16,8 +16,10 @@ CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> OdometryEstima
 CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> OdometryEstimationCallbacks::on_update_frames;
 CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> OdometryEstimationCallbacks::on_update_keyframes;
 
-CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExt&, gtsam::NonlinearFactorGraph&, gtsam::Values&, gtsam::FixedLagSmootherKeyTimestampMap&)>
+CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExtWithFallback&, gtsam::NonlinearFactorGraph&, gtsam::Values&, gtsam::FixedLagSmootherKeyTimestampMap&)>
   OdometryEstimationCallbacks::on_smoother_update;
+
+CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExtWithFallback& smoother)> OdometryEstimationCallbacks::on_smoother_update_finish;
 
 CallbackSlot<void(double)> OdometryEstimationCallbacks::on_smoother_corruption;
 
