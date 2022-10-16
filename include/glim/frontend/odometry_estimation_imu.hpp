@@ -5,7 +5,6 @@
 
 #include <boost/shared_ptr.hpp>
 #include <glim/frontend/odometry_estimation_base.hpp>
-#include <glim/frontend/initial_state_estimation.hpp>
 
 namespace gtsam {
 class Values;
@@ -23,6 +22,7 @@ namespace glim {
 class IMUIntegration;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
+class InitialStateEstimation;
 
 /**
  * @brief Parameters for OdometryEstimationIMU

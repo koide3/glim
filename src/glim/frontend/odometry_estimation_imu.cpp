@@ -13,6 +13,8 @@
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
+#include <glim/frontend/initial_state_estimation.hpp>
+#include <glim/frontend/loose_initial_state_estimation.hpp>
 #include <glim/frontend/callbacks.hpp>
 
 namespace glim {
@@ -63,10 +65,15 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
 
+  /*
   auto init_estimation = new NaiveInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
   if (!params->estimate_init_state) {
     init_estimation->set_init_state(params->init_T_world_imu, params->init_v_world_imu);
   }
+  this->init_estimation.reset(init_estimation);
+  */
+
+  auto init_estimation = new LooseInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
   this->init_estimation.reset(init_estimation);
 
   imu_integration.reset(new IMUIntegration);
@@ -100,6 +107,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   const int last = current - 1;
 
   if (frames.empty()) {
+    init_estimation->insert_frame(raw_frame);
     auto init_state = init_estimation->initial_pose();
     if (init_state == nullptr) {
       return nullptr;
