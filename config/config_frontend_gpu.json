@@ -19,6 +19,9 @@
   */
   "odometry_estimation": {
     "frontend_mode": "GPU",
+    // Initialization params
+    "initialization_mode": "LOOSE",
+    "initialization_window_size": 3.0,
     // Optimization params
     "smoother_lag": 5.0,
     "use_isam2_dogleg": false,

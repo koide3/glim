@@ -24,6 +24,9 @@ public:
 private:
   const Eigen::Isometry3d T_lidar_imu;
 
+  int num_threads;
+  double window_size;
+
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
   std::shared_ptr<gtsam_ext::iVox> target_ivox;

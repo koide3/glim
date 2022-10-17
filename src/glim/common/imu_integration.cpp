@@ -17,7 +17,7 @@ IMUIntegrationParams::~IMUIntegrationParams() {}
 
 IMUIntegration::IMUIntegration(const IMUIntegrationParams& params) {
   auto imu_params = gtsam::PreintegrationParams::MakeSharedU();
-  if(!params.upright) {
+  if (!params.upright) {
     imu_params = gtsam::PreintegrationParams::MakeSharedD();
   }
 
@@ -65,7 +65,7 @@ int IMUIntegration::integrate_imu(double start_time, double end_time, const gtsa
   }
 
   const double dt = end_time - last_stamp;
-  if(dt > 0.0) {
+  if (dt > 0.0) {
     Eigen::Matrix<double, 7, 1> last_imu_frame = imu_itr == imu_queue.end() ? *(imu_itr - 1) : *imu_itr;
     const auto& a = last_imu_frame.block<3, 1>(1, 0);
     const auto& w = last_imu_frame.block<3, 1>(4, 0);
@@ -161,6 +161,10 @@ void IMUIntegration::erase_imu_data(int last) {
 
 const gtsam::PreintegratedImuMeasurements& IMUIntegration::integrated_measurements() const {
   return *imu_measurements;
+}
+
+const std::deque<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& IMUIntegration::imu_data_in_queue() const {
+  return imu_queue;
 }
 
 }  // namespace glim

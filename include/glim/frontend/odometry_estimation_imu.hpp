@@ -41,6 +41,7 @@ public:
   Eigen::Matrix<double, 6, 1> imu_bias;
 
   // Init state
+  std::string initialization_mode;
   bool estimate_init_state;
   Eigen::Isometry3d init_T_world_imu;
   Eigen::Vector3d init_v_world_imu;
