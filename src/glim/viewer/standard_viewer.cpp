@@ -109,6 +109,26 @@ void StandardViewer::set_callbacks() {
   CommonCallbacks::on_notification.add([this](NotificationLevel level, const std::string& message) { guik::LightViewer::instance()->append_text(message); });
 
   /*** Frontend callbacks ***/
+
+  // IMU state initialization update callback
+  IMUStateInitializationCallbacks::on_updated.add([this](const PreprocessedFrame::ConstPtr& frame, const Eigen::Isometry3d& T_odom_lidar_) {
+    std::shared_ptr<Eigen::Isometry3d> T_odom_lidar(new Eigen::Isometry3d(T_odom_lidar_));
+    invoke([this, frame, T_odom_lidar] {
+      auto viewer = guik::LightViewer::instance();
+      auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(frame->points);
+      viewer->update_drawable("initialization_frame_" + guik::anon(), cloud_buffer, guik::FlatBlue(*T_odom_lidar));
+      viewer->update_drawable("initialization_frame_current", cloud_buffer, guik::FlatOrange(*T_odom_lidar).set_point_scale(2.0f));
+    });
+  });
+
+  // IMU state initialization termination callback
+  IMUStateInitializationCallbacks::on_finished.add([this](const EstimationFrame::ConstPtr& frame) {
+    invoke([this] {
+      auto viewer = guik::LightViewer::instance();
+      viewer->remove_drawable(std::regex("initialization.*"));
+    });
+  });
+
   // New image callback
   OdometryEstimationCallbacks::on_insert_image.add([this](const double stamp, const cv::Mat& image) {
     invoke([this, image] {

@@ -19,13 +19,14 @@
 #include <glim/common/callbacks.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
+#include <glim/frontend/callbacks.hpp>
 
 namespace glim {
 
 LooseInitialStateEstimation::LooseInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias) : T_lidar_imu(T_lidar_imu) {
   glim::Config config(glim::GlobalConfig::get_config_path("config_frontend"));
   num_threads = config.param("odometry_estimation", "num_threads", 2);
-  window_size = config.param("odometry_estimation", "initialization_window_size", 3.0);
+  window_size = config.param("odometry_estimation", "initialization_window_size", 1.0);
 
   target_ivox.reset(new gtsam_ext::iVox(0.5));
   covariance_estimation.reset(new CloudCovarianceEstimation(num_threads));
@@ -70,6 +71,9 @@ void LooseInitialStateEstimation::insert_frame(const PreprocessedFrame::ConstPtr
   target_ivox->insert(*transformed);
 
   T_odom_lidar.emplace_back(raw_frame->stamp, Eigen::Isometry3d(estimated_T_odom_lidar.matrix()));
+
+  Eigen::Isometry3d pose(estimated_T_odom_lidar.matrix());
+  IMUStateInitializationCallbacks::on_updated(raw_frame, pose);
 }
 
 void LooseInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
@@ -168,6 +172,8 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
   sst << "--- v_world_imu ---" << std::endl << estimated->v_world_imu.transpose() << std::endl;
   sst << "--- imu_bias ---" << std::endl << estimated->imu_bias.transpose() << std::endl;
   notify(NotificationLevel::INFO, sst.str());
+
+  IMUStateInitializationCallbacks::on_finished(estimated);
 
   return estimated;
 }
