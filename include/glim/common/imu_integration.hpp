@@ -11,13 +11,13 @@ namespace glim {
  * @brief IMU integration parameters
  */
 struct IMUIntegrationParams {
-  IMUIntegrationParams(const bool upright=true);
+  IMUIntegrationParams(const bool upright = true);
   ~IMUIntegrationParams();
 
-  bool upright;         // If true, +Z = up
-  double acc_noise;     // Linear acceleration noise
-  double gyro_noise;    // Angular velocity noise
-  double int_noise;     // Integration noise
+  bool upright;       // If true, +Z = up
+  double acc_noise;   // Linear acceleration noise
+  double gyro_noise;  // Angular velocity noise
+  double int_noise;   // Integration noise
 };
 
 /**
@@ -96,6 +96,11 @@ public:
    * @brief Preintegrated measurements
    */
   const gtsam::PreintegratedImuMeasurements& integrated_measurements() const;
+
+  /**
+   * @brief IMU data in queue
+   */
+  const std::deque<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& imu_data_in_queue() const;
 
 private:
   std::shared_ptr<gtsam::PreintegratedImuMeasurements> imu_measurements;

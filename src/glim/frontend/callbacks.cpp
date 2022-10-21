@@ -4,6 +4,9 @@
 
 namespace glim {
 
+CallbackSlot<void(const PreprocessedFrame::ConstPtr& points, const Eigen::Isometry3d& T_odom_lidar)> IMUStateInitializationCallbacks::on_updated;
+CallbackSlot<void(const EstimationFrame::ConstPtr& estimated_frame)> IMUStateInitializationCallbacks::on_finished;
+
 CallbackSlot<void(const double, const cv::Mat&)> OdometryEstimationCallbacks::on_insert_image;
 CallbackSlot<void(const double, const Eigen::Vector3d&, const Eigen::Vector3d&)> OdometryEstimationCallbacks::on_insert_imu;
 CallbackSlot<void(const PreprocessedFrame::Ptr& frame)> OdometryEstimationCallbacks::on_insert_frame;

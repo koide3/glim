@@ -55,6 +55,11 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
     frame = gtsam_ext::voxelgrid_sampling(frame, params.downsample_resolution);
   }
 
+  if (frame->size() < 100) {
+    std::cerr << console::yellow << "warning: too few points in the downsampled cloud (" << frame->size() << " points)" << console::reset << std::endl;
+    return nullptr;
+  }
+
   // Distance filter
   std::vector<int> indices;
   indices.reserve(frame->size());
@@ -63,6 +68,11 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
     if (dist > params.distance_near_thresh && dist < params.distance_far_thresh) {
       indices.push_back(i);
     }
+  }
+
+  if (indices.size() < 100) {
+    std::cerr << console::yellow << "warning: too few points in the filtered cloud (" << indices.size() << " points)" << console::reset << std::endl;
+    return nullptr;
   }
 
   // Sort by time

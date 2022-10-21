@@ -1,5 +1,8 @@
 {
   /*** Keyframe-based VGICP frontend ***
+  // initialization_mode         : "LOOSE" performs loose coupling-based IMU state initialization that takes a few seconds
+  //                             : "NAIVE" simply uses the linear acceleration direction as the gravity direction
+  // initialization_window_size  : Initialization window size for the "LOOSE" initialization mode
   // smoother_lag                : Fixed-lag smoothing window size [sec]
   // use_isam2_dogleg            : Use the dogleg optimizer as the backend of ISAM2 that is slow but more robust
   // isam2_relinearize_skip      :
@@ -19,6 +22,9 @@
   */
   "odometry_estimation": {
     "frontend_mode": "GPU",
+    // Initialization params
+    "initialization_mode": "LOOSE",
+    "initialization_window_size": 1.0,
     // Optimization params
     "smoother_lag": 5.0,
     "use_isam2_dogleg": false,

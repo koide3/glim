@@ -21,6 +21,25 @@ class IncrementalFixedLagSmootherExtWithFallback;
 namespace glim {
 
 /**
+ * @brief IMU state initialization-related callbacks
+ */
+struct IMUStateInitializationCallbacks {
+public:
+  /**
+   * @brief Initialization update callback
+   * @param points         Input points
+   * @param T_world_lidar  Estimated LiDAR pose w.r.t. the first frame
+   */
+  static CallbackSlot<void(const PreprocessedFrame::ConstPtr& points, const Eigen::Isometry3d& T_odom_lidar)> on_updated;
+
+  /**
+   * @brief IMU state initialization termination callback
+   * @param estimated_frame  Estimated LiDAR-IMU state
+   */
+  static CallbackSlot<void(const EstimationFrame::ConstPtr& estimated_frame)> on_finished;
+};
+
+/**
  * @brief Odometry estimation-related callbacks
  *
  */
@@ -86,8 +105,11 @@ struct OdometryEstimationCallbacks {
    * @param new_factors  New factors to be inserted into the graph
    * @param new_values   New values to be inserted into the graph
    */
-  static CallbackSlot<
-    void(gtsam_ext::IncrementalFixedLagSmootherExtWithFallback& smoother, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values, std::map<std::uint64_t, double>& new_stamps)>
+  static CallbackSlot<void(
+    gtsam_ext::IncrementalFixedLagSmootherExtWithFallback& smoother,
+    gtsam::NonlinearFactorGraph& new_factors,
+    gtsam::Values& new_values,
+    std::map<std::uint64_t, double>& new_stamps)>
     on_smoother_update;
 
   /**

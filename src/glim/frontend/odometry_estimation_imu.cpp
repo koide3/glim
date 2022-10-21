@@ -13,6 +13,8 @@
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
+#include <glim/frontend/initial_state_estimation.hpp>
+#include <glim/frontend/loose_initial_state_estimation.hpp>
 #include <glim/frontend/callbacks.hpp>
 
 namespace glim {
@@ -40,6 +42,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
 
   fix_imu_bias = config.param<bool>("odometry_estimation", "fix_imu_bias", false);
 
+  initialization_mode = config.param<std::string>("odometry_estimation", "initialization_mode", "LOOSE");
   const auto init_T_world_imu = config.param<Eigen::Isometry3d>("odometry_estimation", "init_T_world_imu");
   const auto init_v_world_imu = config.param<Eigen::Vector3d>("odometry_estimation", "init_v_world_imu");
   this->estimate_init_state = !init_T_world_imu && !init_v_world_imu;
@@ -63,11 +66,18 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
   T_lidar_imu.setIdentity();
   T_imu_lidar.setIdentity();
 
-  auto init_estimation = new NaiveInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
-  if (!params->estimate_init_state) {
-    init_estimation->set_init_state(params->init_T_world_imu, params->init_v_world_imu);
+  if (!params->estimate_init_state || params->initialization_mode == "NAIVE") {
+    auto init_estimation = new NaiveInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
+    if (!params->estimate_init_state) {
+      init_estimation->set_init_state(params->init_T_world_imu, params->init_v_world_imu);
+    }
+    this->init_estimation.reset(init_estimation);
+  } else if (params->initialization_mode == "LOOSE") {
+    auto init_estimation = new LooseInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
+    this->init_estimation.reset(init_estimation);
+  } else {
+    std::cerr << glim::console::bold_red << "error: unknown initialization mode " << params->initialization_mode << console::reset << std::endl;
   }
-  this->init_estimation.reset(init_estimation);
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
@@ -100,6 +110,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   const int last = current - 1;
 
   if (frames.empty()) {
+    init_estimation->insert_frame(raw_frame);
     auto init_state = init_estimation->initial_pose();
     if (init_state == nullptr) {
       return nullptr;
