@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <glim/util/callback_slot.hpp>
 
 namespace glim {

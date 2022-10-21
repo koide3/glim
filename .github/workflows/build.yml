@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        DISTRO: [focal, focal_llvm]
+        DISTRO: [focal, focal_llvm, jammy, jammy_llvm]
 
     steps:
       - uses: actions/checkout@v2
