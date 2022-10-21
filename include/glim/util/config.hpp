@@ -2,6 +2,7 @@
 
 #include <any>
 #include <vector>
+#include <string>
 #include <memory>
 #include <optional>
 
@@ -107,7 +108,7 @@ private:
   virtual ~GlobalConfig() override {}
 
 public:
-  static GlobalConfig* instance(const std::string& config_path = "") {
+  static GlobalConfig* instance(const std::string& config_path = std::string()) {
     if (inst == nullptr) {
       inst = new GlobalConfig(config_path + "/config.json");
       inst->override_param("global", "config_path", config_path);
