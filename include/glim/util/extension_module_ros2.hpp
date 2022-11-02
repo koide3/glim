@@ -54,7 +54,8 @@ public:
   ExtensionModuleROS2() {}
   virtual ~ExtensionModuleROS2() {}
 
-  virtual std::vector<GenericTopicSubscription::Ptr> create_subscriptions() = 0;
+  virtual std::vector<GenericTopicSubscription::Ptr> create_subscriptions(rclcpp::Node& node) { return create_subscriptions(); }
+  virtual std::vector<GenericTopicSubscription::Ptr> create_subscriptions() { return {}; }
 };
 
 }  // namespace glim
