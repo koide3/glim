@@ -1,5 +1,11 @@
 FROM koide3/gtsam_docker:focal_cuda11.2
 
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y \
+    libopencv-dev \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
 # without viewer and CUDA
 COPY . /root/glim
 WORKDIR /root/glim/build
