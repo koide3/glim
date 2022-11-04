@@ -1,8 +1,6 @@
 {
   "glim_ros": {
-    // Viewer
-    "enable_viewer": true,
-    "enable_rviz": true,
+    // Backend modules
     "enable_local_mapping": true,
     "enable_global_mapping": true,
     // IMU config
@@ -10,6 +8,8 @@
     "acc_scale": 1.0,
     // Extension modules
     "extension_modules": [
+      "libstandard_viewer.so",
+      "librviz_viewer.so"
       // "libscan_context_loop_detector.so",
       // "libdbow_loop_detector.so",
       // "liborb_slam_frontend.so",

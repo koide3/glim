@@ -110,14 +110,26 @@ install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 
 if(BUILD_WITH_VIEWER)
-  add_library(glim_vis SHARED
+  # Standard viewer
+  add_library(standard_viewer SHARED
     src/glim/viewer/standard_viewer.cpp
+  )
+  target_include_directories(standard_viewer PUBLIC
+    include
+  )
+  target_link_libraries(standard_viewer
+    glim
+    ${Iridescence_LIBRARIES}
+  )
+
+  # Interactive viewer
+  add_library(interactive_viewer SHARED
     src/glim/viewer/interactive_viewer.cpp
     src/glim/viewer/interactive/manual_loop_close_modal.cpp
     src/glim/viewer/interactive/bundle_adjustment_modal.cpp
     src/glim/viewer/offline_viewer.cpp
   )
-  target_include_directories(glim_vis PUBLIC
+  target_include_directories(interactive_viewer PUBLIC
     include
     thirdparty/json/include
     thirdparty/gtsam_ext/include
@@ -126,12 +138,12 @@ if(BUILD_WITH_VIEWER)
     ${OpenCV_INCLUDE_DIRS}
     ${GTSAM_INCLUDE_DIRS}
   )
-  target_link_libraries(glim_vis
+  target_link_libraries(interactive_viewer
     ${Iridescence_LIBRARIES}
   )
 
-  list(APPEND glim_LIBRARIES glim_vis)
-  install(TARGETS glim_vis)
+  list(APPEND glim_LIBRARIES interactive_viewer)
+  install(TARGETS standard_viewer interactive_viewer)
 endif()
 
 #################

@@ -559,3 +559,7 @@ void StandardViewer::drawable_selection() {
   }
 }
 }  // namespace glim
+
+extern "C" glim::ExtensionModule* create_extension_module() {
+  return new glim::StandardViewer();
+}
