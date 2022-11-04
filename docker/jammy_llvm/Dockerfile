@@ -1,26 +1,10 @@
-FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+FROM koide3/gtsam_docker:jammy_cuda11.8
 
 RUN apt-get update \
-  && apt-get upgrade -y \
-  # install dependencies
   && apt-get install --no-install-recommends -y \
-  wget nano build-essential \
-  git cmake libeigen3-dev ca-certificates \
-  libtbb-dev libboost-all-dev libgtest-dev libmetis-dev \
-  libglm-dev libglfw3-dev libpng-dev libopencv-dev \
-  clang lld libomp-dev \
+    libopencv-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
-
-# install GTSAM
-WORKDIR /root
-RUN git clone https://github.com/borglab/gtsam.git
-WORKDIR /root/gtsam/build
-RUN cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_BUILD_TESTS=OFF -DGTSAM_WITH_TBB=OFF -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF
-RUN make -j$(nproc) && make install
 
 RUN update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld 50
 
@@ -34,14 +18,7 @@ RUN CC=clang CXX=clang++ cmake .. \
   -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)
 
-
 # with viewer
-WORKDIR /root
-RUN git clone https://github.com/koide3/iridescence.git --recursive
-WORKDIR /root/iridescence/build
-RUN cmake ..
-RUN make -j$(nproc) && make install
-
 WORKDIR /root/glim/build
 RUN CC=clang CXX=clang++ cmake .. \
   -DBUILD_WITH_CUDA=OFF \
@@ -61,6 +38,5 @@ RUN CC=clang CXX=clang++ cmake .. \
   -DBUILD_WITH_MARCH_NATIVE=OFF \
   -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)
-
 
 CMD ["bash"]
