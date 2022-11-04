@@ -3,7 +3,8 @@
     // Viewer
     "enable_viewer": true,
     "enable_rviz": true,
-    "enable_backend": true,
+    "enable_local_mapping": true,
+    "enable_global_mapping": true,
     // IMU config
     "imu_time_offset": 0.0,
     "acc_scale": 1.0,
