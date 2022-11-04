@@ -67,22 +67,6 @@ bool StandardViewer::ok() const {
   return !request_to_terminate;
 }
 
-void StandardViewer::wait() {
-  while (!request_to_terminate) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-  stop();
-}
-
-void StandardViewer::stop() {
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
-  kill_switch = true;
-  if (thread.joinable()) {
-    thread.join();
-  }
-}
-
 void StandardViewer::invoke(const std::function<void()>& task) {
   if (kill_switch) {
     return;

@@ -18,6 +18,11 @@ public:
   virtual bool needs_wait() const { return false; }
 
   /**
+   * @brief Check if the module is alive. (If it returns false, the system will be shutdown)
+   */
+  virtual bool ok() const { return true; }
+
+  /**
    * @brief Load an extension module from a dynamic library
    * @param so_name  Dynamic library name
    * @return         Loaded extension module

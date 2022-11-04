@@ -9,21 +9,21 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <glim/util/extension_module.hpp>
+
 namespace glim {
 
 class TrajectoryManager;
 struct EstimationFrame;
 
-class StandardViewer {
+class StandardViewer : public ExtensionModule {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   StandardViewer();
   virtual ~StandardViewer();
 
-  bool ok() const;
-  void wait();
-  void stop();
+  virtual bool ok() const override;
 
   void invoke(const std::function<void()>& task);
 
