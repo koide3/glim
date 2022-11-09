@@ -60,8 +60,8 @@ Eigen::Vector4d get_vec4(const void* x, const void* y, const void* z) {
   return Eigen::Vector4d(*reinterpret_cast<const T*>(x), *reinterpret_cast<const T*>(y), *reinterpret_cast<const T*>(z), 1.0);
 }
 
-static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, const std::string& intensity_channel = "intensity") {
-  int num_points = points_msg->width * points_msg->height;
+static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const std::string& intensity_channel = "intensity") {
+  int num_points = points_msg.width * points_msg.height;
 
   int x_type = 0;
   int y_type = 0;
@@ -85,7 +85,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
   fields["timestamp"] = std::make_pair(&time_type, &time_offset);
   fields[intensity_channel] = std::make_pair(&intensity_type, &intensity_offset);
 
-  for (const auto& field : points_msg->fields) {
+  for (const auto& field : points_msg.fields) {
     auto found = fields.find(field.name);
     if (found == fields.end()) {
       continue;
@@ -108,9 +108,9 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
   std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;
   points.resize(num_points);
   for (int i = 0; i < num_points; i++) {
-    const auto* x_ptr = &points_msg->data[points_msg->point_step * i + x_offset];
-    const auto* y_ptr = &points_msg->data[points_msg->point_step * i + y_offset];
-    const auto* z_ptr = &points_msg->data[points_msg->point_step * i + z_offset];
+    const auto* x_ptr = &points_msg.data[points_msg.point_step * i + x_offset];
+    const auto* y_ptr = &points_msg.data[points_msg.point_step * i + y_offset];
+    const auto* z_ptr = &points_msg.data[points_msg.point_step * i + z_offset];
 
     if (x_type == PointField::FLOAT32) {
       points[i] = get_vec4<float>(x_ptr, y_ptr, z_ptr);
@@ -124,7 +124,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
     times.resize(num_points);
 
     for (int i = 0; i < num_points; i++) {
-      const auto* time_ptr = &points_msg->data[points_msg->point_step * i + time_offset];
+      const auto* time_ptr = &points_msg.data[points_msg.point_step * i + time_offset];
       switch (time_type) {
         case PointField::UINT32:
           times[i] = *reinterpret_cast<const uint32_t*>(time_ptr) / 1e9;
@@ -147,7 +147,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
     intensities.resize(num_points);
 
     for (int i = 0; i < num_points; i++) {
-      const auto* intensity_ptr = &points_msg->data[points_msg->point_step * i + intensity_offset];
+      const auto* intensity_ptr = &points_msg.data[points_msg.point_step * i + intensity_offset];
       switch (intensity_type) {
         case PointField::UINT8:
           intensities[i] = *reinterpret_cast<const std::uint8_t*>(intensity_ptr);
@@ -171,8 +171,12 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
     }
   }
 
-  const double stamp = to_sec(points_msg->header.stamp);
+  const double stamp = to_sec(points_msg.header.stamp);
   return RawPoints::Ptr(new RawPoints{stamp, times, intensities, points});
+}
+
+static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, const std::string& intensity_channel = "intensity") {
+  return extract_raw_points(*points_msg);
 }
 
 static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_ext::Frame& frame) {
