@@ -30,7 +30,8 @@ StandardViewer::StandardViewer() {
   request_to_terminate = false;
 
   track = true;
-  show_current = true;
+  show_current_coord = true;
+  show_current_points = true;
   current_color_mode = 0;
 
   show_frontend_scans = true;
@@ -477,7 +478,11 @@ bool StandardViewer::drawable_filter(const std::string& name) {
     return std::equal(pattern.begin(), pattern.end(), name.begin());
   };
 
-  if (!show_current && starts_with(name, "current_")) {
+  if (!show_current_coord && name == "current_coord") {
+    return false;
+  }
+
+  if (!show_current_points && name == "current_frame") {
     return false;
   }
 
@@ -509,8 +514,14 @@ void StandardViewer::drawable_selection() {
     }
   }
   ImGui::SameLine();
-  ImGui::Checkbox("current", &show_current);
+  bool show_current = show_current_coord || show_current_points;
+  if (ImGui::Checkbox("current", &show_current)) {
+    show_current_coord = show_current_points = show_current;
+  }
   ImGui::SameLine();
+  ImGui::Checkbox("coord", &show_current_coord);
+  ImGui::SameLine();
+  ImGui::Checkbox("points", &show_current_points);
 
   std::vector<const char*> current_color_modes = {"FLAT", "INTENSITY", "NORMAL"};
   ImGui::SetNextItemWidth(92);

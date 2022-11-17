@@ -155,7 +155,7 @@ if(DEFINED ENV{ROS_VERSION})
     find_package(ament_cmake REQUIRED)
     install(DIRECTORY config DESTINATION share/glim)
     ament_export_include_directories(include)
-    ament_export_libraries(${glim_LIBRARIES})
+    ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES})
     ament_package()
   elseif($ENV{ROS_VERSION} EQUAL 1)
     # ROS1

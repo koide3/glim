@@ -45,7 +45,8 @@ private:
   int partial_rendering_budget;
 
   bool track;
-  bool show_current;
+  bool show_current_coord;
+  bool show_current_points;
   int current_color_mode;
 
   bool show_frontend_scans;
