@@ -29,7 +29,7 @@ public:
    * @brief Save the submap
    * @param path  Save path
    */
-  void save(const std::string& path);
+  void save(const std::string& path) const;
 
   /**
    * @brief  Load a submap from storage

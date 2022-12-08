@@ -19,7 +19,7 @@ void SubMap::drop_frame_points() {
   }
 }
 
-void SubMap::save(const std::string& path) {
+void SubMap::save(const std::string& path) const {
   boost::filesystem::create_directories(path);
   std::ofstream ofs(path + "/data.txt");
   ofs << "id: " << id << std::endl;

@@ -91,7 +91,7 @@ target_include_directories(glim PUBLIC
   include
   thirdparty/json/include
   thirdparty/gtsam_ext/include
-  ${EIGEN3_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIRS}
   ${Iridescence_INCLUDE_DIRS}
@@ -134,7 +134,7 @@ if(BUILD_WITH_VIEWER)
     thirdparty/json/include
     thirdparty/gtsam_ext/include
     ${Iridescence_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIR}
     ${OpenCV_INCLUDE_DIRS}
     ${GTSAM_INCLUDE_DIRS}
   )
@@ -154,7 +154,7 @@ if(DEFINED ENV{ROS_VERSION})
     # ROS2
     find_package(ament_cmake REQUIRED)
     install(DIRECTORY config DESTINATION share/glim)
-    ament_export_include_directories(include)
+    ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
     ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES})
     ament_package()
   elseif($ENV{ROS_VERSION} EQUAL 1)

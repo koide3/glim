@@ -1,7 +1,11 @@
 #pragma once
 
-#include <mutex>
+#include <deque>
 #include <vector>
+#include <mutex>
+#include <atomic>
+#include <optional>
+#include <condition_variable>
 
 namespace glim {
 
@@ -14,6 +18,13 @@ namespace glim {
 template <typename T, typename Alloc = std::allocator<T>>
 class ConcurrentVector {
 public:
+  ConcurrentVector() { end_of_data = false; }
+
+  void submit_end_of_data() {
+    end_of_data = true;
+    cond.notify_all();
+  }
+
   bool empty() const {
     std::lock_guard<std::mutex> lock(mutex);
     return values.empty();
@@ -32,6 +43,7 @@ public:
   void push_back(const T& value) {
     std::lock_guard<std::mutex> lock(mutex);
     values.push_back(value);
+    cond.notify_one();
   }
 
   void clear() {
@@ -53,13 +65,52 @@ public:
    * @brief Insert new_values at the end of the container
    * @param new_values  Values to be inserted
    */
-  void insert(const std::vector<T, Alloc>& new_values) {
+  template <typename Container>
+  void insert(const Container& new_values) {
     if (new_values.empty()) {
       return;
     }
 
     std::lock_guard<std::mutex> lock(mutex);
     values.insert(values.end(), new_values.begin(), new_values.end());
+    cond.notify_all();
+  }
+
+  /**
+   * @brief Get the first element in the queue
+   * @return  nullopt if the queue is empty
+   */
+  std::optional<T> pop() {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (values.empty()) {
+      return std::nullopt;
+    }
+
+    const T data = values.front();
+    values.pop_front();
+    return data;
+  }
+
+  /**
+   * @brief Get the first element in the queue.
+   *        If the queue is empty, this method waits until a new data arrives or EOD is submitted.
+   * @return  nullopt if the queue is empty and EOD is submitted.
+   */
+  std::optional<T> pop_wait() {
+    std::unique_lock<std::mutex> lock(mutex);
+
+    std::optional<T> data;
+    cond.wait(lock, [this, &data] {
+      if (values.empty()) {
+        return static_cast<bool>(end_of_data);
+      }
+
+      data = values.front();
+      values.pop_front();
+      return true;
+    });
+
+    return data;
   }
 
   /**
@@ -69,7 +120,9 @@ public:
   std::vector<T, Alloc> get_all_and_clear() {
     std::vector<T, Alloc> buffer;
     std::lock_guard<std::mutex> lock(mutex);
-    buffer.swap(values);
+    buffer.assign(values.begin(), values.end());
+    values.clear();
+
     return buffer;
   }
 
@@ -82,7 +135,8 @@ public:
     std::vector<T, Alloc> buffer;
     std::lock_guard<std::mutex> lock(mutex);
     if (values.size() <= num_max) {
-      buffer.swap(values);
+      buffer.assign(values.begin(), values.end());
+      values.clear();
     } else {
       buffer.assign(values.begin(), values.begin() + num_max);
       values.erase(values.begin(), values.begin() + num_max);
@@ -92,8 +146,11 @@ public:
   }
 
 private:
+  std::atomic_bool end_of_data;
+  std::condition_variable cond;
+
   mutable std::mutex mutex;
-  std::vector<T, Alloc> values;
+  std::deque<T, Alloc> values;
 };
 
 }  // namespace  glim
