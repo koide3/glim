@@ -57,7 +57,6 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   if (frame->size() < 100) {
     std::cerr << console::yellow << "warning: too few points in the downsampled cloud (" << frame->size() << " points)" << console::reset << std::endl;
-    return nullptr;
   }
 
   // Distance filter
@@ -72,7 +71,6 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   if (indices.size() < 100) {
     std::cerr << console::yellow << "warning: too few points in the filtered cloud (" << indices.size() << " points)" << console::reset << std::endl;
-    return nullptr;
   }
 
   // Sort by time
@@ -91,7 +89,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   // Create a preprocessed frame
   PreprocessedFrame::Ptr preprocessed(new PreprocessedFrame);
   preprocessed->stamp = raw_points->stamp;
-  preprocessed->scan_end_time = raw_points->stamp + frame->times[frame->size() - 1];
+  preprocessed->scan_end_time = frame->size() ? raw_points->stamp + frame->times[frame->size() - 1] : raw_points->stamp;
 
   preprocessed->times.assign(frame->times, frame->times + frame->size());
   preprocessed->points.assign(frame->points, frame->points + frame->size());

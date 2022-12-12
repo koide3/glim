@@ -83,6 +83,10 @@ void OdometryEstimationGPU::create_frame(EstimationFrame::Ptr& new_frame) {
 
   new_frame->frame = std::make_shared<gtsam_ext::FrameGPU>(*new_frame->frame);
   for (int i = 0; i < params->voxelmap_levels; i++) {
+    if (!new_frame->frame->size()) {
+      break;
+    }
+
     const double resolution = params->voxel_resolution * std::pow(params->voxelmap_scaling_factor, i);
     auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
     voxelmap->insert(*new_frame->frame);
@@ -110,7 +114,7 @@ void OdometryEstimationGPU::update_frames(const int current, const gtsam::Nonlin
 }
 
 gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) {
-  if (current == 0) {
+  if (current == 0 || !frames[current]->frame->size()) {
     return gtsam::NonlinearFactorGraph();
   }
 
@@ -195,6 +199,10 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int curr
  */
 void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
+
+  if (!frames[current]->frame->size()) {
+    return;
+  }
 
   if (keyframes.empty()) {
     keyframes.push_back(frames[current]);

@@ -18,13 +18,17 @@ void CloudCovarianceEstimation::estimate(
   std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& normals,
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>& covs) const {
   //
+  if (points.empty()) {
+    return;
+  }
+
   const int k = neighbors.size() / points.size();
   if (k * points.size() != neighbors.size()) {
     std::cerr << "error: k * points.size() != neighbors.size()" << std::endl;
     abort();
   }
 
-  return estimate(points, neighbors, k, normals, covs);
+  estimate(points, neighbors, k, normals, covs);
 }
 
 void CloudCovarianceEstimation::estimate(
@@ -33,7 +37,10 @@ void CloudCovarianceEstimation::estimate(
   const int k_neighbors,
   std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& normals,
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>& covs) const {
-  //
+  if (points.empty()) {
+    return;
+  }
+
   const int k_correspondences = neighbors.size() / points.size();
   assert(k_correspondences * points.size() == neighbors.size());
   assert(k_neighbors <= k_correspondences);
@@ -78,7 +85,10 @@ std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCov
   const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
   const std::vector<int>& neighbors,
   const int k_neighbors) const {
-  //
+  if (points.empty()) {
+    return std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>();
+  }
+
   const int k_correspondences = neighbors.size() / points.size();
   assert(k_correspondences * points.size() == neighbors.size());
   assert(k_neighbors <= k_correspondences);
@@ -114,7 +124,10 @@ std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCov
 std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCovarianceEstimation::estimate(
   const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
   const std::vector<int>& neighbors) const {
-  //
+  if (points.empty()) {
+    return std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>();
+  }
+
   const int k = neighbors.size() / points.size();
   if (k * points.size() != neighbors.size()) {
     std::cerr << "error: k * points.size() != neighbors.size()" << std::endl;

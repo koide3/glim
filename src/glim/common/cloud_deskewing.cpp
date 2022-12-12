@@ -14,11 +14,14 @@ std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDes
   const Eigen::Vector3d& angular_vel,
   const std::vector<double>& times,
   const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points) {
-  //
+  if (times.empty()) {
+    return std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>();
+  }
+
   const Eigen::Isometry3d T_lidar_imu = T_imu_lidar.inverse();
   const gtsam::Vector6 vel = (gtsam::Vector6() << angular_vel, linear_vel).finished();
 
-  const double time_eps = 1e-4;  // 1msec
+  const double time_eps = 1e-4;  // 0.1msec
   std::vector<double> time_table;
   std::vector<int> time_indices;
 
