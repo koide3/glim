@@ -1,6 +1,7 @@
 #include <glim/frontend/initial_state_estimation.hpp>
 
 #include <iostream>
+#include <spdlog/spdlog.h>
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
 
@@ -25,7 +26,7 @@ void NaiveInitialStateEstimation ::set_init_state(const Eigen::Isometry3d& init_
 
 void NaiveInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   if (linear_acc.norm() < 5.0 || linear_acc.norm() > 15.0) {
-    std::cerr << console::yellow << "warning: too large or small acc found (" << linear_acc.norm() << "[m/s^2])" << console::reset << std::endl;
+    spdlog::warn("too large or small acc found ({}[m/s^2])", linear_acc.norm());
   }
 
   stamp = stamp;

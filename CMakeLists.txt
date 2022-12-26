@@ -25,6 +25,7 @@ find_package(Boost REQUIRED timer serialization)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
 find_package(GTSAM REQUIRED)
+find_package(spdlog REQUIRED)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -101,6 +102,7 @@ target_link_libraries(glim
   ${OpenCV_LIBRARIES}
   ${GTSAM_LIBRARIES}
   ${Boost_LIBRARIES}
+  spdlog::spdlog
 )
 
 
@@ -155,7 +157,7 @@ if(DEFINED ENV{ROS_VERSION})
     find_package(ament_cmake REQUIRED)
     install(DIRECTORY config DESTINATION share/glim)
     ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
-    ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES})
+    ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog)
     ament_package()
   elseif($ENV{ROS_VERSION} EQUAL 1)
     # ROS1

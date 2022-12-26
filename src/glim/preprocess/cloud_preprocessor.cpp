@@ -2,8 +2,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <spdlog/spdlog.h>
 #include <gtsam_ext/ann/kdtree.hpp>
-
 #include <gtsam_ext/types/frame_cpu.hpp>
 
 #include <glim/util/config.hpp>
@@ -56,7 +56,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   }
 
   if (frame->size() < 100) {
-    std::cerr << console::yellow << "warning: too few points in the downsampled cloud (" << frame->size() << " points)" << console::reset << std::endl;
+    spdlog::warn("too few points in the downsampled cloud ({} points)", frame->size());
   }
 
   // Distance filter
@@ -70,7 +70,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   }
 
   if (indices.size() < 100) {
-    std::cerr << console::yellow << "warning: too few points in the filtered cloud (" << indices.size() << " points)" << console::reset << std::endl;
+    spdlog::warn("too few points in the filtered cloud ({} points)", indices.size());
   }
 
   // Sort by time

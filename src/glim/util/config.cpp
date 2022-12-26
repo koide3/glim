@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 
 #include <Eigen/Core>
@@ -16,6 +17,7 @@ namespace glim {
 GlobalConfig* GlobalConfig::inst = nullptr;
 
 namespace {
+
 // IO traits
 template <typename T>
 struct traits {
@@ -84,7 +86,7 @@ struct traits<Eigen::Transform<T, 3, Eigen::Isometry>> {
   }
 };
 
-template<>
+template <>
 struct traits<std::vector<Eigen::Isometry3d>> {
   using InType = std::vector<double>;
   using OutType = std::vector<Eigen::Isometry3d>;
@@ -123,6 +125,53 @@ struct traits<std::vector<Eigen::Isometry3d>> {
   }
 };
 
+// Convertion to string
+
+template <typename T>
+std::string convert_to_string(const T& value) {
+  return fmt::format("{}", value);
+}
+
+template <typename T2>
+std::string convert_to_string(const std::vector<T2>& values) {
+  std::stringstream sst;
+  sst << "[";
+  for (int i = 0; i < values.size(); i++) {
+    if (i) {
+      sst << ",";
+    }
+    sst << convert_to_string(values[i]);
+  }
+  sst << "]";
+  return sst.str();
+}
+
+template <int D>
+std::string convert_to_string(const Eigen::Matrix<double, D, 1>& value) {
+  std::stringstream sst;
+  sst << "vec(";
+  for (int i = 0; i < value.size(); i++) {
+    if (i) {
+      sst << ",";
+    }
+    sst << fmt::format("{:.6f}", value[i]);
+  }
+  sst << ")";
+  return sst.str();
+}
+
+template <>
+std::string convert_to_string(const Eigen::Quaterniond& quat) {
+  return fmt::format("quat({:.6f},{:.6f},{:.6f},{:.6f})", quat.x(), quat.y(), quat.z(), quat.w());
+}
+
+template <>
+std::string convert_to_string(const Eigen::Isometry3d& pose) {
+  const Eigen::Vector3d trans(pose.translation());
+  const Eigen::Quaterniond quat(pose.linear());
+  return fmt::format("se3({:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f})", trans.x(), trans.y(), trans.z(), quat.x(), quat.y(), quat.z(), quat.w());
+}
+
 }  // namespace
 
 Config::Config(const std::string& config_filename) {
@@ -134,7 +183,7 @@ Config::Config(const std::string& config_filename) {
 
   std::ifstream ifs(config_filename);
   if (!ifs) {
-    std::cerr << console::bold_red << "error: failed to open " << config_filename << console::reset << std::endl;
+    spdlog::error("failed to open {}", config_filename);
   } else {
     json = nlohmann::json::parse(ifs, nullptr, true, true);
   }
@@ -165,13 +214,12 @@ template <typename T>
 T Config::param(const std::string& module_name, const std::string& param_name, const T& default_value) const {
   auto found = param<T>(module_name, param_name);
   if (!found) {
-    std::cerr << console::yellow;
-    std::cerr << "warning: param " << console::underline << module_name << "/" << param_name << console::reset << console::yellow << " not found" << std::endl;
-    std::cerr << "       : use the default value" << std::endl;
-    std::cerr << console::reset;
+    spdlog::warn("param {}/{} not found", module_name, param_name);
+    spdlog::warn("use default_value={}", convert_to_string(default_value));
     return default_value;
   }
 
+  spdlog::debug("param {}/{}={}", module_name, param_name, convert_to_string(found.value()));
   return found.value();
 }
 
@@ -179,11 +227,11 @@ template <typename T>
 T Config::param_cast(const std::string& module_name, const std::string& param_name) const {
   auto found = param<T>(module_name, param_name);
   if (!found) {
-    std::cerr << console::bold_red;
-    std::cerr << "error : param " << console::underline << module_name << "/" << param_name << console::reset << console::bold_red << " not found" << std::endl;
-    std::cerr << console::reset;
+    spdlog::critical("param {}/{} not found", module_name, param_name);
     abort();
   }
+
+  spdlog::debug("param {}/{}={}", module_name, param_name, convert_to_string(found.value()));
   return *found;
 }
 
@@ -226,14 +274,12 @@ template <typename T>
 T Config::param_nested(const std::vector<std::string>& nested_module_names, const std::string& param_name, const T& default_value) const {
   auto found = param_nested<T>(nested_module_names, param_name);
   if (!found) {
-    std::cerr << console::yellow;
-    std::cerr << "warning: param " << console::underline;
+    std::stringstream param_name;
     for (const auto& module_name : nested_module_names) {
-      std::cerr << module_name << "/";
+      param_name << module_name << "/";
     }
-    std::cerr << param_name << console::reset << console::yellow << " not found" << std::endl;
-    std::cerr << "       : use the default value" << std::endl;
-    std::cerr << console::reset;
+    spdlog::warn("param {} not found", param_name.str());
+    spdlog::warn("use default_value={}", convert_to_string(default_value));
     return default_value;
   }
 
@@ -244,13 +290,11 @@ template <typename T>
 T Config::param_cast_nested(const std::vector<std::string>& nested_module_names, const std::string& param_name) const {
   auto found = param_nested<T>(nested_module_names, param_name);
   if (!found) {
-    std::cerr << console::bold_red;
-    std::cerr << "error: param " << console::underline;
+    std::stringstream param_name;
     for (const auto& module_name : nested_module_names) {
-      std::cerr << module_name << "/";
+      param_name << module_name << "/";
     }
-    std::cerr << param_name << console::reset << console::bold_red << " not found" << std::endl;
-    std::cerr << console::reset;
+    spdlog::critical("param {} not found", param_name.str());
     abort();
   }
   return *found;

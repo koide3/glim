@@ -1,5 +1,7 @@
 #include <glim/frontend/odometry_estimation_imu.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
@@ -76,7 +78,7 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
     auto init_estimation = new LooseInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
     this->init_estimation.reset(init_estimation);
   } else {
-    std::cerr << glim::console::bold_red << "error: unknown initialization mode " << params->initialization_mode << console::reset << std::endl;
+    spdlog::error("unknown initialization mode {}", params->initialization_mode);
   }
 
   imu_integration.reset(new IMUIntegration);
@@ -225,9 +227,8 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
     new_factors.add(imu_factor);
   } else {
-    std::cerr << console::yellow << "warning: insufficient number of IMU data between LiDAR scans!! (odometry_estimation)" << console::reset << std::endl;
-    std::cerr << console::yellow << boost::format("       : t_last=%.6f t_current=%.6f num_imu=%d") % last_stamp % raw_frame->stamp % num_imu_integrated << console::reset
-              << std::endl;
+    spdlog::warn("insufficient number of IMU data between LiDAR scans!! (odometry_estimation)");
+    spdlog::warn("t_last={:.6f} t_current={:.6f} num_imu={}", last_stamp, raw_frame->stamp, num_imu_integrated);
     new_factors.add(gtsam::BetweenFactor<gtsam::Vector3>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Sigma(3, 1.0)));
   }
 
@@ -336,9 +337,9 @@ void OdometryEstimationIMU::update_frames(int current, const gtsam::NonlinearFac
       frames[i]->v_world_imu = v_world_imu;
       frames[i]->imu_bias = imu_bias;
     } catch (std::out_of_range& e) {
-      std::cerr << "caught " << e.what() << std::endl;
-      std::cerr << "current:" << current << std::endl;
-      std::cerr << "marginalized_cursor:" << marginalized_cursor << std::endl;
+      spdlog::error("caught {}", e.what());
+      spdlog::error("current={}", current);
+      spdlog::error("marginalized_cursor={}", marginalized_cursor);
       Callbacks::on_smoother_corruption(frames[current]->stamp);
       fallback_smoother();
       break;
