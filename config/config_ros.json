@@ -20,8 +20,6 @@
     // Topics
     "imu_topic": "/os_cloud_node/imu",
     "points_topic": "/os_cloud_node/points",
-    "image_topic": "/image",
-    // Enable debug printing
-    "debug": false
+    "image_topic": "/image"
   }
 }

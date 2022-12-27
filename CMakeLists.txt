@@ -57,6 +57,7 @@ endif()
 add_library(glim SHARED
   # util
   src/glim/util/config.cpp
+  src/glim/util/logging.cpp
   src/glim/util/export_factors.cpp
   src/glim/util/time_keeper.cpp
   src/glim/util/extension_module.cpp
@@ -69,6 +70,7 @@ add_library(glim SHARED
   src/glim/common/cloud_covariance_estimation.cpp
   # frontend
   src/glim/frontend/callbacks.cpp
+  src/glim/frontend/estimation_frame.cpp
   src/glim/frontend/initial_state_estimation.cpp
   src/glim/frontend/loose_initial_state_estimation.cpp
   src/glim/frontend/odometry_estimation_base.cpp

@@ -63,6 +63,8 @@ EstimationFrame::ConstPtr NaiveInitialStateEstimation::initial_pose() {
 
   estimated->T_world_lidar = estimated->T_world_imu * T_lidar_imu.inverse();
 
+  spdlog::info("initial IMU state estimation done");
+
   return estimated;
 }
 

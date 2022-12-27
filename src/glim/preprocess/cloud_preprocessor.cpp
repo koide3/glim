@@ -39,6 +39,8 @@ CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : pa
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
+  spdlog::trace("preprocessing input: {} points", raw_points->size());
+
   gtsam_ext::Frame::Ptr frame(new gtsam_ext::Frame);
   frame->num_points = raw_points->size();
   frame->times = const_cast<double*>(raw_points->times.data());
@@ -99,6 +101,8 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   preprocessed->k_neighbors = params.k_correspondences;
   preprocessed->neighbors = find_neighbors(frame->points, frame->size(), params.k_correspondences);
+
+  spdlog::trace("preprocessed: {} -> {} points", raw_points->size(), preprocessed->size());
 
   return preprocessed;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
 #include <ros/ros.h>
 #include <rosbag/message_instance.h>
 #include <glim/util/console_colors.hpp>
@@ -39,24 +40,23 @@ public:
 /**
  * @brief Specialized topic subscription for type erasure
  */
-template<typename Msg>
+template <typename Msg>
 class TopicSubscription : public GenericTopicSubscription {
 public:
   /**
    * @brief topic    Topic name
    * @brief callback Message callback
    */
-  template<typename Callback>
-  TopicSubscription(const std::string& topic, const Callback& callback) : GenericTopicSubscription(topic), callback(callback) {}
+  template <typename Callback>
+  TopicSubscription(const std::string& topic, const Callback& callback) : GenericTopicSubscription(topic),
+                                                                          callback(callback) {}
 
-  virtual void create_subscriber(ros::NodeHandle& nh) override {
-    sub = nh.subscribe<Msg>(topic, 10, callback);
-  }
+  virtual void create_subscriber(ros::NodeHandle& nh) override { sub = nh.subscribe<Msg>(topic, 10, callback); }
 
   virtual void insert_message_instance(const rosbag::MessageInstance& m) override {
     const auto msg = m.instantiate<Msg>();
-    if(msg == nullptr) {
-      std::cerr << console::yellow << "warning: failed to instantiate message on " << topic << console::reset << std::endl;
+    if (msg == nullptr) {
+      spdlog::warn("failed to instantiate message on {}", topic);
       return;
     }
 
@@ -71,11 +71,11 @@ public:
  * @brief Extension module with ROS1 topic subscription
  */
 class ExtensionModuleROS : public ExtensionModule {
-public: 
+public:
   ExtensionModuleROS() {}
   virtual ~ExtensionModuleROS() {}
 
   virtual std::vector<GenericTopicSubscription::Ptr> create_subscriptions() = 0;
 };
 
-}
+}  // namespace glim

@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <spdlog/spdlog.h>
 #include <boost/format.hpp>
 
 #include <Eigen/Core>
@@ -96,12 +97,12 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
   }
 
   if (x_offset < 0 || y_offset < 0 || z_offset < 0) {
-    std::cerr << "waning: missing point coordinate fields" << std::endl;
+    spdlog::warn("missing point coordinate fields");
     return nullptr;
   }
 
   if ((x_type != PointField::FLOAT32 && x_type != PointField::FLOAT64) || x_type != y_type || x_type != y_type) {
-    std::cerr << "warning: unsupported points type" << std::endl;
+    spdlog::warn("unsupported points type");
     return nullptr;
   }
 
@@ -136,7 +137,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
           times[i] = *reinterpret_cast<const double*>(time_ptr);
           break;
         default:
-          std::cerr << "warning: unsupported time type " << time_type << std::endl;
+          spdlog::warn("unsupported time type {}", time_type);
           return nullptr;
       }
     }
@@ -165,7 +166,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
           intensities[i] = *reinterpret_cast<const double*>(intensity_ptr);
           break;
         default:
-          std::cerr << "warning: unsupported intensity type" << std::endl;
+          spdlog::warn("unsupported intensity type {}", intensity_type);
           return nullptr;
       }
     }

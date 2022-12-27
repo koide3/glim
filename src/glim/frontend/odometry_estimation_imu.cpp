@@ -12,6 +12,7 @@
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
+#include <glim/util/convert_to_string.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -106,6 +107,7 @@ void OdometryEstimationIMU::insert_imu(const double stamp, const Eigen::Vector3d
 }
 
 EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
+  spdlog::trace("insert_frame points={} times={} ~ {}", raw_frame->size(), raw_frame->times.front(), raw_frame->times.back());
   Callbacks::on_insert_frame(raw_frame);
 
   const int current = frames.size();
@@ -115,9 +117,15 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     init_estimation->insert_frame(raw_frame);
     auto init_state = init_estimation->initial_pose();
     if (init_state == nullptr) {
+      spdlog::debug("waiting for initial IMU state estimation to be finished");
       return nullptr;
     }
     init_estimation.reset();
+
+    spdlog::info("initial IMU state estimation result");
+    spdlog::info("T_world_imu={}", convert_to_string(init_state->T_world_imu));
+    spdlog::info("v_world_imu={}", convert_to_string(init_state->v_world_imu));
+    spdlog::info("imu_bias={}", convert_to_string(init_state->imu_bias));
 
     // Initialize the first frame
     EstimationFrame::Ptr new_frame(new EstimationFrame);
@@ -201,6 +209,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   int num_imu_integrated = 0;
   const int imu_read_cursor = imu_integration->integrate_imu(last_stamp, raw_frame->stamp, last_imu_bias, &num_imu_integrated);
   imu_integration->erase_imu_data(imu_read_cursor);
+  spdlog::trace("num_imu_integrated={}", num_imu_integrated);
 
   // IMU state prediction
   const gtsam::NavState predicted_nav_world_imu = imu_integration->integrated_measurements().predict(last_nav_world_imu, last_imu_bias);
@@ -326,6 +335,8 @@ std::vector<EstimationFrame::ConstPtr> OdometryEstimationIMU::get_remaining_fram
 }
 
 void OdometryEstimationIMU::update_frames(int current, const gtsam::NonlinearFactorGraph& new_factors) {
+  spdlog::trace("update frames current={} marginalized_cursor={}", current, marginalized_cursor);
+
   for (int i = marginalized_cursor; i < frames.size(); i++) {
     try {
       Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
