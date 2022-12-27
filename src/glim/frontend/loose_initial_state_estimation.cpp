@@ -1,6 +1,7 @@
 #include <glim/frontend/loose_initial_state_estimation.hpp>
 
 #include <sstream>
+#include <spdlog/spdlog.h>
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/PriorFactor.h>
@@ -16,6 +17,7 @@
 #include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/convert_to_string.hpp>
 #include <glim/common/callbacks.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -84,6 +86,8 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
   if (T_odom_lidar.empty() || T_odom_lidar.back().first - T_odom_lidar.front().first < window_size) {
     return nullptr;
   }
+
+  spdlog::info("estimate initial IMU state");
 
   using gtsam::symbol_shorthand::B;
   using gtsam::symbol_shorthand::V;
@@ -165,13 +169,6 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
 
   estimated->T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(T_odom_lidar.size() - 1)).matrix());
   estimated->T_world_lidar = estimated->T_world_imu * T_lidar_imu.inverse();
-
-  std::stringstream sst;
-  sst << "initial state estimation result" << std::endl;
-  sst << "--- T_world_imu ---" << std::endl << estimated->T_world_imu.matrix() << std::endl;
-  sst << "--- v_world_imu ---" << std::endl << estimated->v_world_imu.transpose() << std::endl;
-  sst << "--- imu_bias ---" << std::endl << estimated->imu_bias.transpose() << std::endl;
-  notify(NotificationLevel::INFO, sst.str());
 
   IMUStateInitializationCallbacks::on_finished(estimated);
 

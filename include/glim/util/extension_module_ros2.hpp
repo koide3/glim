@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any>
+#include <spdlog/spdlog.h>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/serialization.hpp>
 #include <glim/util/console_colors.hpp>
@@ -37,7 +38,7 @@ public:
     serialization.deserialize_message(&serialized_msg, msg.get());
 
     if (msg == nullptr) {
-      std::cerr << console::yellow << "warning: failed to deserialize message on " << topic << console::reset << std::endl;
+      spdlog::warn("failed to deserialize message on {}", topic);
       return;
     }
 

@@ -2,8 +2,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <spdlog/spdlog.h>
 #include <gtsam_ext/ann/kdtree.hpp>
-
 #include <gtsam_ext/types/frame_cpu.hpp>
 
 #include <glim/util/config.hpp>
@@ -39,6 +39,8 @@ CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : pa
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
+  spdlog::trace("preprocessing input: {} points", raw_points->size());
+
   gtsam_ext::Frame::Ptr frame(new gtsam_ext::Frame);
   frame->num_points = raw_points->size();
   frame->times = const_cast<double*>(raw_points->times.data());
@@ -56,7 +58,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   }
 
   if (frame->size() < 100) {
-    std::cerr << console::yellow << "warning: too few points in the downsampled cloud (" << frame->size() << " points)" << console::reset << std::endl;
+    spdlog::warn("too few points in the downsampled cloud ({} points)", frame->size());
   }
 
   // Distance filter
@@ -70,7 +72,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   }
 
   if (indices.size() < 100) {
-    std::cerr << console::yellow << "warning: too few points in the filtered cloud (" << indices.size() << " points)" << console::reset << std::endl;
+    spdlog::warn("too few points in the filtered cloud ({} points)", indices.size());
   }
 
   // Sort by time
@@ -99,6 +101,8 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   preprocessed->k_neighbors = params.k_correspondences;
   preprocessed->neighbors = find_neighbors(frame->points, frame->size(), params.k_correspondences);
+
+  spdlog::trace("preprocessed: {} -> {} points", raw_points->size(), preprocessed->size());
 
   return preprocessed;
 }

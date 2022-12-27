@@ -2,6 +2,8 @@
 
 #include <future>
 
+#include <spdlog/spdlog.h>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/BetweenFactor.h>
@@ -151,8 +153,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     try {
       values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
     } catch (std::exception& e) {
-      std::cerr << console::bold_red << "error: an exception was caught during odometry estimation" << console::reset << std::endl;
-      std::cerr << e.what() << std::endl;
+      spdlog::error("an exception was caught during odometry estimation");
+      spdlog::error("{}", e.what());
     }
 
     const gtsam::Pose3 T_world_lidar_begin = values.at<gtsam::Pose3>(X(current));
@@ -224,9 +226,9 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
       Eigen::Isometry3d T_world_lidar = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
       frames[i]->set_T_world_sensor(FrameID::LIDAR, T_world_lidar);
     } catch (std::out_of_range& e) {
-      std::cerr << "caught " << e.what() << std::endl;
-      std::cerr << "current:" << current << std::endl;
-      std::cerr << "marginalized_cursor:" << marginalized_cursor << std::endl;
+      spdlog::error("caught {}", e.what());
+      spdlog::error("current={}", current);
+      spdlog::error("marginalized_cursor={}", marginalized_cursor);
       Callbacks::on_smoother_corruption(frames[current]->stamp);
       break;
     }

@@ -1,10 +1,14 @@
 #include <glim/backend/async_global_mapping.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <glim/backend/callbacks.hpp>
 
 namespace glim {
 
-AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping, const int optimization_interval) : global_mapping(global_mapping), optimization_interval(optimization_interval) {
+AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping, const int optimization_interval)
+: global_mapping(global_mapping),
+  optimization_interval(optimization_interval) {
   saving = false;
   request_to_optimize = false;
   GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
@@ -53,12 +57,12 @@ int AsyncGlobalMapping::output_queue_size() const {
 }
 
 void AsyncGlobalMapping::save(const std::string& path) {
-  std::cout << "saving to " << path << "..." << std::endl;
+  spdlog::info("saving to {}...", path);
   saving = true;
   std::this_thread::sleep_for(std::chrono::seconds(1));
   global_mapping->save(path);
   saving = false;
-  std::cout << "saved" << std::endl;
+  spdlog::info("saved");
 }
 
 std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> AsyncGlobalMapping::export_points() {

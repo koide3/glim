@@ -1,16 +1,16 @@
 #include <glim/util/extension_module.hpp>
 
 #include <dlfcn.h>
+#include <spdlog/spdlog.h>
 #include <glim/util/console_colors.hpp>
 
 namespace glim {
 
-
 std::shared_ptr<ExtensionModule> ExtensionModule::load(const std::string& so_name) {
   void* handle = dlopen(so_name.c_str(), RTLD_LAZY);
   if (handle == nullptr) {
-    std::cerr << console::yellow << "warning: failed to open " << so_name << console::reset << std::endl;
-    std::cerr << console::yellow << dlerror() << console::reset << std::endl;
+    spdlog::warn("failed to open {}", so_name);
+    spdlog::warn("{}", dlerror());
     return nullptr;
   }
 

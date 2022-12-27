@@ -1,5 +1,7 @@
 #include <glim/frontend/odometry_estimation_cpu.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
@@ -60,7 +62,7 @@ OdometryEstimationCPU::OdometryEstimationCPU(const OdometryEstimationCPUParams& 
       target_voxelmaps[i]->set_lru_thresh(params.lru_thresh);
     }
   } else {
-    std::cerr << console::bold_red << "error: unknown registration type for odometry_estimation_cpu (" << params.registration_type << ")" << console::reset << std::endl;
+    spdlog::error("unknown registration type for odometry_estimation_cpu ({})", params.registration_type);
     abort();
   }
 }

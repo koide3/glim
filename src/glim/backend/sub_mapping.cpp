@@ -1,5 +1,6 @@
 #include <glim/backend/sub_mapping.hpp>
 
+#include <spdlog/spdlog.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
@@ -114,7 +115,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
   if (params.enable_imu && odom_frame->frame_id != FrameID::IMU) {
-    std::cerr << console::yellow << "warning: odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation" << console::reset << std::endl;
+    spdlog::warn("odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation");
   }
 
   // Fix the first frame
@@ -135,7 +136,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     } else if (params.between_registration_type == "NONE") {
       graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
     } else {
-      std::cerr << console::yellow << "warning: unknown between registration type:" << params.between_registration_type << console::reset << std::endl;
+      spdlog::warn("unknown between registration type ({})", params.between_registration_type);
     }
   }
 
@@ -159,7 +160,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       if (num_integrated >= 2) {
         graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
       } else {
-        std::cerr << console::yellow << "warning: insufficient IMU data between LiDAR frames!! (sub_mapping)" << console::reset << std::endl;
+        spdlog::warn("insufficient IMU data between LiDAR frames!! (sub_mapping)");
         graph->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       }
     }
@@ -181,7 +182,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
       insert_as_keyframe = delta_trans > params.keyframe_update_interval_trans || delta_angle > params.keyframe_update_interval_rot;
     } else {
-      std::cerr << console::yellow << "warning: unknown keyframe update strategy " << console::underline << params.keyframe_update_strategy << console::reset << std::endl;
+      spdlog::warn("unknown keyframe update strategy ({})", params.keyframe_update_strategy);
     }
   }
 
@@ -211,8 +212,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       }
 #endif
       else {
-        std::cerr << console::yellow << "warning: unknown registration error factor type " << console::underline << params.registration_error_factor_type << console::yellow
-                  << std::endl;
+        spdlog::warn("unknown registration error factor type ({})", params.registration_error_factor_type);
       }
     }
   }
@@ -283,7 +283,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
       keyframe->voxelmaps.push_back(voxelmap);
     }
 #else
-    std::cerr << console::yellow << "warning: GPU is enabled for sub_mapping but gtsam_ext was built without CUDA!!" << console::reset << std::endl;
+    spdlog::warn("GPU is enabled for sub_mapping but gtsam_ext was built without CUDA!!");
 #endif
   } else {
     keyframe->voxelmaps.clear();
@@ -319,8 +319,8 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
       gtsam::Values optimized = optimizer.optimize();
       *values = optimized;
     } catch (std::exception& e) {
-      std::cerr << console::bold_red << "error: an exception was caught during sub map optimization" << console::reset << std::endl;
-      std::cerr << e.what() << std::endl;
+      spdlog::error("an exception was caught during sub map optimization");
+      spdlog::error(e.what());
     }
   }
 

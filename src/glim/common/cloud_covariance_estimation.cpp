@@ -6,6 +6,8 @@
 #include <Eigen/Geometry>
 #include <Eigen/Eigen>
 
+#include <spdlog/spdlog.h>
+
 namespace glim {
 
 CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads) : regularization_method(RegularizationMethod::PLANE), num_threads(num_threads) {}
@@ -24,7 +26,7 @@ void CloudCovarianceEstimation::estimate(
 
   const int k = neighbors.size() / points.size();
   if (k * points.size() != neighbors.size()) {
-    std::cerr << "error: k * points.size() != neighbors.size()" << std::endl;
+    spdlog::critical("k * points.size() != neighbors.size()");
     abort();
   }
 
@@ -130,7 +132,7 @@ std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCov
 
   const int k = neighbors.size() / points.size();
   if (k * points.size() != neighbors.size()) {
-    std::cerr << "error: k * points.size() != neighbors.size()" << std::endl;
+    spdlog::critical("k * points.size() != neighbors.size()");
     abort();
   }
 

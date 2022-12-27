@@ -25,6 +25,7 @@ find_package(Boost REQUIRED timer serialization)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
 find_package(GTSAM REQUIRED)
+find_package(spdlog REQUIRED)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -56,6 +57,7 @@ endif()
 add_library(glim SHARED
   # util
   src/glim/util/config.cpp
+  src/glim/util/logging.cpp
   src/glim/util/export_factors.cpp
   src/glim/util/time_keeper.cpp
   src/glim/util/extension_module.cpp
@@ -68,6 +70,7 @@ add_library(glim SHARED
   src/glim/common/cloud_covariance_estimation.cpp
   # frontend
   src/glim/frontend/callbacks.cpp
+  src/glim/frontend/estimation_frame.cpp
   src/glim/frontend/initial_state_estimation.cpp
   src/glim/frontend/loose_initial_state_estimation.cpp
   src/glim/frontend/odometry_estimation_base.cpp
@@ -101,6 +104,7 @@ target_link_libraries(glim
   ${OpenCV_LIBRARIES}
   ${GTSAM_LIBRARIES}
   ${Boost_LIBRARIES}
+  spdlog::spdlog
 )
 
 
@@ -155,7 +159,7 @@ if(DEFINED ENV{ROS_VERSION})
     find_package(ament_cmake REQUIRED)
     install(DIRECTORY config DESTINATION share/glim)
     ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
-    ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES})
+    ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog)
     ament_package()
   elseif($ENV{ROS_VERSION} EQUAL 1)
     # ROS1

@@ -1,5 +1,7 @@
 #include <glim/frontend/odometry_estimation_gpu.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 
@@ -51,7 +53,7 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() : OdometryEstimationI
   } else if (strategy == "ENTROPY") {
     keyframe_strategy = KeyframeUpdateStrategy::ENTROPY;
   } else {
-    std::cerr << console::bold_red << "error: unknown keyframe update strategy " << strategy << console::reset << std::endl;
+    spdlog::error("unknown keyframe update strategy {}", strategy);
   }
 
   keyframe_min_overlap = config.param<double>("odometry_estimation", "keyframe_min_overlap", 0.1);

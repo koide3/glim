@@ -1,5 +1,6 @@
 #include <glim/backend/sub_map.hpp>
 
+#include <spdlog/spdlog.h>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 
@@ -75,7 +76,7 @@ Eigen::Matrix<double, ROWS, COLS> read_matrix(std::ifstream& ifs) {
 SubMap::Ptr SubMap::load(const std::string& path) {
   std::ifstream ifs(path + "/data.txt");
   if (!ifs) {
-    std::cerr << console::red << "error: failed to open " << path + "/data.txt" << console::reset << std::endl;
+    spdlog::error("failed to open {}/data.txt", path);
     return nullptr;
   }
 
