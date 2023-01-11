@@ -32,6 +32,10 @@
     ],
     // Camera config (required for only extension modules)
     "global_shutter_camera": true,
+    "image_size": [
+      752,
+      480
+    ],
     "T_lidar_camera": [
       -0.00320,
       -0.05292,
