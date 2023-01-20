@@ -1,0 +1,58 @@
+site_name: "GLIM"
+site_author: k.koide
+repo_url: https://github.com/koide3/glim
+site_url: https://glim.github.io/site
+site_description: "GLIM: Versatile and Extensible Open-Source 3D Range-based Mapping Framework"
+
+theme: 
+    name: material
+    palette:
+        primary: indigo
+    logo: assets/logo2_w.png
+    favicon: assets/glim_gray.png
+    front:
+        text: Roboto
+
+use_directory_urls: false
+
+markdown_extensions:
+    - meta
+    - attr_list
+    - admonition
+    - pymdownx.highlight:
+        anchor_linenums: true
+    - pymdownx.inlinehilite
+    - pymdownx.snippets
+    - pymdownx.superfences
+    - pymdownx.emoji:
+        emoji_index: !!python/name:materialx.emoji.twemoji
+        emoji_generator: !!python/name:materialx.emoji.to_svg
+    - fontawesome_markdown
+
+copyright: Copyright &copy; 2021 - 2022 Kenji Koide
+extra:
+    social:
+        - icon: material/home
+          link: https://staff.aist.go.jp/k.koide/
+        - icon: fontawesome/brands/github
+          link: https://github.com/koide3/glim
+        - icon: fontawesome/brands/docker
+          link: https://hub.docker.com/repository/docker/koide3/glim_ros
+        - icon: fontawesome/brands/twitter
+          link: https://twitter.com/k_koide3
+
+extra_css:
+    - "css/custom.css"
+    - "https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css"
+
+nav:
+    - 'index.md'
+    - 'installation.md'
+    - 'docker.md'
+    - 'quickstart.md'
+    - 'demo.md'
+    - 'parameters.md'
+    - 'extend.md'
+    - 'extensions.md'
+    - 'faq.md'
+    - 'api.md'

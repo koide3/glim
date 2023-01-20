@@ -1,4 +1,4 @@
-![GLIM](docs/logo2.png "GLIM Logo")
+![GLIM](docs/assets/logo2.png "GLIM Logo")
 
 **GLIM** is a versatile and extensible range-based 3D mapping framework.
 
@@ -11,7 +11,7 @@
   - RGB-D camera (e.g., Microsoft Azure Kinect)
 - ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/koide3/glim_ext) that offers several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial frontend).
 
-Tested on Ubuntu 20.04 with CUDA 11.6 / NVIDIA Jetson Xavier (JetPack 5.0.1).
+Tested on Ubuntu 20.04 with CUDA 11.6 / Ubuntu 22.04 with CUDA 11.8 / NVIDIA Jetson Xavier and Orin (JetPack 5.0.1).
 
 [![Build](https://github.com/koide3/glim/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
 [![ROS1](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml/badge.svg)](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml)
@@ -32,77 +32,11 @@ Tested on Ubuntu 20.04 with CUDA 11.6 / NVIDIA Jetson Xavier (JetPack 5.0.1).
 - [Iridescence](https://github.com/koide3/iridescence) (for visualization)
 - [glim_ext](https://github.com/koide3/glim_ext) (for extension functions)
 
-## Installation
-### Common dependencies
-
-```bash
-# Install libraries
-sudo apt install libomp-dev libboost-all-dev
-
-# Install GTSAM
-git clone https://github.com/borglab/gtsam
-mkdir gtsam/build && cd gtsam/build
-cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
-         -DGTSAM_BUILD_TESTS=OFF \
-         -DGTSAM_WITH_TBB=OFF \
-         -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF
-
-make -j$(nproc)
-sudo make install
-
-# Install Iridescence for visualization
-# This is optional but highly recommended
-sudo apt install -y libglm-dev libglfw3-dev libpng-dev
-
-git clone https://github.com/koide3/iridescence --recursive
-mkdir iridescence/build && cd iridescence/build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-
-make -j$(nproc)
-sudo make install
-```
-
-### Installation for ROS1
-
-```bash
-cd ~/catkin_ws/src
-git clone https://github.com/koide3/glim --recursive
-git clone https://github.com/koide3/glim_ros1
-
-# Optional extension library
-git clone https://github.com/koide3/glim_ext --recursive
-
-cd ~/catkin_ws
-catkin_make
-```
-
-### Installation for ROS2
-
-```bash
-cd ~/ros2_ws/src
-git clone https://github.com/koide3/glim --recursive
-git clone https://github.com/koide3/glim_ros2
-
-# Optional extension library
-git clone https://github.com/koide3/glim_ext --recursive
-
-cd ~/ros2_ws
-colcon_build
-```
-
 ## License
 
-This package is released under the GPLv3 license. For commercial purposes, please contact ```k.koide@aist.go.jp```.
-
-
-## Papers
-- Koide et al., "Voxelized GICP for Fast and Accurate 3D Point Cloud Registration", ICRA2021 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/icra2021_02.pdf)
-- Koide et al., "Globally Consistent 3D LiDAR Mapping with GPU-accelerated GICP Matching Cost Factors", IEEE RA-L, 2021 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/ral2021.pdf)
-- Koide et al., "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", ICRA2022 [[link]](https://staff.aist.go.jp/k.koide/assets/pdf/icra2022.pdf)
-
+This package is released under the MIT license. For commercial support, please contact ```k.koide@aist.go.jp```.
 
 ## Contact
-[Kenji Koide](https://staff.aist.go.jp/k.koide/), k.koide@aist.go.jp
-
-[Mobile Robotics Research Team (MR2T)](https://unit.aist.go.jp/hcmrc/mr-rt/index.html), National Institute of Advanced Industrial Science and Technology (AIST), Japan
+[Kenji Koide](https://staff.aist.go.jp/k.koide/), k.koide@aist.go.jp  
+National Institute of Advanced Industrial Science and Technology (AIST), Japan
 
