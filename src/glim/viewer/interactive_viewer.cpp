@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <thread>
+#include <spdlog/spdlog.h>
 #include <glim/common/callbacks.hpp>
 #include <glim/backend/sub_map.hpp>
 #include <glim/backend/callbacks.hpp>
@@ -171,7 +172,7 @@ void InteractiveViewer::drawable_selection() {
   }
 
   if (ImGui::Button("Optimize")) {
-    notify(NotificationLevel::INFO, "Optimizing...");
+    spdlog::info("optimizing...");
     GlobalMappingCallbacks::request_to_optimize();
   }
 
@@ -242,7 +243,7 @@ void InteractiveViewer::run_modals() {
   factors.erase(std::remove(factors.begin(), factors.end(), nullptr), factors.end());
 
   if (factors.size()) {
-    notify(NotificationLevel::INFO, "Optimizing...");
+    spdlog::info("optimizing...");
     new_factors.insert(factors);
     GlobalMappingCallbacks::request_to_optimize();
   }

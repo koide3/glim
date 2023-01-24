@@ -288,14 +288,11 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   factor->set_num_threads(2);
   graph.add(factor);
 
-  notify(INFO, "--- LM optimization ---");
+  spdlog::debug("--- LM optimization ---");
   gtsam_ext::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setMaxIterations(10);
-  lm_params.callback = [](const auto& status, const auto& values) {
-    notify(INFO, status.to_string());
-    // std::cout << status.to_string() << std::endl;
-  };
+  lm_params.callback = [](const auto& status, const auto& values) { spdlog::debug(status.to_string()); };
 
   gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();

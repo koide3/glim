@@ -1,5 +1,7 @@
 #include <glim/viewer/standard_viewer.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam_ext/optimizers/isam2_result_ext.hpp>
@@ -10,6 +12,7 @@
 #include <glim/frontend/estimation_frame.hpp>
 #include <glim/backend/callbacks.hpp>
 #include <glim/util/config.hpp>
+#include <glim/util/logging.hpp>
 #include <glim/util/trajectory_manager.hpp>
 
 #include <glk/colormap.hpp>
@@ -19,6 +22,7 @@
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/indexed_pointcloud_buffer.hpp>
 #include <glk/primitives/primitives.hpp>
+#include <guik/spdlog_sink.hpp>
 #include <guik/viewer/light_viewer.hpp>
 
 namespace glim {
@@ -332,8 +336,8 @@ void StandardViewer::set_callbacks() {
 
   // Submap optimization status callback
   SubMappingCallbacks::on_optimization_status.add([this](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
-    const std::string text = status.to_short_string();
-    invoke([this, text] { guik::LightViewer::instance()->sub_viewer("submap")->append_text(text); });
+    spdlog::debug("--- submap optimization ---");
+    spdlog::debug(status.to_short_string());
   });
 
   /*** Global mapping callbacks ***/
@@ -427,10 +431,8 @@ void StandardViewer::set_callbacks() {
 
   // Smoother update result callback
   GlobalMappingCallbacks::on_smoother_update_result.add([this](gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result) {
-    std::string text = (boost::format("--- iSAM2 update (%d values / %d factors) ---\n") % result.num_values % result.num_factors).str();
-    text += result.to_string();
-
-    invoke([this, text] { guik::LightViewer::instance()->append_text(text); });
+    spdlog::debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
+    spdlog::debug(result.to_string());
   });
 }
 
@@ -453,6 +455,7 @@ void StandardViewer::viewer_loop() {
 
   viewer->register_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
   viewer->register_ui_callback("selection", [this] { drawable_selection(); });
+  viewer->register_ui_callback("logging", guik::create_logger_ui(glim::get_ringbuffer_sink(), 0.5));
 
   while (!kill_switch) {
     if (!viewer->spin_once()) {
@@ -506,7 +509,12 @@ bool StandardViewer::drawable_filter(const std::string& name) {
 }
 
 void StandardViewer::drawable_selection() {
+  ImGui::SetWindowPos("images", {1800, 60}, ImGuiCond_FirstUseEver);
+  ImGui::SetWindowPos("logging", {1800, 950}, ImGuiCond_FirstUseEver);
+
+  ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.5));
   ImGui::Begin("selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::PopStyleColor();
 
   if (ImGui::Checkbox("track", &track)) {
     if (track) {
