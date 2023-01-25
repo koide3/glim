@@ -509,6 +509,8 @@ bool StandardViewer::drawable_filter(const std::string& name) {
 }
 
 void StandardViewer::drawable_selection() {
+  auto viewer = guik::LightViewer::instance();
+
   ImGui::SetWindowPos("images", {1800, 60}, ImGuiCond_FirstUseEver);
   ImGui::SetWindowPos("logging", {1800, 950}, ImGuiCond_FirstUseEver);
 
@@ -534,6 +536,11 @@ void StandardViewer::drawable_selection() {
   std::vector<const char*> current_color_modes = {"FLAT", "INTENSITY", "NORMAL"};
   ImGui::SetNextItemWidth(92);
   ImGui::Combo("color_mode", &current_color_mode, current_color_modes.data(), current_color_modes.size());
+
+  ImGui::SameLine();
+  if (ImGui::Button("Log")) {
+    viewer->register_ui_callback("logging", guik::create_logger_ui(glim::get_ringbuffer_sink(), 0.5));
+  }
 
   ImGui::Separator();
   bool show_frontend = show_frontend_scans || show_frontend_keyframes;
@@ -562,7 +569,7 @@ void StandardViewer::drawable_selection() {
 
   ImGui::Separator();
   if (ImGui::DragFloatRange2("z_range", &z_range[0], &z_range[1], 0.1f, -100.0f, 100.0f)) {
-    guik::LightViewer::instance()->shader_setting().add<Eigen::Vector2f>("z_range", auto_z_range + z_range);
+    viewer->shader_setting().add<Eigen::Vector2f>("z_range", auto_z_range + z_range);
   }
 
   ImGui::End();

@@ -84,6 +84,12 @@ void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
     return;
   }
 
+  // Check if the per-point timestamps are positive
+  if (points->times.front() < 0.0 || points->times.back() < 0.0) {
+    spdlog::warn("negative per-point timestamp is found!!");
+    spdlog::warn("front={:.6f} back={:.6f}", points->times.front(), points->times.back());
+  }
+
   // Point timestamps are already relative to the first one
   if (points->times.front() < 1.0) {
     first_warning = false;
