@@ -3,7 +3,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 #include <glim/frontend/estimation_frame.hpp>
 #include <glim/preprocess/preprocessed_frame.hpp>
 

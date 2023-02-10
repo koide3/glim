@@ -107,7 +107,6 @@ target_link_libraries(glim
   spdlog::spdlog
 )
 
-
 list(APPEND glim_LIBRARIES glim gtsam_ext)
 install(TARGETS glim gtsam_ext)
 install(DIRECTORY include/ DESTINATION include)
@@ -120,9 +119,12 @@ if(BUILD_WITH_VIEWER)
   )
   target_include_directories(standard_viewer PUBLIC
     include
+    thirdparty/gtsam_ext/include
+    ${Iridescence_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIR}
+    ${OpenCV_INCLUDE_DIRS}
   )
   target_link_libraries(standard_viewer
-    glim
     ${Iridescence_LIBRARIES}
   )
 
