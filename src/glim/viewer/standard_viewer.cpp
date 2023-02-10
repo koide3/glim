@@ -135,7 +135,7 @@ void StandardViewer::set_callbacks() {
 
       last_id = new_frame->id;
       last_num_points = new_frame->frame->size();
-      if (new_frame->raw_frame) {
+      if (new_frame->raw_frame && new_frame->raw_frame->size()) {
         last_point_stamps.first = new_frame->raw_frame->times.front();
         last_point_stamps.second = new_frame->raw_frame->times.back();
       }
