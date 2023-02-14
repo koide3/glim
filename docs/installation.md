@@ -12,7 +12,8 @@ sudo apt install libomp-dev libboost-all-dev libmetis-dev \
  
 # Install GTSAM
 git clone https://github.com/borglab/gtsam
-mkdir gtsam/build && cd gtsam/build
+cd gtsam && git checkout 4.2a9
+mkdir build && cd build
 # For Ubuntu 22.04, add -DGTSAM_USE_SYSTEM_EIGEN=ON
 cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
          -DGTSAM_BUILD_TESTS=OFF \
