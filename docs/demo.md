@@ -40,6 +40,6 @@ rosrun glim_ros glim_rosbag _config_path:=$(realpath config/kinect) kinect.bag
 </div>
 
 !!! note
-    - Only frontend estimation was performed, no backend optimization.
+    - Only odometry estimation was performed, no global optimization.
     - Visualization was run on another PC that received points and pose messages via ethernet.  
       (rviz took about a half of Jetson Nano's computation capability without rendering anything!!)

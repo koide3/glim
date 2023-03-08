@@ -30,24 +30,24 @@ values.insert(X(id), pose);
 
 ### Variables in GLIM
 
-In the following, we show the graph structures and variables in the frontend and backend algorithms of GLIM. Through the global callback slot mechanism, which will be explained later, you can access variables in the factor graphs and create additional constraints (i.e., factors) to improve the accuracy/stability/robustness of the mapping process in specific situations.
+In the following, we show the graph structures and variables in the odometry estimation and global optimization algorithms of GLIM. Through the global callback slot mechanism, which will be explained later, you can access variables in the factor graphs and create additional constraints (i.e., factors) to improve the accuracy/stability/robustness of the mapping process in specific situations.
 
-#### Variables in the frontend
+#### Variables in the odometry estimation
 
 - ```X(i)``` : IMU pose = T_odom_imu (gtsam::Pose3)
 - ```V(i)``` : IMU velocity = v_odom_imu (gtsam::Vector3)
 - ```B(i)``` : IMU bias (gtsam::imuBias::ConstantBias)
 
 !!! note
-    In the frontend estimation, old variables are eliminated from the graph when they leave the sliding optimization window specified by the **smoother_lag** param (e.g., 5 sec). You thus need to ensure that additional factors refer to only variables in this optimization window. 
+    In the odometry estimation, old variables are eliminated from the graph when they leave the sliding optimization window specified by the **smoother_lag** param (e.g., 5 sec). You thus need to ensure that additional factors refer to only variables in this optimization window. 
 
 !!! note
     Because **frontend_ct** performs LiDAR-only estimation, it does not create ```V(i)``` and ```B(i)```, and ```X(i)``` represents the LiDAR pose instead of the IMU pose.
 
 !!! info
-    ["velocity_suppressor.cpp"](https://github.com/koide3/glim_ext/blob/master/modules/frontend/velocity_suppressor/src/glim_ext/velocity_suppressor.cpp) in **gtsam_ext** shows a simple example to insert velocity suppression factors into the frontend factor graph.
+    ["velocity_suppressor.cpp"](https://github.com/koide3/glim_ext/blob/master/modules/frontend/velocity_suppressor/src/glim_ext/velocity_suppressor.cpp) in **gtsam_ext** shows a simple example to insert velocity suppression factors into the odometry estimation factor graph.
 
-#### Variables in the backend
+#### Variables in the global optimization
 
 **Sub mapping states**:
 
@@ -64,7 +64,7 @@ In the following, we show the graph structures and variables in the frontend and
 
 ## Global callback slot
 
-The global callback slot is a mechanism to hook processing steps in the mapping system. It enables to access the internal states of the mapping process and insert additional factors into the factor graph. The following code demonstrates how we can register a callback function to the new frame creation event in the frontend and retrieve estimated sensor states of the latest frame.
+The global callback slot is a mechanism to hook processing steps in the mapping system. It enables to access the internal states of the mapping process and insert additional factors into the factor graph. The following code demonstrates how we can register a callback function to the new frame creation event in the odometry estimation and retrieve estimated sensor states of the latest frame.
 
 
 ```cpp

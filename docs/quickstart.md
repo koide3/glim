@@ -19,10 +19,10 @@ glim/config/config_ros.json
 ```
 
 !!! tip
-    If you want to try the **GPU-based frontend and backend**, set ```config_frontend``` to ```config_frontend_gpu.json``` and ```config_backend``` to ```config_backend_gpu.json```.
+    If you want to try the **GPU-based odometry estimation and global optimization**, set ```config_frontend``` to ```config_frontend_gpu.json``` and ```config_backend``` to ```config_backend_gpu.json```.
 
 !!! tip
-    If you want to try the **LiDAR-only frontend without IMU data**, set ```config_frontend``` to ```config_frontend_ct.json```, and set ```enable_imu``` in ```config_backend_cpu.json``` to ```false``` for both the sub- and global mapping modules.
+    If you want to try the **LiDAR-only odometry estimation without IMU data**, set ```config_frontend``` to ```config_frontend_ct.json```, and set ```enable_imu``` in ```config_backend_cpu.json``` to ```false``` for both the sub- and global mapping modules.
 
 
 ## Executables

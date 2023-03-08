@@ -22,11 +22,11 @@ catkin_make -DENABLE_ORBSLAM=ON \
             -DENABLE_DBOW=ON
 ```
 
-### Frontend modules
+### Odometry estimation modules
 
-#### [ORB_SLAM frontend](https://github.com/koide3/glim_ext/tree/master/modules/frontend/orb_slam_frontend)
+#### [ORB_SLAM-based loose visual integration](https://github.com/koide3/glim_ext/tree/master/modules/frontend/orb_slam_frontend)
 
-- Loosely coupled visual frontend constraints based on ORB_SLAM3
+- Loosely coupled visual odometry estimation constraints based on ORB_SLAM3
 - Dependency: [ORB_SLAM3](https://github.com/UZ-SLAMLab/ORB_SLAM3) (GPL-3.0)
 
 <div class="youtube">
@@ -36,7 +36,7 @@ catkin_make -DENABLE_ORBSLAM=ON \
 
 #### [Velocity suppressor](https://github.com/koide3/glim_ext/tree/master/modules/frontend/velocity_suppressor)
 
-- Frontend constraints to regulate IMU velocity
+- Constraints to regulate IMU velocity
 
 #### [IMU calibration validator](https://github.com/koide3/glim_ext/tree/master/modules/frontend/imu_validator)
 
@@ -46,11 +46,11 @@ catkin_make -DENABLE_ORBSLAM=ON \
 <iframe width="560" height="315" src="https://www.youtube.com/embed/tsOJHTObuqY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-### Backend modules
+### Global optimization modules
 
 #### [GNSS constraints](https://github.com/koide3/glim_ext/tree/master/modules/backend/gnss_backend) [ROS1 only]
 
-- Naive implementation of GNSS backend constraints
+- Naive implementation of GNSS global optimization constraints
 
 #### [ScanContext loop detector](https://github.com/koide3/glim_ext/tree/master/modules/backend/scan_context_loop_detector)
 
@@ -74,9 +74,9 @@ catkin_make -DENABLE_ORBSLAM=ON \
 
 The following modules are provided as closed-source packages. Contact us if you are interested in the closed-source modules.
 
-### Tightly-coupled multi-LiDAR frontend module
+### Tightly-coupled multi-LiDAR odometry estimation module
 
-### Tightly-coupled multi-camera frontend module
+### Tightly-coupled multi-camera odometry estimation module
 
 <div class="youtube">
 <iframe width="560" height="315" src="https://www.youtube.com/embed/LBogW_6Appg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

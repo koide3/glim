@@ -21,7 +21,7 @@
 !!! note
     To see if estimated covariances are fine, change ```color_mode``` in the standard viewer to ```NORMAL```. If point colors are uniform on flat planes, covariances should be ok.
 
-## CPU-based LiDAR-IMU Frontend (config_frontend_cpu.json)
+## CPU-based LiDAR-IMU Odometry Estimation (config_frontend_cpu.json)
 
 - **registration_type** (default GICP) : Either of *"GICP"* or *"VGICP"*.
     - *"GICP"* uses iVox-based GICP scan matching that is accurate and robust in many cases.
@@ -30,7 +30,7 @@
     - *"VGICP"* uses voxelized GICP scan matching that is faster but requires tuning **vgicp_resolution** parameter for good estimation in indoor environments.
         - **vgicp_resolution** (default 0.5 m) : Resolution of VIGP voxels used for VGICP scan matching. Use a small value for indoor environments (e.g., 0.25 ~ 0.5 m) and a large value for outdoor environments (0.5 ~ 2.0 m).
 
-## GPU-based LiDAR-IMU Frontend (config_frontend.json)
+## GPU-based LiDAR-IMU Odometry Estimation (config_frontend.json)
 
 - **voxel_resolution** (default 0.25 m) : Base VGICP voxel resolution. Use a small value for indoor environments (e.g., 0.1 ~ 0.25 m).
 - **voxelmap_levels** (default 2 levels): Multi resolution voxel levels. Increasing this parameter makes estimation robust to large displacement.
@@ -40,22 +40,22 @@
     - *"DISPLACEMENT"* uses the conventional displacement-based keyframe management that is more intuitive to tune. Change **keyframe_delta_(trans|rot)** to tune the keyframe insertion frequency.
     - *"ENTROPY"* uses an entropy-based keyframe management. This strategy is often difficult to tune and is not recommended.
 
-## LiDAR-only Frontend (config_frontend_ct.json)
+## LiDAR-only Odometry Estimation (config_frontend_ct.json)
 
 - **max_correspondence_distance** (default 2.0 m) : Maximum corresponding distance for scan matching. 
 
 
-## Backend (config_backend.json)
+## Global Optimization (config_backend.json)
 
 ### Sub mapping
-- **enable_optimization** (default true) : In environments where the frontend estimation is sufficiently robust and accurate, you can set this false to disable submap optimization and save the processing cost.
-- **keyframe-related params** : These parameters control the keyframe creation in sub mapping. See GPU-based LiDAR-IMU frontend params for details.
+- **enable_optimization** (default true) : In environments where the odometry estimation is sufficiently robust and accurate, you can set this false to disable submap optimization and save the processing cost.
+- **keyframe-related params** : These parameters control the keyframe creation in sub mapping. See GPU-based LiDAR-IMU odometry params for details.
 
 ### Global mapping
 - **min_implicit_loop_overlap** (default 0.2) : Minimum overlap rate to create registration error factor.
 
 ### Common parameters for sub and global mapping
-- **enable_imu** (default true) : Must be false if the LiDAR-only frontend is used.
+- **enable_imu** (default true) : Must be false if the LiDAR-only odometry estimation is used.
 - **registration_error_factor_type** (default "VGICP") : Registration error computation type. Must be either of *"VGICP"* or *"VGICP_GPU"*.
 - **random_sampling_rate** (default 0.1) : Random sampling rate for points used for registration error computation. With the GPU implementation, you can use a large random sampling rate (e.g., 1.0 = disabling random sampling) to perform full global registration error minimization.
 - **(submap|keyframe)_voxel_resolution** (default 0.5 m) : Base voxel resolution. Set a small value (e.g., 0.15 ~ 0.25 m) for indoor environments.
