@@ -127,12 +127,23 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     const Eigen::Isometry3d delta = odom_frames[last]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
 
     if (params.between_registration_type == "GICP") {
-      auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), odom_frames[last]->frame, odom_frames[current]->frame);
-      auto linearized = factor->linearize(*values);
-      // graph->emplace_shared<gtsam::LinearContainerFactor>(linearized, *values);
+      const auto& last_frame = odom_frames[last]->frame;
+      const auto& current_frame = odom_frames[current]->frame;
 
-      auto H = linearized->hessianBlockDiagonal()[X(current)];
-      graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Gaussian::Information(H));
+      gtsam::noiseModel::Base::shared_ptr noise_model;
+      if (last_frame->size() < 500 || current_frame->size() < 500) {
+        spdlog::warn("use an identity covariance because either of last or current frames have too few points (last={} current={})", last_frame->size(), current_frame->size());
+        noise_model = gtsam::noiseModel::Isotropic::Precision(6, 1e3);
+      } else {
+        auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), last_frame, current_frame);
+        auto linearized = factor->linearize(*values);
+        // graph->emplace_shared<gtsam::LinearContainerFactor>(linearized, *values);
+
+        auto H = linearized->hessianBlockDiagonal()[X(current)];
+        noise_model = gtsam::noiseModel::Gaussian::Information(H);
+      }
+
+      graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), noise_model);
     } else if (params.between_registration_type == "NONE") {
       graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
     } else {
@@ -170,9 +181,13 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   if (!insert_as_keyframe) {
     // Overlap-based keyframe update
     if (params.keyframe_update_strategy == "OVERLAP") {
-      const double overlap =
-        gtsam_ext::overlap_auto(keyframes.back()->voxelmaps.back(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
-      insert_as_keyframe = overlap < params.max_keyframe_overlap;
+      if (keyframes.back()->voxelmaps.empty() || odom_frame->frame->size() < 10) {
+        spdlog::warn("voxelmap or odom_frame is empty!! (voxelmap={} odom_frame={})", keyframes.back()->voxelmaps.size(), odom_frame->frame->size());
+      } else {
+        const double overlap =
+          gtsam_ext::overlap_auto(keyframes.back()->voxelmaps.back(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
+        insert_as_keyframe = overlap < params.max_keyframe_overlap;
+      }
     }
     // Displacement-based keyframe update
     else if (params.keyframe_update_strategy == "DISPLACEMENT") {
@@ -193,8 +208,20 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
     // Create registration error factors (fully connected)
     for (int i = 0; i < keyframes.size() - 1; i++) {
+      if (keyframes[i]->frame->size() == 0 || keyframes.back()->frame->size() == 0) {
+        spdlog::warn(
+          "skip creation of registration error factors because keyframe has no points (keyframe[i]={}, keyframe[-1]={})",
+          keyframes[i]->frame->size(),
+          keyframes.back()->frame->size());
+      }
+
       if (params.registration_error_factor_type == "VGICP") {
         for (const auto& voxelmap : keyframes[i]->voxelmaps) {
+          if (!voxelmap) {
+            spdlog::warn("voxelmap is empty!");
+            continue;
+          }
+
           graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame);
         }
       }
@@ -206,6 +233,11 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
         const auto& buffer = stream_buffer.second;
 
         for (const auto& voxelmap : keyframes[i]->voxelmaps) {
+          if (!voxelmap) {
+            spdlog::warn("voxelmap is empty!");
+            continue;
+          }
+
           auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame, stream, buffer);
           graph->add(factor);
         }

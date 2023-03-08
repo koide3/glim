@@ -14,7 +14,6 @@
 #include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/rotate_vector3_factor.hpp>
 
-
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Isotropic, "gtsam::noiseModel::Isotropic");
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Gaussian, "gtsam::noiseModel::Gaussian");
 BOOST_CLASS_EXPORT_GUID(gtsam::SharedNoiseModel, "gtsam::SharedNoiseModel");

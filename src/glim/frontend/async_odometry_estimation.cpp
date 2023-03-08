@@ -1,5 +1,7 @@
 #include <glim/frontend/async_odometry_estimation.hpp>
 
+#include <spdlog/spdlog.h>
+
 namespace glim {
 
 AsyncOdometryEstimation::AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation, bool enable_imu) : odometry_estimation(odometry_estimation) {
@@ -93,6 +95,8 @@ void AsyncOdometryEstimation::run() {
 
     while (!raw_frames.empty()) {
       if (!end_of_sequence && enable_imu && raw_frames.front()->scan_end_time > last_imu_time) {
+        spdlog::debug("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f})", raw_frames.front()->scan_end_time, last_imu_time);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         break;
       }
 
