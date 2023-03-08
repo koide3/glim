@@ -15,8 +15,8 @@ public:
     wrt_first_frame_timestamp = true;
   }
 
-  bool replace_frame_timestamp;     ///< If true, replace the frame timestamp with point timestamp
-  bool wrt_first_frame_timestamp;   ///< If true, use the timestamp with respect to the very first points msg
+  bool replace_frame_timestamp;    ///< If true, replace the frame timestamp with point timestamp
+  bool wrt_first_frame_timestamp;  ///< If true, use the timestamp with respect to the very first points msg
 };
 
 /**
@@ -36,8 +36,9 @@ public:
 
   /**
    * @brief Check if IMU and LiDAR data are (very roughly) synchronized
+   * @return If the IMU data is invalid and should be skipped, return false
    */
-  void validate_imu_stamp(const double imu_stamp);
+  bool validate_imu_stamp(const double imu_stamp);
 
 private:
   void replace_points_stamp(const glim::RawPoints::Ptr& points);

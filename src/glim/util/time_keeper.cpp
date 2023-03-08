@@ -19,13 +19,14 @@ TimeKeeper::TimeKeeper(const AbsPointTimeParams& abs_params) : abs_params(abs_pa
 
 TimeKeeper::~TimeKeeper() {}
 
-void TimeKeeper::validate_imu_stamp(const double imu_stamp) {
+bool TimeKeeper::validate_imu_stamp(const double imu_stamp) {
   const double imu_diff = imu_stamp - last_imu_stamp;
   if (last_imu_stamp < 0.0) {
     // First IMU frame
   } else if (imu_stamp < last_imu_stamp) {
     spdlog::warn("IMU IMU timestamp rewind detected!!");
     spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", imu_stamp, last_imu_stamp, imu_diff);
+    return false;
   } else if (imu_stamp - last_imu_stamp > 0.1) {
     spdlog::warn("large time gap between consecutive IMU data!!");
     spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", imu_stamp, last_imu_stamp, imu_diff);
@@ -37,6 +38,8 @@ void TimeKeeper::validate_imu_stamp(const double imu_stamp) {
     spdlog::warn("large time difference between points and imu!!");
     spdlog::warn("points={:.6f} imu={:.6f} diff={:.6f}", last_points_stamp, imu_stamp, points_diff);
   }
+
+  return true;
 }
 
 void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
