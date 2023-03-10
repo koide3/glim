@@ -49,7 +49,6 @@ public:
   double isam2_relinearize_thresh;
 };
 
-
 /**
  * @brief Global mapping
  */
@@ -61,6 +60,7 @@ public:
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
   virtual void insert_submap(const SubMap::Ptr& submap) override;
 
+  virtual void find_overlapping_submaps(double min_overlap) override;
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;

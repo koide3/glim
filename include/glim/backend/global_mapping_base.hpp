@@ -38,6 +38,11 @@ public:
   virtual void insert_submap(const SubMap::Ptr& submap);
 
   /**
+   * @brief Request to find new overlapping submaps
+   */
+  virtual void find_overlapping_submaps(double min_overlap);
+
+  /**
    * @brief Request to perform optimization
    */
   virtual void optimize();

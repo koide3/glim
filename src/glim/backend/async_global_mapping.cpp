@@ -11,7 +11,10 @@ AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMapping
   optimization_interval(optimization_interval) {
   saving = false;
   request_to_optimize = false;
+  request_to_find_overlapping_submaps.store(-1.0);
+
   GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
+  GlobalMappingCallbacks::request_to_find_overlapping_submaps.add([this](double min_overlap) { request_to_find_overlapping_submaps.store(min_overlap); });
 
   kill_switch = false;
   end_of_sequence = false;
@@ -89,6 +92,11 @@ void AsyncGlobalMapping::run() {
     if (images.empty() && imu_frames.empty() && submaps.empty()) {
       if (end_of_sequence) {
         break;
+      }
+
+      const double min_overlap = request_to_find_overlapping_submaps.exchange(-1.0);
+      if (min_overlap > 0.0) {
+        global_mapping->find_overlapping_submaps(min_overlap);
       }
 
       if (request_to_optimize || std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(optimization_interval)) {

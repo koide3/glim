@@ -47,6 +47,7 @@ InteractiveViewer::InteractiveViewer() {
   draw_factors = true;
   draw_spheres = true;
 
+  min_overlap = 0.2f;
   cont_optimize = false;
 
   enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
@@ -169,6 +170,12 @@ void InteractiveViewer::drawable_selection() {
 
   if (do_update_viewer) {
     update_viewer();
+  }
+
+  ImGui::DragFloat("Min overlap", &min_overlap, 0.01f, 0.01f, 1.0f);
+  if (ImGui::Button("Find overlapping submaps")) {
+    spdlog::info("finding overlapping submaps...");
+    GlobalMappingCallbacks::request_to_find_overlapping_submaps(min_overlap);
   }
 
   if (ImGui::Button("Optimize")) {

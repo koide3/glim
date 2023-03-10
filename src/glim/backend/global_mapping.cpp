@@ -1,5 +1,6 @@
 #include <glim/backend/global_mapping.hpp>
 
+#include <unordered_set>
 #include <spdlog/spdlog.h>
 #include <boost/filesystem.hpp>
 
@@ -244,6 +245,77 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
 
   submaps.push_back(submap);
   subsampled_submaps.push_back(subsampled_submap);
+}
+
+void GlobalMapping::find_overlapping_submaps(double min_overlap) {
+  if (submaps.empty()) {
+    return;
+  }
+
+  // Between factors are Vector2i actually. A bad use of Vector3i
+  std::unordered_set<Eigen::Vector3i, gtsam_ext::Vector3iHash> existing_factors;
+  for (const auto& factor : isam2->getFactorsUnsafe()) {
+    if (factor->keys().size() != 2) {
+      continue;
+    }
+
+    gtsam::Symbol sym1(factor->keys()[0]);
+    gtsam::Symbol sym2(factor->keys()[1]);
+    if (sym1.chr() != 'x' || sym2.chr() != 'x') {
+      continue;
+    }
+
+    existing_factors.emplace(sym1.index(), sym2.index(), 0);
+  }
+
+  gtsam::NonlinearFactorGraph new_factors;
+
+  for (int i = 0; i < submaps.size(); i++) {
+    for (int j = i + 1; j < submaps.size(); j++) {
+      if (existing_factors.count(Eigen::Vector3i(i, j, 0))) {
+        continue;
+      }
+
+      const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * submaps[j]->T_world_origin;
+      const double dist = delta.translation().norm();
+      if (dist > params.max_implicit_loop_distance) {
+        continue;
+      }
+
+      const double overlap = gtsam_ext::overlap_auto(submaps[i]->voxelmaps.back(), subsampled_submaps[j], delta);
+      if (overlap < min_overlap) {
+        continue;
+      }
+
+      if (false) {
+      }
+#ifdef BUILD_GTSAM_EXT_GPU
+      else if (std::dynamic_pointer_cast<gtsam_ext::GaussianVoxelMapGPU>(submaps[i]->voxelmaps.back()) && subsampled_submaps[j]->points_gpu) {
+        const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_ext::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
+        const auto& stream = stream_buffer.first;
+        const auto& buffer = stream_buffer.second;
+        for (const auto& voxelmap : submaps[i]->voxelmaps) {
+          new_factors.emplace_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
+        }
+      }
+#endif
+      else {
+        for (const auto& voxelmap : submaps[i]->voxelmaps) {
+          new_factors.emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(i), X(j), voxelmap, subsampled_submaps[j]);
+        }
+      }
+    }
+  }
+
+  spdlog::info("new overlapping {} submap pairs found", new_factors.size());
+
+  gtsam::Values new_values;
+  Callbacks::on_smoother_update(*isam2, new_factors, new_values);
+  auto result = isam2->update(new_factors, new_values);
+  Callbacks::on_smoother_update_result(*isam2, result);
+
+  update_submaps();
+  Callbacks::on_update_submaps(submaps);
 }
 
 void GlobalMapping::optimize() {

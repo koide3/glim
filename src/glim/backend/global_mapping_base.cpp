@@ -18,6 +18,8 @@ void GlobalMappingBase::insert_submap(const SubMap::Ptr& submap) {
   Callbacks::on_insert_submap(submap);
 }
 
+void GlobalMappingBase::find_overlapping_submaps(double min_overlap) {}
+
 void GlobalMappingBase::optimize() {}
 
 }

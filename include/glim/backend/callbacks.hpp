@@ -131,5 +131,12 @@ struct GlobalMappingCallbacks {
    * @note  This is a special inverse-direction callback slot
    */
   static CallbackSlot<void()> request_to_optimize;
+
+  /**
+   * @brief Request the global mapping module to find new overlapping submaps
+   * @param min_overlap  Minimum overlap rate between submaps
+   * @note  This is a special inverse-direction callback slot
+   */
+  static CallbackSlot<void(double)> request_to_find_overlapping_submaps;
 };
 }

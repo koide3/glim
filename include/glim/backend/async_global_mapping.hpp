@@ -88,6 +88,7 @@ private:
 
   int optimization_interval;
   std::atomic_bool request_to_optimize;
+  std::atomic<double> request_to_find_overlapping_submaps;
 
   std::shared_ptr<glim::GlobalMappingBase> global_mapping;
 };

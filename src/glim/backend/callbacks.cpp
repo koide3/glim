@@ -23,4 +23,5 @@ CallbackSlot<void(gtsam_ext::ISAM2Ext&, gtsam::NonlinearFactorGraph&, gtsam::Val
 CallbackSlot<void(gtsam_ext::ISAM2Ext&, const gtsam_ext::ISAM2ResultExt& result)> GlobalMappingCallbacks::on_smoother_update_result;
 
 CallbackSlot<void()> GlobalMappingCallbacks::request_to_optimize;
+CallbackSlot<void(double)> GlobalMappingCallbacks::request_to_find_overlapping_submaps;
 }  // namespace glim

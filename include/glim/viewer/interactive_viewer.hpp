@@ -80,6 +80,7 @@ protected:
   bool draw_factors;
   bool draw_spheres;
 
+  float min_overlap;
   bool cont_optimize;
 
   bool enable_partial_rendering;
