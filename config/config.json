@@ -6,7 +6,7 @@
     "config_viewer": "config_viewer.json",
     "config_sensors": "config_sensors.json",
     "config_preprocess": "config_preprocess.json",
-    "config_frontend": "config_frontend_cpu.json",
-    "config_backend": "config_backend_cpu.json"
+    "config_frontend": "config_frontend_gpu.json",
+    "config_backend": "config_backend_gpu.json"
   }
 }

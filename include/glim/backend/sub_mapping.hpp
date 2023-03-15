@@ -32,6 +32,7 @@ public:
   // Keyframe update strategy params
   int max_num_keyframes;
   std::string keyframe_update_strategy;
+  int keyframe_update_min_points;
   double keyframe_update_interval_rot;
   double keyframe_update_interval_trans;
   double max_keyframe_overlap;

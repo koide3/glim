@@ -107,7 +107,11 @@ void OdometryEstimationIMU::insert_imu(const double stamp, const Eigen::Vector3d
 }
 
 EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
-  spdlog::trace("insert_frame points={} times={} ~ {}", raw_frame->size(), raw_frame->times.front(), raw_frame->times.back());
+  if (raw_frame->size()) {
+    spdlog::trace("insert_frame points={} times={} ~ {}", raw_frame->size(), raw_frame->times.front(), raw_frame->times.back());
+  } else {
+    spdlog::warn("insert_frame points={}", raw_frame->size());
+  }
   Callbacks::on_insert_frame(raw_frame);
 
   const int current = frames.size();
@@ -313,6 +317,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
   Callbacks::on_update_frames(active_frames);
+  spdlog::trace("frames updated");
 
   return frames[current];
 }

@@ -42,6 +42,7 @@ SubMappingParams::SubMappingParams() {
   max_num_keyframes = config.param<int>("sub_mapping", "max_num_keyframes", 15);
 
   keyframe_update_strategy = config.param<std::string>("sub_mapping", "keyframe_update_strategy", "OVERLAP");
+  keyframe_update_min_points = config.param<int>("sub_mapping", "keyframe_update_min_points", 500);
   keyframe_update_interval_rot = config.param<double>("sub_mapping", "keyframe_update_interval_rot", 3.15);
   keyframe_update_interval_trans = config.param<double>("sub_mapping", "keyframe_update_interval_trans", 1.0);
   max_keyframe_overlap = config.param<double>("sub_mapping", "max_keyframe_overlap", 0.8);
@@ -178,7 +179,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   }
 
   bool insert_as_keyframe = keyframes.empty();
-  if (!insert_as_keyframe) {
+  if (!insert_as_keyframe && odom_frame->frame && odom_frame->frame->size() > params.keyframe_update_min_points) {
     // Overlap-based keyframe update
     if (params.keyframe_update_strategy == "OVERLAP") {
       if (keyframes.back()->voxelmaps.empty() || odom_frame->frame->size() < 10) {
