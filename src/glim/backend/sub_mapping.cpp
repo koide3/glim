@@ -34,7 +34,7 @@ using gtsam::symbol_shorthand::X;
 using Callbacks = SubMappingCallbacks;
 
 SubMappingParams::SubMappingParams() {
-  Config config(GlobalConfig::get_config_path("config_backend"));
+  Config config(GlobalConfig::get_config_path("config_sub_mapping"));
 
   enable_imu = config.param<bool>("sub_mapping", "enable_imu", true);
   enable_optimization = config.param<bool>("sub_mapping", "enable_optimization", true);

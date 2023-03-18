@@ -1,5 +1,5 @@
 {
-  /*** CT-ICP-based frontend ***
+  /*** CT-ICP-based odometry estimation ***
   // num_threads                    : Number of threads used for CT-ICP
   // ivox_resolution                : Target iVox resolution
   // ivox_min_points_dist           : Minimum distance between points in an iVox cell
@@ -14,7 +14,7 @@
   // isam2_relinearize_thresh       :
   */
   "odometry_estimation": {
-    "frontend_mode": "CT",
+    "so_name": "libodometry_estimation_ct.so",
     "num_threads": 4,
     // ivox params
     "ivox_resolution": 1.0,

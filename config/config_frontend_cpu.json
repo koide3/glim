@@ -1,12 +1,12 @@
 {
-  /*** Keyframe-based VGICP frontend ***
+  /*** Keyframe-based VGICP odometry estimation ***
   // smoother_lag                : Fixed-lag smoothing window size [sec]
   // use_isam2_dogleg            : Use the dogleg optimizer as the backend of ISAM2 that is slow but more robust
   // isam2_relinearize_skip      :
   // isam2_relinearize_thresh    :
   */
   "odometry_estimation": {
-    "frontend_mode": "CPU",
+    "so_name": "libodometry_estimation_cpu.so",
     // Initialization params
     "initialization_mode": "LOOSE",
     "initialization_window_size": 3.0,

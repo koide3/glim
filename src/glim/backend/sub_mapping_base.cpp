@@ -1,5 +1,6 @@
 #include <glim/backend/sub_mapping_base.hpp>
 
+#include <glim/util/load_module.hpp>
 #include <glim/backend/callbacks.hpp>
 
 namespace glim {
@@ -18,4 +19,7 @@ void SubMappingBase::insert_frame(const EstimationFrame::ConstPtr& frame) {
   Callbacks::on_insert_frame(frame);
 }
 
+std::shared_ptr<SubMappingBase> SubMappingBase::load_module(const std::string& so_name) {
+  return load_module_from_so<SubMappingBase>(so_name, "create_sub_mapping_module");
+}
 }

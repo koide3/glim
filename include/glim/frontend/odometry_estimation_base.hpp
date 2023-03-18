@@ -18,6 +18,11 @@ public:
   virtual ~OdometryEstimationBase() {}
 
   /**
+   * @brief Returns true if the odometry estimation module requires IMU data
+  */
+  virtual bool requires_imu() const { return true; }
+
+  /**
    * @brief Insert an image
    * @param stamp   Timestamp
    * @param image   Image
@@ -45,6 +50,13 @@ public:
    * @return std::vector<EstimationFrame::ConstPtr>
    */
   virtual std::vector<EstimationFrame::ConstPtr> get_remaining_frames() { return std::vector<EstimationFrame::ConstPtr>(); }
+
+  /**
+   * @brief Load an odometry estimation module from a dynamic library
+   * @param so_name  Dynamic library name
+   * @return         Loaded odometry estimation module
+  */
+  static std::shared_ptr<OdometryEstimationBase> load_module(const std::string& so_name);
 };
 
 }  // namespace glim

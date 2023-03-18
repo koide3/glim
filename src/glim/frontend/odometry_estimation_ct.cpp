@@ -269,3 +269,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 }
 
 }  // namespace glim
+
+extern "C" glim::OdometryEstimationBase* create_odometry_estimation_module() {
+  glim::OdometryEstimationCTParams params;
+  return new glim::OdometryEstimationCT(params);
+}

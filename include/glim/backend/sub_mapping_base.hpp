@@ -49,5 +49,12 @@ public:
    * @return std::vector<SubMap::Ptr>
    */
   virtual std::vector<SubMap::Ptr> submit_end_of_sequence() { return std::vector<SubMap::Ptr>(); }
+
+  /**
+   * @brief Load a sub mapping module from a shared library
+   * @param so_name  Shared library name
+   * @return         Loaded sub mapping module
+  */
+  static std::shared_ptr<SubMappingBase> load_module(const std::string& so_name);
 };
 }

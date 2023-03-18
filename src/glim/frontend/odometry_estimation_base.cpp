@@ -1,5 +1,6 @@
 #include <glim/frontend/odometry_estimation_base.hpp>
 
+#include <glim/util/load_module.hpp>
 #include <glim/frontend/callbacks.hpp>
 
 namespace glim {
@@ -18,4 +19,9 @@ EstimationFrame::ConstPtr OdometryEstimationBase::insert_frame(const Preprocesse
   Callbacks::on_insert_frame(frame);
   return nullptr;
 }
+
+std::shared_ptr<OdometryEstimationBase> OdometryEstimationBase::load_module(const std::string& so_name) {
+  return load_module_from_so<OdometryEstimationBase>(so_name, "create_odometry_estimation_module");
+}
+
 }
