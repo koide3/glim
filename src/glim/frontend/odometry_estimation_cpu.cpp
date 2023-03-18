@@ -212,8 +212,3 @@ void OdometryEstimationCPU::update_target(const int current, const Eigen::Isomet
 }
 
 }  // namespace glim
-
-extern "C" glim::OdometryEstimationBase* create_odometry_estimation_module() {
-  glim::OdometryEstimationCPUParams params;
-  return new glim::OdometryEstimationCPU(params);
-}

@@ -402,8 +402,3 @@ void OdometryEstimationGPU::update_keyframes_entropy(const gtsam::NonlinearFacto
 }
 
 }  // namespace glim
-
-extern "C" glim::OdometryEstimationBase* create_odometry_estimation_module() {
-  glim::OdometryEstimationGPUParams params;
-  return new glim::OdometryEstimationGPU(params);
-}

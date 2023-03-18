@@ -49,7 +49,7 @@ endif()
 # GPU-related
 if(BUILD_WITH_CUDA)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
-  install(TARGETS gtsam_ext_cuda)
+  set(GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
   list(APPEND glim_LIBRARIES gtsam_ext_cuda)
 endif()
 
@@ -76,6 +76,8 @@ add_library(glim SHARED
   src/glim/frontend/odometry_estimation_base.cpp
   src/glim/frontend/async_odometry_estimation.cpp
   src/glim/frontend/odometry_estimation_imu.cpp
+  src/glim/frontend/odometry_estimation_ct.cpp
+  src/glim/frontend/odometry_estimation_cpu.cpp
   # backend
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_map.cpp
@@ -85,6 +87,8 @@ add_library(glim SHARED
   src/glim/backend/async_global_mapping.cpp
   src/glim/backend/sub_mapping.cpp
   src/glim/backend/global_mapping.cpp
+  # GPU-related
+  ${GPU_SRCS}
 )
 target_include_directories(glim PUBLIC
   include
@@ -104,58 +108,32 @@ target_link_libraries(glim
 )
 list(APPEND glim_LIBRARIES glim gtsam_ext)
 
-# Odometry estimation modules
-# odometry_estimation_cpu
-add_library(odometry_estimation_cpu SHARED
-  src/glim/frontend/odometry_estimation_cpu.cpp
+# Create shared libraries for estimation modules
+list(APPEND module_srcs
+  src/glim/frontend/odometry_estimation_ct_create.cpp
+  src/glim/frontend/odometry_estimation_cpu_create.cpp
+  src/glim/backend/sub_mapping_create.cpp
+  src/glim/backend/global_mapping_create.cpp
 )
-target_link_libraries(odometry_estimation_cpu
-  glim
-  spdlog::spdlog
-)
-list(APPEND glim_LIBRARIES odometry_estimation_cpu)
-
-# odometry_estimation_ct
-add_library(odometry_estimation_ct SHARED
-  src/glim/frontend/odometry_estimation_ct.cpp
-)
-target_link_libraries(odometry_estimation_ct
-  glim
-  spdlog::spdlog
-)
-list(APPEND glim_LIBRARIES odometry_estimation_ct)
-
-# odometry_estimation_gpu
 if(BUILD_WITH_CUDA)
-  add_library(odometry_estimation_gpu SHARED
-    src/glim/frontend/odometry_estimation_gpu.cpp
+  list(APPEND module_srcs
+    src/glim/frontend/odometry_estimation_gpu_create.cpp
   )
-  target_link_libraries(odometry_estimation_gpu
+endif()
+
+foreach(module_src IN LISTS module_srcs)
+  get_filename_component(module_src_filename ${module_src} NAME_WE)
+  string(REGEX REPLACE "_create" "" module_name ${module_src_filename})
+
+  add_library(${module_name} SHARED
+    ${module_src}
+  )
+  target_link_libraries(${module_name}
     glim
     spdlog::spdlog
   )
-  list(APPEND glim_LIBRARIES odometry_estimation_gpu)
-endif()
-
-# Sub mapping module
-add_library(sub_mapping SHARED
-  src/glim/backend/sub_mapping_load.cpp
-)
-target_link_libraries(sub_mapping
-  glim
-  spdlog::spdlog
-)
-list(APPEND glim_LIBRARIES sub_mapping)
-
-# Global mapping module
-add_library(global_mapping SHARED
-  src/glim/backend/global_mapping_load.cpp
-)
-target_link_libraries(global_mapping
-  glim
-  spdlog::spdlog
-)
-list(APPEND glim_LIBRARIES global_mapping)
+  list(APPEND glim_LIBRARIES ${module_name})
+endforeach()
 
 
 # Install
