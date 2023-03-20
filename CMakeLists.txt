@@ -111,6 +111,7 @@ list(APPEND glim_LIBRARIES glim gtsam_ext)
 install(TARGETS glim gtsam_ext)
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
+install(DIRECTORY thirdparty/gtsam_ext/thirdparty/nanoflann/include/ DESTINATION include)
 
 if(BUILD_WITH_VIEWER)
   # Standard viewer
