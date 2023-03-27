@@ -140,6 +140,7 @@ endforeach()
 install(TARGETS ${glim_LIBRARIES})
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
+install(DIRECTORY thirdparty/gtsam_ext/thirdparty/nanoflann/include/ DESTINATION include)
 
 
 if(BUILD_WITH_VIEWER)
