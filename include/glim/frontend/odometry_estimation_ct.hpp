@@ -59,6 +59,8 @@ public:
   OdometryEstimationCT(const OdometryEstimationCTParams& params = OdometryEstimationCTParams());
   virtual ~OdometryEstimationCT() override;
 
+  virtual bool requires_imu() const override { return false; }
+
   virtual EstimationFrame::ConstPtr insert_frame(const PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
 
 private:

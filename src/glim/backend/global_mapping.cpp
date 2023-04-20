@@ -41,7 +41,7 @@ using gtsam::symbol_shorthand::X;
 using Callbacks = GlobalMappingCallbacks;
 
 GlobalMappingParams::GlobalMappingParams() {
-  Config config(GlobalConfig::get_config_path("config_backend"));
+  Config config(GlobalConfig::get_config_path("config_global_mapping"));
 
   enable_imu = config.param<bool>("global_mapping", "enable_imu", true);
   enable_optimization = config.param<bool>("global_mapping", "enable_optimization", true);

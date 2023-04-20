@@ -1,5 +1,5 @@
 {
-  /*** Keyframe-based VGICP frontend ***
+  /*** Keyframe-based VGICP odometry estimation ***
   // initialization_mode         : "LOOSE" performs loose coupling-based IMU state initialization that takes a few seconds
   //                             : "NAIVE" simply uses the linear acceleration direction as the gravity direction
   // initialization_window_size  : Initialization window size for the "LOOSE" initialization mode
@@ -21,7 +21,7 @@
   // keyframe_delta_(trans|rot)  : Keyframe displacement threshold [m / rad]
   */
   "odometry_estimation": {
-    "frontend_mode": "GPU",
+    "so_name": "libodometry_estimation_gpu.so",
     // Initialization params
     "initialization_mode": "LOOSE",
     "initialization_window_size": 1.0,

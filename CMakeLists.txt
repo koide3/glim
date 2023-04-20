@@ -49,8 +49,7 @@ endif()
 # GPU-related
 if(BUILD_WITH_CUDA)
   add_definitions(-DBUILD_GTSAM_EXT_GPU)
-  install(TARGETS gtsam_ext_cuda)
-  list(APPEND GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
+  set(GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
   list(APPEND glim_LIBRARIES gtsam_ext_cuda)
 endif()
 
@@ -61,6 +60,7 @@ add_library(glim SHARED
   src/glim/util/export_factors.cpp
   src/glim/util/time_keeper.cpp
   src/glim/util/extension_module.cpp
+  src/glim/util/load_module.cpp
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
@@ -75,8 +75,8 @@ add_library(glim SHARED
   src/glim/frontend/loose_initial_state_estimation.cpp
   src/glim/frontend/odometry_estimation_base.cpp
   src/glim/frontend/async_odometry_estimation.cpp
-  src/glim/frontend/odometry_estimation_ct.cpp
   src/glim/frontend/odometry_estimation_imu.cpp
+  src/glim/frontend/odometry_estimation_ct.cpp
   src/glim/frontend/odometry_estimation_cpu.cpp
   # backend
   src/glim/backend/callbacks.cpp
@@ -106,12 +106,42 @@ target_link_libraries(glim
   ${Boost_LIBRARIES}
   spdlog::spdlog
 )
-
 list(APPEND glim_LIBRARIES glim gtsam_ext)
-install(TARGETS glim gtsam_ext)
+
+# Create shared libraries for estimation modules
+list(APPEND module_srcs
+  src/glim/frontend/odometry_estimation_ct_create.cpp
+  src/glim/frontend/odometry_estimation_cpu_create.cpp
+  src/glim/backend/sub_mapping_create.cpp
+  src/glim/backend/global_mapping_create.cpp
+)
+if(BUILD_WITH_CUDA)
+  list(APPEND module_srcs
+    src/glim/frontend/odometry_estimation_gpu_create.cpp
+  )
+endif()
+
+foreach(module_src IN LISTS module_srcs)
+  get_filename_component(module_src_filename ${module_src} NAME_WE)
+  string(REGEX REPLACE "_create" "" module_name ${module_src_filename})
+
+  add_library(${module_name} SHARED
+    ${module_src}
+  )
+  target_link_libraries(${module_name}
+    glim
+    spdlog::spdlog
+  )
+  list(APPEND glim_LIBRARIES ${module_name})
+endforeach()
+
+
+# Install
+install(TARGETS ${glim_LIBRARIES})
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
 install(DIRECTORY thirdparty/gtsam_ext/thirdparty/nanoflann/include/ DESTINATION include)
+
 
 if(BUILD_WITH_VIEWER)
   # Standard viewer

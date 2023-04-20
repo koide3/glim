@@ -27,7 +27,7 @@ public:
    * @param so_name  Dynamic library name
    * @return         Loaded extension module
    */
-  static std::shared_ptr<ExtensionModule> load(const std::string& so_name);
+  static std::shared_ptr<ExtensionModule> load_module(const std::string& so_name);
 };
 
 }  // namespace glim

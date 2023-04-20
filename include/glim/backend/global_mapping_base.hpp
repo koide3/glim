@@ -59,5 +59,12 @@ public:
   virtual std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points() {
     return std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>();
   }
+
+  /**
+   * @brief Load a global mapping module from a shared library
+   * @param so_name  Shared library name
+   * @return         Loaded global mapping module
+   */
+  static std::shared_ptr<GlobalMappingBase> load_module(const std::string& so_name);
 };
 }
