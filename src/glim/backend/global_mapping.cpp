@@ -602,6 +602,7 @@ bool GlobalMapping::load(const std::string& path) {
 
   spdlog::info("deserializing factor graph");
   gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
+  spdlog::info("deserializing values");
   gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
 
   spdlog::info("creating matching cost factors");
