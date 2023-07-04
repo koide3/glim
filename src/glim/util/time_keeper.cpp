@@ -105,6 +105,18 @@ void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
     spdlog::warn("replace_frame_stamp={} wrt_first_frame_timestamp={}", abs_params.replace_frame_timestamp, abs_params.wrt_first_frame_timestamp);
   }
 
+  if (points->times.front() > 1e16) {
+    if (first_warning) {
+      spdlog::warn("too large point timestamp ({:.6f} > 1e16) found!!", points->times.front());
+      spdlog::warn("maybe using a Livox LiDAR that use FLOAT64 nanosec per-point timestamps");
+      spdlog::warn("convert per-point timestamps from nanosec to sec");
+    }
+
+    for (auto& time : points->times) {
+      time *= 1e-9;
+    }
+  }
+
   // Convert absolute times to relative times
   if (abs_params.replace_frame_timestamp) {
     if (!abs_params.wrt_first_frame_timestamp || std::abs(points->stamp - points->times.front()) < 1.0) {
