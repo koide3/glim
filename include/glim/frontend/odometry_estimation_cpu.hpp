@@ -17,17 +17,17 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   OdometryEstimationCPUParams();
-  ~OdometryEstimationCPUParams();
+  virtual ~OdometryEstimationCPUParams();
 
 public:
   // Registration params
-  std::string registration_type;    ///< Registration type (GICP or VGICP)
-  int max_iterations;               ///< Maximum number of iterations
-  int lru_thresh;                   ///< LRU cache threshold
-  double target_downsampling_rate;  ///< Downsampling rate for points to be inserted into the target
+  std::string registration_type;         ///< Registration type (GICP or VGICP)
+  int max_iterations;                    ///< Maximum number of iterations
+  int lru_thresh;                        ///< LRU cache threshold
+  double target_downsampling_rate;       ///< Downsampling rate for points to be inserted into the target
 
-  double ivox_resolution;  ///< iVox resolution (for GICP)
-  double ivox_min_dist;    ///< Minimum distance between points in an iVox cell (for GICP)
+  double ivox_resolution;                ///< iVox resolution (for GICP)
+  double ivox_min_dist;                  ///< Minimum distance between points in an iVox cell (for GICP)
 
   double vgicp_resolution;               ///< Voxelmap resolution (for VGICP)
   int vgicp_voxelmap_levels;             ///< Multi-resolution voxelmap levesl (for VGICP)

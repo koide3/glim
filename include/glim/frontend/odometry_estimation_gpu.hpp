@@ -18,7 +18,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   OdometryEstimationGPUParams();
-  ~OdometryEstimationGPUParams();
+  virtual ~OdometryEstimationGPUParams();
 
   enum class KeyframeUpdateStrategy { OVERLAP, DISPLACEMENT, ENTROPY };
 
