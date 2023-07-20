@@ -61,6 +61,7 @@ add_library(glim SHARED
   src/glim/util/time_keeper.cpp
   src/glim/util/extension_module.cpp
   src/glim/util/load_module.cpp
+  src/glim/util/data_validator.cpp
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
