@@ -35,6 +35,7 @@ DataValidator::DataValidator(bool debug) {
 DataValidator::~DataValidator() {}
 
 void DataValidator::timer_callback() {
+  const auto t1 = std::chrono::high_resolution_clock::now();
   spdlog::debug("timer_callback");
 
   const auto now = std::chrono::high_resolution_clock::now();
@@ -44,6 +45,8 @@ void DataValidator::timer_callback() {
   if (now - last_points_time > std::chrono::seconds(1)) {
     spdlog::warn("No points received in last 1 second");
   }
+
+  spdlog::debug("timer_callback done (elapsed={:.3f}[msec])", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - t1).count() / 1e6);
 }
 
 void DataValidator::imu_callback(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
@@ -63,6 +66,7 @@ void DataValidator::imu_callback(const double stamp, const Eigen::Vector3d& line
 }
 
 void DataValidator::points_callback(const double stamp, const std::shared_ptr<RawPoints>& raw_points) {
+  const auto t1 = std::chrono::high_resolution_clock::now();
   spdlog::debug("points_callback (stamp={:.6f})", stamp);
 
   last_points_time = std::chrono::high_resolution_clock::now();
@@ -101,6 +105,8 @@ void DataValidator::points_callback(const double stamp, const std::shared_ptr<Ra
   }
 
   last_points_stamp = stamp;
+
+  spdlog::debug("points_callback done (elapsed={:.3f}[msec])", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - t1).count() / 1e6);
 }
 
 }  // namespace glim
