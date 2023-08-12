@@ -11,7 +11,7 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <gtsam_ext/ann/ivox.hpp>
-#include <gtsam_ext/types/frame_cpu.hpp>
+#include <gtsam_ext/types/point_cloud_cpu.hpp>
 #include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
@@ -38,7 +38,7 @@ LooseInitialStateEstimation::LooseInitialStateEstimation(const Eigen::Isometry3d
 LooseInitialStateEstimation::~LooseInitialStateEstimation() {}
 
 void LooseInitialStateEstimation::insert_frame(const PreprocessedFrame::ConstPtr& raw_frame) {
-  auto frame = std::make_shared<gtsam_ext::FrameCPU>(raw_frame->points);
+  auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(raw_frame->points);
   frame->add_covs(covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors));
 
   gtsam::Pose3 estimated_T_odom_lidar = gtsam::Pose3::Identity();
@@ -57,7 +57,7 @@ void LooseInitialStateEstimation::insert_frame(const PreprocessedFrame::ConstPtr
     values.insert(0, init_T_odom_lidar);
 
     gtsam::NonlinearFactorGraph graph;
-    auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor_<gtsam_ext::iVox, gtsam_ext::Frame>>(gtsam::Pose3::Identity(), 0, target_ivox, frame, target_ivox);
+    auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor_<gtsam_ext::iVox, gtsam_ext::PointCloud>>(gtsam::Pose3::Identity(), 0, target_ivox, frame, target_ivox);
     factor->set_num_threads(num_threads);
     graph.add(factor);
 

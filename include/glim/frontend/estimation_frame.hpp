@@ -4,7 +4,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <gtsam_ext/types/frame.hpp>
+#include <gtsam_ext/types/point_cloud.hpp>
 #include <gtsam_ext/types/gaussian_voxelmap.hpp>
 #include <glim/preprocess/preprocessed_frame.hpp>
 
@@ -55,7 +55,7 @@ public:
   Eigen::Matrix<double, 8, -1> imu_rate_trajectory;  ///< IMU-rate trajectory 8 x N  [t, x, y, z, qx, qy, qz, qw]
 
   FrameID frame_id;                  ///< Coordinate frame of $frame
-  gtsam_ext::Frame::ConstPtr frame;  ///< Deskewed points for state estimation
+  gtsam_ext::PointCloud::ConstPtr frame;  ///< Deskewed points for state estimation
 
   std::vector<gtsam_ext::GaussianVoxelMap::Ptr> voxelmaps;  ///< Multi-resolution voxelmaps
 };

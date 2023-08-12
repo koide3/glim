@@ -5,7 +5,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/BetweenFactor.h>
-#include <gtsam_ext/types/frame.hpp>
+#include <gtsam_ext/types/point_cloud.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
 
@@ -32,14 +32,14 @@ ManualLoopCloseModal::ManualLoopCloseModal() : request_to_open(false) {
 
 ManualLoopCloseModal::~ManualLoopCloseModal() {}
 
-void ManualLoopCloseModal::set_target(const gtsam::Key target_key, const gtsam_ext::Frame::ConstPtr& target, const Eigen::Isometry3d& target_pose) {
+void ManualLoopCloseModal::set_target(const gtsam::Key target_key, const gtsam_ext::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose) {
   this->target_key = target_key;
   this->target = target;
   this->target_pose = target_pose;
   this->target_drawable = std::make_shared<glk::PointCloudBuffer>(target->points, target->size());
 }
 
-void ManualLoopCloseModal::set_source(const gtsam::Key source_key, const gtsam_ext::Frame::ConstPtr& source, const Eigen::Isometry3d& source_pose) {
+void ManualLoopCloseModal::set_source(const gtsam::Key source_key, const gtsam_ext::PointCloud::ConstPtr& source, const Eigen::Isometry3d& source_pose) {
   this->source_key = source_key;
   this->source = source;
   this->source_pose = source_pose;

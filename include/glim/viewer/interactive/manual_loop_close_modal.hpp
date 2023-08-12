@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gtsam/nonlinear/NonlinearFactor.h>
-#include <gtsam_ext/types/frame.hpp>
+#include <gtsam_ext/types/point_cloud.hpp>
 #include <glk/drawable.hpp>
 
 namespace guik {
@@ -23,8 +23,8 @@ public:
   ManualLoopCloseModal();
   ~ManualLoopCloseModal();
 
-  void set_target(const gtsam::Key target_key, const gtsam_ext::Frame::ConstPtr& target, const Eigen::Isometry3d& target_pose);
-  void set_source(const gtsam::Key target_key, const gtsam_ext::Frame::ConstPtr& source, const Eigen::Isometry3d& source_pose);
+  void set_target(const gtsam::Key target_key, const gtsam_ext::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose);
+  void set_source(const gtsam::Key target_key, const gtsam_ext::PointCloud::ConstPtr& source, const Eigen::Isometry3d& source_pose);
 
   gtsam::NonlinearFactor::shared_ptr run();
 
@@ -45,8 +45,8 @@ private:
   gtsam::Key target_key;
   gtsam::Key source_key;
 
-  gtsam_ext::Frame::ConstPtr target;
-  gtsam_ext::Frame::ConstPtr source;
+  gtsam_ext::PointCloud::ConstPtr target;
+  gtsam_ext::PointCloud::ConstPtr source;
 
   Eigen::Isometry3d target_pose;
   Eigen::Isometry3d source_pose;

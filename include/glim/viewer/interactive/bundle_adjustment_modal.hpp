@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gtsam/nonlinear/NonlinearFactor.h>
-#include <gtsam_ext/types/frame.hpp>
+#include <gtsam_ext/types/point_cloud.hpp>
 #include <glk/drawable.hpp>
 
 #include <glim/backend/sub_map.hpp>

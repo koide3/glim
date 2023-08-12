@@ -7,8 +7,8 @@
 
 #include <gtsam_ext/cuda/cuda_stream.hpp>
 #include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
-#include <gtsam_ext/types/frame_gpu.hpp>
-#include <gtsam_ext/types/voxelized_frame_gpu.hpp>
+#include <gtsam_ext/types/point_cloud_gpu.hpp>
+#include <gtsam_ext/types/gaussian_voxelmap_cpu.hpp>
 #include <gtsam_ext/types/gaussian_voxelmap_gpu.hpp>
 #include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
@@ -83,7 +83,7 @@ OdometryEstimationGPU::~OdometryEstimationGPU() {
 void OdometryEstimationGPU::create_frame(EstimationFrame::Ptr& new_frame) {
   const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
 
-  new_frame->frame = std::make_shared<gtsam_ext::FrameGPU>(*new_frame->frame);
+  new_frame->frame = gtsam_ext::PointCloudGPU::clone(*new_frame->frame);
   for (int i = 0; i < params->voxelmap_levels; i++) {
     if (!new_frame->frame->size()) {
       break;

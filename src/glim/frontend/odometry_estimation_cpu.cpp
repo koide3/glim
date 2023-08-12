@@ -7,7 +7,7 @@
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 
 #include <gtsam_ext/ann/ivox.hpp>
-#include <gtsam_ext/types/frame_cpu.hpp>
+#include <gtsam_ext/types/point_cloud_cpu.hpp>
 #include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
@@ -89,7 +89,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   gtsam::NonlinearFactorGraph matching_cost_factors;
   if (params->registration_type == "GICP") {
     auto gicp_factor =
-      gtsam::make_shared<gtsam_ext::IntegratedGICPFactor_<gtsam_ext::iVox, gtsam_ext::Frame>>(gtsam::Pose3(), X(current), target_ivox, frames[current]->frame, target_ivox);
+      gtsam::make_shared<gtsam_ext::IntegratedGICPFactor_<gtsam_ext::iVox, gtsam_ext::PointCloud>>(gtsam::Pose3(), X(current), target_ivox, frames[current]->frame, target_ivox);
     gicp_factor->set_max_corresponding_distance(params->ivox_resolution * 2.0);
     gicp_factor->set_num_threads(params->num_threads);
     matching_cost_factors.add(gicp_factor);
@@ -190,13 +190,13 @@ void OdometryEstimationCPU::update_target(const int current, const Eigen::Isomet
     frame->frame_id = FrameID::IMU;
 
     if (params->registration_type == "GICP") {
-      frame->frame = std::make_shared<gtsam_ext::FrameCPU>(target_ivox->voxel_points());
+      frame->frame = std::make_shared<gtsam_ext::PointCloudCPU>(target_ivox->voxel_points());
     } else if (params->registration_type == "VGICP") {
       std::vector<Eigen::Vector4d> points;
       for (const auto& voxel : target_voxelmaps[0]->voxels) {
         points.push_back(voxel.second->mean);
       }
-      frame->frame = std::make_shared<gtsam_ext::FrameCPU>(points);
+      frame->frame = std::make_shared<gtsam_ext::PointCloudCPU>(points);
     }
 
     std::vector<EstimationFrame::ConstPtr> keyframes = {frame};

@@ -6,7 +6,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 
-#include <gtsam_ext/types/frame_cpu.hpp>
+#include <gtsam_ext/types/point_cloud_cpu.hpp>
 #include <gtsam_ext/factors/linear_damping_factor.hpp>
 #include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 
@@ -158,7 +158,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> covs;
     covariance_estimation->estimate(points_imu, raw_frame->neighbors, normals, covs);
 
-    auto frame = std::make_shared<gtsam_ext::FrameCPU>(points_imu);
+    auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(points_imu);
     frame->add_covs(covs);
     frame->add_normals(normals);
     new_frame->frame = frame;
@@ -282,7 +282,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> deskewed_covs;
   covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
 
-  auto frame = std::make_shared<gtsam_ext::FrameCPU>(deskewed);
+  auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(deskewed);
   frame->add_covs(deskewed_covs);
   frame->add_normals(deskewed_normals);
   new_frame->frame = frame;

@@ -251,7 +251,7 @@ void StandardViewer::set_callbacks() {
   /*** Submapping callbacks ***/
   // New keyframe callback
   SubMappingCallbacks::on_new_keyframe.add([this](int id, const EstimationFrame::ConstPtr& keyframe) {
-    gtsam_ext::Frame::ConstPtr frame = keyframe->frame;
+    gtsam_ext::PointCloud::ConstPtr frame = keyframe->frame;
 
     invoke([this, id, keyframe, frame] {
       auto viewer = guik::LightViewer::instance();

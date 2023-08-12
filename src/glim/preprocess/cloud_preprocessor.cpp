@@ -4,7 +4,7 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include <gtsam_ext/ann/kdtree.hpp>
-#include <gtsam_ext/types/frame_cpu.hpp>
+#include <gtsam_ext/types/point_cloud_cpu.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
@@ -41,7 +41,7 @@ CloudPreprocessor::~CloudPreprocessor() {}
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
   spdlog::trace("preprocessing input: {} points", raw_points->size());
 
-  gtsam_ext::Frame::Ptr frame(new gtsam_ext::Frame);
+  gtsam_ext::PointCloud::Ptr frame(new gtsam_ext::PointCloud);
   frame->num_points = raw_points->size();
   frame->times = const_cast<double*>(raw_points->times.data());
   frame->points = const_cast<Eigen::Vector4d*>(raw_points->points.data());

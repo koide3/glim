@@ -11,7 +11,7 @@
 #include <gtsam_ext/ann/ivox.hpp>
 #include <gtsam_ext/ann/ivox_covariance_estimation.hpp>
 #include <gtsam_ext/ann/kdtree.hpp>
-#include <gtsam_ext/types/frame_cpu.hpp>
+#include <gtsam_ext/types/point_cloud_cpu.hpp>
 #include <gtsam_ext/factors/integrated_ct_gicp_factor.hpp>
 #include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
 #include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
@@ -81,7 +81,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   new_frame->imu_bias.setZero();
   new_frame->raw_frame = raw_frame;
 
-  gtsam_ext::FrameCPU::Ptr frame_cpu(new gtsam_ext::FrameCPU(raw_frame->points));
+  gtsam_ext::PointCloudCPU::Ptr frame_cpu(new gtsam_ext::PointCloudCPU(raw_frame->points));
   frame_cpu->add_times(raw_frame->times);
 
   covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors, frame_cpu->normals_storage, frame_cpu->covs_storage);
@@ -133,7 +133,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
     // Create CT-GICP factor
     gtsam::NonlinearFactorGraph graph;
-    auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor_<gtsam_ext::iVox, gtsam_ext::Frame>>(X(current), Y(current), target_ivox, new_frame->frame, target_ivox);
+    auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor_<gtsam_ext::iVox, gtsam_ext::PointCloud>>(X(current), Y(current), target_ivox, new_frame->frame, target_ivox);
     factor->set_num_threads(params.num_threads);
     factor->set_max_corresponding_distance(params.max_correspondence_distance);
     graph.add(factor);
@@ -195,7 +195,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   frames.push_back(new_frame);
 
   // Transform points into the global coordinate and insert them into the iVox
-  auto transformed = std::make_shared<gtsam_ext::FrameCPU>(*new_frame->frame);
+  auto transformed = gtsam_ext::PointCloudCPU::clone(*new_frame->frame);
   for (int i = 0; i < transformed->size(); i++) {
     transformed->points[i] = new_frame->T_world_sensor() * new_frame->frame->points[i];
     transformed->covs[i] = new_frame->T_world_sensor().matrix() * new_frame->frame->covs[i] * new_frame->T_world_sensor().matrix().transpose();
@@ -252,7 +252,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     frame->imu_bias.setZero();
 
     frame->frame_id = FrameID::LIDAR;
-    frame->frame = std::make_shared<gtsam_ext::FrameCPU>(target_ivox->voxel_points());
+    frame->frame = std::make_shared<gtsam_ext::PointCloudCPU>(target_ivox->voxel_points());
 
     std::vector<EstimationFrame::ConstPtr> keyframes = {frame};
     Callbacks::on_update_keyframes(keyframes);

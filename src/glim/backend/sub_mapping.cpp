@@ -5,12 +5,10 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 
-#include <gtsam_ext/types/frame.hpp>
-#include <gtsam_ext/types/frame_cpu.hpp>
-#include <gtsam_ext/types/frame_gpu.hpp>
-#include <gtsam_ext/types/gaussian_voxelmap.hpp>
-#include <gtsam_ext/types/voxelized_frame_cpu.hpp>
-#include <gtsam_ext/types/voxelized_frame_gpu.hpp>
+#include <gtsam_ext/types/point_cloud_cpu.hpp>
+#include <gtsam_ext/types/point_cloud_gpu.hpp>
+#include <gtsam_ext/types/gaussian_voxelmap_cpu.hpp>
+#include <gtsam_ext/types/gaussian_voxelmap_gpu.hpp>
 #include <gtsam_ext/factors/integrated_gicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
 #include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
@@ -102,7 +100,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 #ifdef BUILD_GTSAM_EXT_GPU
     if (params.enable_gpu) {
       auto stream = std::static_pointer_cast<gtsam_ext::CUDAStream>(this->stream);
-      auto frame_gpu = std::make_shared<gtsam_ext::FrameGPU>(*frame->frame, *stream);
+      auto frame_gpu = gtsam_ext::PointCloudGPU::clone(*frame->frame, *stream);
       frame->frame = frame_gpu;
     }
 #endif
@@ -272,7 +270,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 }
 
 void SubMapping::insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame) {
-  gtsam_ext::Frame::ConstPtr deskewed_frame = odom_frame->frame;
+  gtsam_ext::PointCloud::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
   if (params.enable_imu && odom_frame->raw_frame) {
@@ -288,7 +286,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
       deskewing
         ->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
 
-    auto frame = std::make_shared<gtsam_ext::FrameCPU>(deskewed);
+    auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(deskewed);
     for (int i = 0; i < frame->size(); i++) {
       frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
     }
@@ -298,7 +296,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   }
 
   // Random sampling for registration error factors
-  gtsam_ext::Frame::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, params.keyframe_randomsampling_rate, mt);
+  gtsam_ext::PointCloud::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, params.keyframe_randomsampling_rate, mt);
 
   EstimationFrame::Ptr keyframe(new EstimationFrame);
   *keyframe = *odom_frame;
@@ -306,7 +304,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   if (params.enable_gpu) {
 #ifdef BUILD_GTSAM_EXT_GPU
     auto stream = std::static_pointer_cast<gtsam_ext::CUDAStream>(this->stream);
-    keyframe->frame = std::make_shared<gtsam_ext::FrameGPU>(*subsampled_frame, *stream);
+    keyframe->frame = gtsam_ext::PointCloudGPU::clone(*subsampled_frame, *stream);
     keyframe->voxelmaps.clear();
 
     for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
@@ -383,7 +381,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     submap->frames[i] = frame;
   }
 
-  std::vector<gtsam_ext::Frame::ConstPtr> keyframes_to_merge(keyframes.size());
+  std::vector<gtsam_ext::PointCloud::ConstPtr> keyframes_to_merge(keyframes.size());
   std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> poses_to_merge(keyframes.size());
   for (int i = 0; i < keyframes.size(); i++) {
     keyframes_to_merge[i] = keyframes[i]->frame;

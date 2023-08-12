@@ -90,7 +90,7 @@ private:
   std::any stream_buffer_roundrobin;
 
   std::vector<SubMap::Ptr> submaps;
-  std::vector<gtsam_ext::Frame::Ptr> subsampled_submaps;
+  std::vector<gtsam_ext::PointCloud::Ptr> subsampled_submaps;
 
   std::unique_ptr<gtsam::Values> new_values;
   std::unique_ptr<gtsam::NonlinearFactorGraph> new_factors;
