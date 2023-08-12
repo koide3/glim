@@ -110,9 +110,14 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     // Estimate sensor velocity from last sensor states
     gtsam::Vector6 last_twist = gtsam::Vector6::Zero();
     if (current >= 2) {
-      const double delta_time = (frames[last]->stamp + frames[last]->frame->times[frames[last]->frame->size() - 1]) - frames[last - 1]->stamp;
-      const gtsam::Pose3 delta_pose = smoother->calculateEstimate<gtsam::Pose3>(X(last - 1)).inverse() * smoother->calculateEstimate<gtsam::Pose3>(Y(last));
-      last_twist = 0.5 * gtsam::Pose3::Logmap(delta_pose) / delta_time;
+      if (!frames[last] || !frames[last - 1]) {
+        spdlog::warn("neither frames[last]={} nor frames[last - 1]={} is released!!", fmt::ptr(frames[last]), fmt::ptr(frames[last - 1]));
+        spdlog::warn("there might be a large time gap between point cloud frames");
+      } else {
+        const double delta_time = (frames[last]->stamp + frames[last]->frame->times[frames[last]->frame->size() - 1]) - frames[last - 1]->stamp;
+        const gtsam::Pose3 delta_pose = smoother->calculateEstimate<gtsam::Pose3>(X(last - 1)).inverse() * smoother->calculateEstimate<gtsam::Pose3>(Y(last));
+        last_twist = 0.5 * gtsam::Pose3::Logmap(delta_pose) / delta_time;
+      }
     }
 
     const auto& last_frame = frames[last];

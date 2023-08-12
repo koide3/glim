@@ -7,6 +7,7 @@
 #include <glim/frontend/odometry_estimation_base.hpp>
 
 namespace gtsam {
+class Pose3;
 class Values;
 class ImuFactor;
 class NonlinearFactorGraph;
@@ -32,7 +33,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   OdometryEstimationIMUParams();
-  ~OdometryEstimationIMUParams();
+  virtual ~OdometryEstimationIMUParams();
 
 public:
   // Sensor params;
