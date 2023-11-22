@@ -134,6 +134,10 @@ public:
   std::vector<T, Alloc> get_and_clear(int num_max) {
     std::vector<T, Alloc> buffer;
     std::lock_guard<std::mutex> lock(mutex);
+    if (values.empty()) {
+      return buffer;
+    }
+
     if (values.size() <= num_max) {
       buffer.assign(values.begin(), values.end());
       values.clear();

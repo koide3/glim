@@ -32,10 +32,16 @@ public:
 
   InterpolationHelperResult find(const double stamp, StampedValue* left_ptr, StampedValue* right_ptr, int* remove_cursor_ptr) const {
     if (values.empty() || values.back().first < stamp) {
+      if (!values.empty() && left_ptr) {
+        *left_ptr = values.back();
+      }
       return InterpolationHelperResult::WAITING;
     }
 
     if (values.front().first > stamp) {
+      if (right_ptr) {
+        *right_ptr = values.front();
+      }
       return InterpolationHelperResult::FAILURE;
     }
 
