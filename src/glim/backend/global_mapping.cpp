@@ -603,17 +603,17 @@ bool GlobalMapping::load(const std::string& path) {
     Callbacks::on_insert_submap(submap);
   }
 
+  bool corrupted_graph = false;
   gtsam::Values values;
   gtsam::NonlinearFactorGraph graph;
 
   spdlog::info("deserializing factor graph");
-  bool needs_recovery = false;
   try {
     gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
   } catch (std::exception& e) {
     spdlog::warn("failed to deserialize graph!!");
     spdlog::warn(e.what());
-    needs_recovery = true;
+    corrupted_graph = true;
   }
   spdlog::info("deserializing values");
   try {
@@ -621,7 +621,7 @@ bool GlobalMapping::load(const std::string& path) {
   } catch (std::exception& e) {
     spdlog::warn("failed to deserialize values!!");
     spdlog::warn(e.what());
-    needs_recovery = true;
+    corrupted_graph = true;
   }
   spdlog::info("|graph|={} |values|={}", graph.size(), values.size());
 
@@ -659,19 +659,35 @@ bool GlobalMapping::load(const std::string& path) {
     if (!values.exists(X(submap->id))) {
       spdlog::warn("insert missing pose value for submap {}", submap->id);
       values.insert_or_assign(X(submap->id), gtsam::Pose3(submap->T_world_origin.matrix()));
+      corrupted_graph = true;
+    }
+
+    if (!values.exists(E(submap->id * 2)) || !values.exists(E(submap->id * 2 + 1))) {
+      spdlog::warn("insert missing endpoint values for submap {}", submap->id);
+      values.insert_or_assign(E(submap->id * 2), gtsam::Pose3((submap->T_world_origin * submap->T_origin_endpoint_L).matrix()));
+      values.insert_or_assign(E(submap->id * 2 + 1), gtsam::Pose3((submap->T_world_origin * submap->T_origin_endpoint_R).matrix()));
+      corrupted_graph = true;
     }
 
     if (!values.exists(V(submap->id * 2)) || !values.exists(V(submap->id * 2 + 1))) {
       spdlog::warn("insert missing velocity values for submap {}", submap->id);
       values.insert_or_assign(V(submap->id * 2), gtsam::Vector3(0.0, 0.0, 0.0));
       values.insert_or_assign(V(submap->id * 2 + 1), gtsam::Vector3(0.0, 0.0, 0.0));
+      corrupted_graph = true;
     }
 
     if (!values.exists(B(submap->id * 2)) || !values.exists(B(submap->id * 2 + 1))) {
       spdlog::warn("insert missing bias values for submap {}", submap->id);
       values.insert_or_assign(B(submap->id * 2), gtsam::imuBias::ConstantBias(gtsam::Vector6::Zero()));
       values.insert_or_assign(B(submap->id * 2 + 1), gtsam::imuBias::ConstantBias(gtsam::Vector6::Zero()));
+      corrupted_graph = true;
     }
+  }
+
+  if (corrupted_graph) {
+    spdlog::warn("disable optimization because the loaded graph is corrupted");
+    gtsam_ext::ISAM2Params isam2_params;
+    isam2.reset(new gtsam_ext::ISAM2ExtDummy(isam2_params));
   }
 
   spdlog::info("optimize");
