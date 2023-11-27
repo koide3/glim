@@ -455,9 +455,15 @@ void GlobalMapping::save(const std::string& path) {
 
   try {
     gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
+  } catch (boost::archive::archive_exception e) {
+    spdlog::warn("failed to serialize graph!!");
+    spdlog::warn(e.what());
+  }
+
+  try {
     gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
   } catch (boost::archive::archive_exception e) {
-    spdlog::warn("failed to serialize factor graph!!");
+    spdlog::warn("failed to serialize values!!");
     spdlog::warn(e.what());
   }
 
@@ -601,9 +607,23 @@ bool GlobalMapping::load(const std::string& path) {
   gtsam::NonlinearFactorGraph graph;
 
   spdlog::info("deserializing factor graph");
-  gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
+  bool needs_recovery = false;
+  try {
+    gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
+  } catch (std::exception& e) {
+    spdlog::warn("failed to deserialize graph!!");
+    spdlog::warn(e.what());
+    needs_recovery = true;
+  }
   spdlog::info("deserializing values");
-  gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
+  try {
+    gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
+  } catch (std::exception& e) {
+    spdlog::warn("failed to deserialize values!!");
+    spdlog::warn(e.what());
+    needs_recovery = true;
+  }
+  spdlog::info("|graph|={} |values|={}", graph.size(), values.size());
 
   spdlog::info("creating matching cost factors");
   for (const auto& factor : matching_cost_factors) {
@@ -631,6 +651,26 @@ bool GlobalMapping::load(const std::string& path) {
       }
     } else {
       spdlog::warn("unsupported matching cost factor type ({})", type);
+    }
+  }
+
+  spdlog::info("validating the graph");
+  for (const auto& submap : submaps) {
+    if (!values.exists(X(submap->id))) {
+      spdlog::warn("insert missing pose value for submap {}", submap->id);
+      values.insert_or_assign(X(submap->id), gtsam::Pose3(submap->T_world_origin.matrix()));
+    }
+
+    if (!values.exists(V(submap->id * 2)) || !values.exists(V(submap->id * 2 + 1))) {
+      spdlog::warn("insert missing velocity values for submap {}", submap->id);
+      values.insert_or_assign(V(submap->id * 2), gtsam::Vector3(0.0, 0.0, 0.0));
+      values.insert_or_assign(V(submap->id * 2 + 1), gtsam::Vector3(0.0, 0.0, 0.0));
+    }
+
+    if (!values.exists(B(submap->id * 2)) || !values.exists(B(submap->id * 2 + 1))) {
+      spdlog::warn("insert missing bias values for submap {}", submap->id);
+      values.insert_or_assign(B(submap->id * 2), gtsam::imuBias::ConstantBias(gtsam::Vector6::Zero()));
+      values.insert_or_assign(B(submap->id * 2 + 1), gtsam::imuBias::ConstantBias(gtsam::Vector6::Zero()));
     }
   }
 
