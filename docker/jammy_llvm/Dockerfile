@@ -2,7 +2,7 @@ FROM koide3/gtsam_docker:jammy_cuda11.8
 
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
-    libfmt-dev libspdlog-dev libopencv-dev \
+  libfmt-dev libspdlog-dev libopencv-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -34,6 +34,7 @@ RUN sed -i '496{s/^/\/\//}' /usr/lib/llvm-14/lib/clang/14.0.0/include/omp.h
 WORKDIR /root/glim/build
 RUN CC=clang CXX=clang++ cmake .. \
   -DBUILD_WITH_CUDA=ON \
+  -DBUILD_WITH_CUDA_MULTIARCH=ON \
   -DBUILD_WITH_VIEWER=ON \
   -DBUILD_WITH_MARCH_NATIVE=OFF \
   -DCMAKE_BUILD_TYPE=Release

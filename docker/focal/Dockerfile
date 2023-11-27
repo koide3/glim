@@ -2,7 +2,7 @@ FROM koide3/gtsam_docker:focal_cuda11.2
 
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
-    libfmt-dev libspdlog-dev libopencv-dev \
+  libfmt-dev libspdlog-dev libopencv-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -29,6 +29,7 @@ RUN make -j$(nproc)
 WORKDIR /root/glim/build
 RUN cmake .. \
   -DBUILD_WITH_CUDA=ON \
+  -DBUILD_WITH_CUDA_MULTIARCH=ON \
   -DBUILD_WITH_VIEWER=ON \
   -DBUILD_WITH_MARCH_NATIVE=OFF \
   -DCMAKE_BUILD_TYPE=Release
