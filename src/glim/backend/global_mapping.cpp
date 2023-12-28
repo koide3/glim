@@ -62,6 +62,8 @@ GlobalMappingParams::GlobalMappingParams() {
   use_isam2_dogleg = config.param<bool>("global_mapping", "use_isam2_dogleg", false);
   isam2_relinearize_skip = config.param<int>("global_mapping", "isam2_relinearize_skip", 1);
   isam2_relinearize_thresh = config.param<double>("global_mapping", "isam2_relinearize_thresh", 0.1);
+
+  init_pose_damping_scale = config.param<double>("global_mapping", "init_pose_damping_scale", 1e10);
 }
 
 GlobalMappingParams::~GlobalMappingParams() {}
@@ -139,7 +141,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   submap->drop_frame_points();
 
   if (current == 0) {
-    new_factors->emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, 1e10);
+    new_factors->emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, params.init_pose_damping_scale);
   } else {
     new_factors->add(*create_between_factors(current));
     new_factors->add(*create_matching_cost_factors(current));

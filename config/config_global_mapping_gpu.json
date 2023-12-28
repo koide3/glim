@@ -13,6 +13,7 @@
     "so_name": "libglobal_mapping.so",
     "enable_imu": true,
     "enable_optimization": true,
+    "init_pose_damping_scale": 1e10,
     // Relative pose factors
     "create_between_factors": false,
     "between_registration_type": "GICP",

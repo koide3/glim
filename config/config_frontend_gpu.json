@@ -25,6 +25,7 @@
     // Initialization params
     "initialization_mode": "LOOSE",
     "initialization_window_size": 1.0,
+    "init_pose_damping_scale": 1e10,
     // Optimization params
     "smoother_lag": 5.0,
     "use_isam2_dogleg": false,
