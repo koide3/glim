@@ -46,7 +46,7 @@ public:
   bool estimate_init_state;
   Eigen::Isometry3d init_T_world_imu;
   Eigen::Vector3d init_v_world_imu;
-  double init_pose_dampling_scale;
+  double init_pose_damping_scale;
 
   // Optimization params
   double smoother_lag;

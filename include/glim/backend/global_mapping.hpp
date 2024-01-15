@@ -47,6 +47,8 @@ public:
   bool use_isam2_dogleg;
   double isam2_relinearize_skip;
   double isam2_relinearize_thresh;
+
+  double init_pose_damping_scale;
 };
 
 /**

@@ -51,7 +51,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
   this->estimate_init_state = !init_T_world_imu && !init_v_world_imu;
   this->init_T_world_imu = init_T_world_imu.value_or(Eigen::Isometry3d::Identity());
   this->init_v_world_imu = init_v_world_imu.value_or(Eigen::Vector3d::Zero());
-  this->init_pose_dampling_scale = 1e10;
+  this->init_pose_damping_scale = config.param<double>("odometry_estimation", "init_pose_damping_scale", 1e10);
 
   smoother_lag = config.param<double>("odometry_estimation", "smoother_lag", 5.0);
   use_isam2_dogleg = config.param<bool>("odometry_estimation", "use_isam2_dogleg", false);
@@ -182,7 +182,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     new_values.insert(B(0), gtsam::imuBias::ConstantBias(new_frame->imu_bias));
 
     // Prior for initial IMU states
-    new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, params->init_pose_dampling_scale);
+    new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, params->init_pose_damping_scale);
     new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0));
     new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(B(0), 6, 1e2);
     new_factors.add(create_factors(current, nullptr, new_values));
