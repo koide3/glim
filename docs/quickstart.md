@@ -6,11 +6,14 @@
 2. Download [test data](https://zenodo.org/record/7233945).  
     ROS1: [os1_128_01_downsampled.bag (515MB)](https://zenodo.org/record/7233945/files/os1_128_01_downsampled.bag?download=1) or [os1_128_01.bag (7.3GB)](https://zenodo.org/record/7233945/files/os1_128_01.bag?download=1)  
     ROS2: [os1_128_01_downsampled.tar.gz (426MB)](https://zenodo.org/record/7233945/files/os1_128_01_downsampled.tar.gz?download=1) or [os1_128_01.tar.gz (3.2GB)](https://zenodo.org/record/7233945/files/os1_128_01.tar.gz?download=1)
+
+    Alternative links (Google Drive): ROS1 ([downsampled](https://drive.google.com/file/d/1Oc8D0-l5vmEoZMQLqu8Q6JRwBWl3UnLh/view?usp=drive_link), [raw](https://drive.google.com/file/d/1nDTqKDtMvKjmuCCzrdlIoRbRSYYXfv_B/view?usp=drive_link))  ROS2 ([downsampled](https://drive.google.com/file/d/144ksLyfs4-OO2WlhueEespLBkKS1x889/view?usp=drive_link), [raw](https://drive.google.com/file/d/1eQ70dUVmwsBijyLMcBPvGLpS1I3X0XTk/view?usp=drive_link))
+
 3. Confirm the sensor configuration and ROS topic parameters are set as follows:
 ```json
 glim/config/config.json
-  "config_frontend": "config_frontend_cpu.json",
-  "config_backend": "config_backend_cpu.json",
+  "config_frontend": "config_frontend_gpu.json",
+  "config_backend": "config_backend_gpu.json",
 glim/config/config_sensors.json
   "T_lidar_imu": [-0.006, 0.012, -0.008, 0, 0, 0, 1],
 glim/config/config_ros.json
@@ -19,7 +22,7 @@ glim/config/config_ros.json
 ```
 
 !!! tip
-    If you want to try the **GPU-based odometry estimation and global optimization**, set ```config_frontend``` to ```config_frontend_gpu.json``` and ```config_backend``` to ```config_backend_gpu.json```.
+    If you want to try the **CPU-based odometry estimation and global optimization**, set ```config_frontend``` to ```config_frontend_cpu.json``` and ```config_backend``` to ```config_backend_cpu.json```.
 
 !!! tip
     If you want to try the **LiDAR-only odometry estimation without IMU data**, set ```config_frontend``` to ```config_frontend_ct.json```, and set ```enable_imu``` in ```config_backend_cpu.json``` to ```false``` for both the sub- and global mapping modules.
