@@ -40,7 +40,7 @@ Tested on Ubuntu 20.04 with CUDA 11.6 / Ubuntu 22.04 with CUDA 11.8 / NVIDIA Jet
 
 ## License
 
-This package is released under the MIT license. For commercial support, please contact ```k.koide@aist.go.jp```.
+For commercial support, please contact ```k.koide@aist.go.jp```.
 
 ## Contact
 [Kenji Koide](https://staff.aist.go.jp/k.koide/), k.koide@aist.go.jp  
