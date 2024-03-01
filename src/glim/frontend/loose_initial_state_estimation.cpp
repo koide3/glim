@@ -38,6 +38,11 @@ LooseInitialStateEstimation::LooseInitialStateEstimation(const Eigen::Isometry3d
 LooseInitialStateEstimation::~LooseInitialStateEstimation() {}
 
 void LooseInitialStateEstimation::insert_frame(const PreprocessedFrame::ConstPtr& raw_frame) {
+  if (raw_frame->size() < 50) {
+    spdlog::warn("skip initial state estimation for a frame with too few points ({} points)", raw_frame->size());
+    return;
+  }
+
   auto frame = std::make_shared<gtsam_ext::FrameCPU>(raw_frame->points);
   frame->add_covs(covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors));
 
