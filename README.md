@@ -1,5 +1,11 @@
 ![GLIM](docs/assets/logo2.png "GLIM Logo")
 
+## Important Notes
+
+Releases after v0.1.1 (239a75cf2bbc2dcc594dee3d801b005ae04a19b7, Nov, 27th, 2023) can be subject to the change to a non-permissive license. We have not decided anything on the new license model. Note that v0.1.1 and earlier remain on the MIT license.
+
+## Introduction
+
 **GLIM** is a versatile and extensible range-based 3D mapping framework.
 
 - ***Accuracy:*** The backend of GLIM is based on global matching cost minimization that enables to accurately retain the global consistency of a map. Optionally, GPU acceleration can be used to maximize the mapping speed and quality.
@@ -34,7 +40,7 @@ Tested on Ubuntu 20.04 with CUDA 11.6 / Ubuntu 22.04 with CUDA 11.8 / NVIDIA Jet
 
 ## License
 
-This package is released under the MIT license. For commercial support, please contact ```k.koide@aist.go.jp```.
+For commercial support, please contact ```k.koide@aist.go.jp```.
 
 ## Contact
 [Kenji Koide](https://staff.aist.go.jp/k.koide/), k.koide@aist.go.jp  
