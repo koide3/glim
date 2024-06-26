@@ -7,7 +7,7 @@
 #include <boost/format.hpp>
 
 #include <Eigen/Core>
-#include <gtsam_ext/types/point_cloud.hpp>
+#include <gtsam_points/types/point_cloud.hpp>
 #include <glim/util/raw_points.hpp>
 
 #ifdef GLIM_ROS2
@@ -210,7 +210,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
   return extract_raw_points(*points_msg);
 }
 
-static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_ext::PointCloud& frame) {
+static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_points::PointCloud& frame) {
   PointCloud2Ptr msg(new PointCloud2);
   msg->header.frame_id = frame_id;
   msg->header.stamp = from_sec(stamp);

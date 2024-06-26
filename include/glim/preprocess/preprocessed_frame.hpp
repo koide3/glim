@@ -26,9 +26,9 @@ public:
   double stamp;          // Timestamp at the beginning of the scan
   double scan_end_time;  // Timestamp at the end of the scan
 
-  std::vector<double> times;                                                       // Point timestamps w.r.t. the first pt
-  std::vector<double> intensities;                                                 // Point intensities
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;  // Points (homogeneous coordinates)
+  std::vector<double> times;            // Point timestamps w.r.t. the first pt
+  std::vector<double> intensities;      // Point intensities
+  std::vector<Eigen::Vector4d> points;  // Points (homogeneous coordinates)
 
   int k_neighbors;             // Number of neighbors of each point
   std::vector<int> neighbors;  // k-nearest neighbors of each point

@@ -8,14 +8,14 @@ CloudDeskewing::CloudDeskewing() {}
 
 CloudDeskewing::~CloudDeskewing() {}
 
-std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDeskewing::deskew(
+std::vector<Eigen::Vector4d> CloudDeskewing::deskew(
   const Eigen::Isometry3d& T_imu_lidar,
   const Eigen::Vector3d& linear_vel,
   const Eigen::Vector3d& angular_vel,
   const std::vector<double>& times,
-  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points) {
+  const std::vector<Eigen::Vector4d>& points) {
   if (times.empty()) {
-    return std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>();
+    return std::vector<Eigen::Vector4d>();
   }
 
   const Eigen::Isometry3d T_lidar_imu = T_imu_lidar.inverse();
@@ -35,14 +35,14 @@ std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDes
     time_indices.push_back(time_table.size() - 1);
   }
 
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> T_lidar0_lidar1(time_table.size());
+  std::vector<Eigen::Isometry3d> T_lidar0_lidar1(time_table.size());
   for (int i = 0; i < time_table.size(); i++) {
     const double dt = time_table[i];
     const Eigen::Isometry3d T_imu1_imu0(gtsam::Pose3::Expmap(dt * vel).matrix());
     T_lidar0_lidar1[i] = T_lidar_imu * T_imu1_imu0.inverse() * T_imu_lidar;
   }
 
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> deskewed(points.size());
+  std::vector<Eigen::Vector4d> deskewed(points.size());
   for (int i = 0; i < points.size(); i++) {
     const auto& T_l0_l1 = T_lidar0_lidar1[time_indices[i]];
     deskewed[i] = T_l0_l1 * points[i];
@@ -51,13 +51,13 @@ std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDes
   return deskewed;
 }
 
-std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDeskewing::deskew(
+std::vector<Eigen::Vector4d> CloudDeskewing::deskew(
   const Eigen::Isometry3d& T_imu_lidar,
   const std::vector<double>& imu_times,
-  const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& imu_poses,
+  const std::vector<Eigen::Isometry3d>& imu_poses,
   const double stamp,
   const std::vector<double>& times,
-  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points) {
+  const std::vector<Eigen::Vector4d>& points) {
   //
   if (imu_poses.empty()) {
     return deskew(T_imu_lidar, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), times, points);
@@ -78,7 +78,7 @@ std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDes
   }
 
   const Eigen::Isometry3d T_lidar_imu = T_imu_lidar.inverse();
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> T_lidar0_lidar1(time_table.size());
+  std::vector<Eigen::Isometry3d> T_lidar0_lidar1(time_table.size());
 
   int imu_cursor = 0;
   Eigen::Isometry3d T_imu0_world;  // IMU pose at the very beginning of the scan
@@ -120,7 +120,7 @@ std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> CloudDes
   }
 
   // Transform points
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> deskewed(points.size());
+  std::vector<Eigen::Vector4d> deskewed(points.size());
   for (int i = 0; i < points.size(); i++) {
     deskewed[i] = T_lidar0_lidar1[time_indices[i]] * points[i];
   }

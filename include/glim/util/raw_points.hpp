@@ -18,11 +18,11 @@ public:
   int size() const { return points.size(); }
 
 public:
-  double stamp;                                                                    ///< Timestamp of the first point
-  std::vector<double> times;                                                       ///< Per-point timestamps relative to the first point
-  std::vector<double> intensities;                                                 ///< Point intensities
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points;  ///< Point coordinates
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> colors;  ///< Point colors
+  double stamp;                         ///< Timestamp of the first point
+  std::vector<double> times;            ///< Per-point timestamps relative to the first point
+  std::vector<double> intensities;      ///< Point intensities
+  std::vector<Eigen::Vector4d> points;  ///< Point coordinates
+  std::vector<Eigen::Vector4d> colors;  ///< Point colors
 };
 
 }  // namespace glim

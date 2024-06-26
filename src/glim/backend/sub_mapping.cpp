@@ -5,16 +5,16 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 
-#include <gtsam_ext/types/point_cloud_cpu.hpp>
-#include <gtsam_ext/types/point_cloud_gpu.hpp>
-#include <gtsam_ext/types/gaussian_voxelmap_cpu.hpp>
-#include <gtsam_ext/types/gaussian_voxelmap_gpu.hpp>
-#include <gtsam_ext/factors/integrated_gicp_factor.hpp>
-#include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
-#include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
-#include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
-#include <gtsam_ext/cuda/cuda_stream.hpp>
-#include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
+#include <gtsam_points/types/point_cloud_gpu.hpp>
+#include <gtsam_points/types/gaussian_voxelmap_cpu.hpp>
+#include <gtsam_points/types/gaussian_voxelmap_gpu.hpp>
+#include <gtsam_points/factors/integrated_gicp_factor.hpp>
+#include <gtsam_points/factors/integrated_vgicp_factor.hpp>
+#include <gtsam_points/factors/integrated_vgicp_factor_gpu.hpp>
+#include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
+#include <gtsam_points/cuda/cuda_stream.hpp>
+#include <gtsam_points/cuda/stream_temp_buffer_roundrobin.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
@@ -74,9 +74,9 @@ SubMapping::SubMapping(const SubMappingParams& params) : params(params) {
   values.reset(new gtsam::Values);
   graph.reset(new gtsam::NonlinearFactorGraph);
 
-#ifdef BUILD_GTSAM_EXT_GPU
-  stream = std::make_shared<gtsam_ext::CUDAStream>();
-  stream_buffer_roundrobin = std::make_shared<gtsam_ext::StreamTempBufferRoundRobin>(8);
+#ifdef BUILD_GTSAM_POINTS_GPU
+  stream = std::make_shared<gtsam_points::CUDAStream>();
+  stream_buffer_roundrobin = std::make_shared<gtsam_points::StreamTempBufferRoundRobin>(8);
 #endif
 }
 
@@ -97,10 +97,10 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     EstimationFrame::Ptr frame(new EstimationFrame);
     *frame = *odom_frame;
 
-#ifdef BUILD_GTSAM_EXT_GPU
+#ifdef BUILD_GTSAM_POINTS_GPU
     if (params.enable_gpu) {
-      auto stream = std::static_pointer_cast<gtsam_ext::CUDAStream>(this->stream);
-      auto frame_gpu = gtsam_ext::PointCloudGPU::clone(*frame->frame, *stream);
+      auto stream = std::static_pointer_cast<gtsam_points::CUDAStream>(this->stream);
+      auto frame_gpu = gtsam_points::PointCloudGPU::clone(*frame->frame, *stream);
       frame->frame = frame_gpu;
     }
 #endif
@@ -134,7 +134,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
         spdlog::warn("use an identity covariance because either of last or current frames have too few points (last={} current={})", last_frame->size(), current_frame->size());
         noise_model = gtsam::noiseModel::Isotropic::Precision(6, 1e3);
       } else {
-        auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(X(last), X(current), last_frame, current_frame);
+        auto factor = gtsam::make_shared<gtsam_points::IntegratedGICPFactor>(X(last), X(current), last_frame, current_frame);
         auto linearized = factor->linearize(*values);
         // graph->emplace_shared<gtsam::LinearContainerFactor>(linearized, *values);
 
@@ -184,7 +184,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
         spdlog::warn("voxelmap or odom_frame is empty!! (voxelmap={} odom_frame={})", keyframes.back()->voxelmaps.size(), odom_frame->frame->size());
       } else {
         const double overlap =
-          gtsam_ext::overlap_auto(keyframes.back()->voxelmaps.back(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
+          gtsam_points::overlap_auto(keyframes.back()->voxelmaps.back(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
         insert_as_keyframe = overlap < params.max_keyframe_overlap;
       }
     }
@@ -221,12 +221,12 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
             continue;
           }
 
-          graph->emplace_shared<gtsam_ext::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame);
+          graph->emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame);
         }
       }
-#ifdef BUILD_GTSAM_EXT_GPU
+#ifdef BUILD_GTSAM_POINTS_GPU
       else if (params.registration_error_factor_type == "VGICP_GPU") {
-        auto roundrobin = std::static_pointer_cast<gtsam_ext::StreamTempBufferRoundRobin>(stream_buffer_roundrobin);
+        auto roundrobin = std::static_pointer_cast<gtsam_points::StreamTempBufferRoundRobin>(stream_buffer_roundrobin);
         auto stream_buffer = roundrobin->get_stream_buffer();
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
@@ -237,7 +237,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
             continue;
           }
 
-          auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame, stream, buffer);
+          auto factor = gtsam::make_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame, stream, buffer);
           graph->add(factor);
         }
       }
@@ -270,7 +270,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 }
 
 void SubMapping::insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame) {
-  gtsam_ext::PointCloud::ConstPtr deskewed_frame = odom_frame->frame;
+  gtsam_points::PointCloud::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
   if (params.enable_imu && odom_frame->raw_frame) {
@@ -279,14 +279,14 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
 
     // TODO: smoothing-based pose estimation
     std::vector<double> imu_pred_times;
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> imu_pred_poses;
+    std::vector<Eigen::Isometry3d> imu_pred_poses;
     imu_integration->integrate_imu(odom_frame->raw_frame->stamp, odom_frame->raw_frame->scan_end_time, nav_world_imu, imu_bias, imu_pred_times, imu_pred_poses);
 
     auto deskewed =
       deskewing
         ->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
 
-    auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(deskewed);
+    auto frame = std::make_shared<gtsam_points::PointCloudCPU>(deskewed);
     for (int i = 0; i < frame->size(); i++) {
       frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
     }
@@ -296,31 +296,31 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   }
 
   // Random sampling for registration error factors
-  gtsam_ext::PointCloud::Ptr subsampled_frame = gtsam_ext::random_sampling(deskewed_frame, params.keyframe_randomsampling_rate, mt);
+  gtsam_points::PointCloud::Ptr subsampled_frame = gtsam_points::random_sampling(deskewed_frame, params.keyframe_randomsampling_rate, mt);
 
   EstimationFrame::Ptr keyframe(new EstimationFrame);
   *keyframe = *odom_frame;
 
   if (params.enable_gpu) {
-#ifdef BUILD_GTSAM_EXT_GPU
-    auto stream = std::static_pointer_cast<gtsam_ext::CUDAStream>(this->stream);
-    keyframe->frame = gtsam_ext::PointCloudGPU::clone(*subsampled_frame, *stream);
+#ifdef BUILD_GTSAM_POINTS_GPU
+    auto stream = std::static_pointer_cast<gtsam_points::CUDAStream>(this->stream);
+    keyframe->frame = gtsam_points::PointCloudGPU::clone(*subsampled_frame, *stream);
     keyframe->voxelmaps.clear();
 
     for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
       const double resolution = params.keyframe_voxel_resolution * std::pow(params.keyframe_voxelmap_scaling_factor, i);
-      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
+      auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
       voxelmap->insert(*keyframe->frame);
       keyframe->voxelmaps.push_back(voxelmap);
     }
 #else
-    spdlog::warn("GPU is enabled for sub_mapping but gtsam_ext was built without CUDA!!");
+    spdlog::warn("GPU is enabled for sub_mapping but gtsam_points was built without CUDA!!");
 #endif
   } else {
     keyframe->voxelmaps.clear();
     for (int i = 0; i < params.keyframe_voxelmap_levels; i++) {
       const double resolution = params.keyframe_voxel_resolution * std::pow(params.keyframe_voxelmap_scaling_factor, i);
-      auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapCPU>(resolution);
+      auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapCPU>(resolution);
       voxelmap->insert(*keyframe->frame);
       keyframe->voxelmaps.push_back(voxelmap);
     }
@@ -339,12 +339,12 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
 
   // Optimization
   Callbacks::on_optimize_submap(*graph, *values);
-  gtsam_ext::LevenbergMarquardtExtParams lm_params;
+  gtsam_points::LevenbergMarquardtExtParams lm_params;
   lm_params.setMaxIterations(20);
   if (Callbacks::on_optimization_status) {
-    lm_params.callback = [](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) { Callbacks::on_optimization_status(status, values); };
+    lm_params.callback = [](const gtsam_points::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) { Callbacks::on_optimization_status(status, values); };
   }
-  gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
+  gtsam_points::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
   if (params.enable_optimization) {
     try {
       gtsam::Values optimized = optimizer.optimize();
@@ -381,22 +381,22 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     submap->frames[i] = frame;
   }
 
-  std::vector<gtsam_ext::PointCloud::ConstPtr> keyframes_to_merge(keyframes.size());
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> poses_to_merge(keyframes.size());
+  std::vector<gtsam_points::PointCloud::ConstPtr> keyframes_to_merge(keyframes.size());
+  std::vector<Eigen::Isometry3d> poses_to_merge(keyframes.size());
   for (int i = 0; i < keyframes.size(); i++) {
     keyframes_to_merge[i] = keyframes[i]->frame;
     poses_to_merge[i] = submap->T_world_origin.inverse() * Eigen::Isometry3d(values->at<gtsam::Pose3>(X(keyframe_indices[i])).matrix());
   }
 
   // TODO: improve merging process
-#ifdef BUILD_GTSAM_EXT_GPU
+#ifdef BUILD_GTSAM_POINTS_GPU
   if (params.enable_gpu) {
-    // submap->frame = gtsam_ext::merge_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution);
+    // submap->frame = gtsam_points::merge_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution);
   }
 #endif
 
   if (submap->frame == nullptr) {
-    submap->frame = gtsam_ext::merge_frames_auto(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution);
+    submap->frame = gtsam_points::merge_frames_auto(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution);
   }
 
   return submap;

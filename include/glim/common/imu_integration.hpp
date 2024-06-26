@@ -62,7 +62,7 @@ public:
     const gtsam::NavState& state,
     const gtsam::imuBias::ConstantBias& bias,
     std::vector<double>& pred_times,
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& pred_poses);
+    std::vector<Eigen::Isometry3d>& pred_poses);
 
   /**
    * @brief Integrate IMU measurements and predict IMU poses in a time range
@@ -82,9 +82,9 @@ public:
     const gtsam::NavState& state,
     const gtsam::imuBias::ConstantBias& bias,
     std::vector<double>& pred_times,
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& pred_poses,
-    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& pred_vels,
-    std::vector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& measurements);
+    std::vector<Eigen::Isometry3d>& pred_poses,
+    std::vector<Eigen::Vector3d>& pred_vels,
+    std::vector<Eigen::Matrix<double, 7, 1>>& measurements);
 
   /**
    * @brief Erase IMU data before the given index
@@ -100,10 +100,10 @@ public:
   /**
    * @brief IMU data in queue
    */
-  const std::deque<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& imu_data_in_queue() const;
+  const std::deque<Eigen::Matrix<double, 7, 1>>& imu_data_in_queue() const;
 
 private:
   std::shared_ptr<gtsam::PreintegratedImuMeasurements> imu_measurements;
-  std::deque<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>> imu_queue;
+  std::deque<Eigen::Matrix<double, 7, 1>> imu_queue;
 };
 }  // namespace glim

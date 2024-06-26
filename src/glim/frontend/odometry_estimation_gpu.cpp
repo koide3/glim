@@ -5,18 +5,19 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 
-#include <gtsam_ext/cuda/cuda_stream.hpp>
-#include <gtsam_ext/cuda/stream_temp_buffer_roundrobin.hpp>
-#include <gtsam_ext/types/point_cloud_gpu.hpp>
-#include <gtsam_ext/types/gaussian_voxelmap_cpu.hpp>
-#include <gtsam_ext/types/gaussian_voxelmap_gpu.hpp>
-#include <gtsam_ext/factors/linear_damping_factor.hpp>
-#include <gtsam_ext/factors/integrated_gicp_factor.hpp>
-#include <gtsam_ext/factors/integrated_vgicp_factor.hpp>
-#include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
-#include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_ext.hpp>
-#include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
-#include <gtsam_ext/cuda/nonlinear_factor_set_gpu.hpp>
+#include <gtsam_points/cuda/cuda_stream.hpp>
+#include <gtsam_points/cuda/stream_temp_buffer_roundrobin.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
+#include <gtsam_points/types/point_cloud_gpu.hpp>
+#include <gtsam_points/types/gaussian_voxelmap_cpu.hpp>
+#include <gtsam_points/types/gaussian_voxelmap_gpu.hpp>
+#include <gtsam_points/factors/linear_damping_factor.hpp>
+#include <gtsam_points/factors/integrated_gicp_factor.hpp>
+#include <gtsam_points/factors/integrated_vgicp_factor.hpp>
+#include <gtsam_points/factors/integrated_vgicp_factor_gpu.hpp>
+#include <gtsam_points/optimizers/incremental_fixed_lag_smoother_ext.hpp>
+#include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
+#include <gtsam_points/cuda/nonlinear_factor_set_gpu.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
@@ -70,8 +71,8 @@ OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& 
   entropy_running_average = 0.0;
   marginalized_cursor = 0;
 
-  stream.reset(new gtsam_ext::CUDAStream());
-  stream_buffer_roundrobin.reset(new gtsam_ext::StreamTempBufferRoundRobin());
+  stream.reset(new gtsam_points::CUDAStream());
+  stream_buffer_roundrobin.reset(new gtsam_points::StreamTempBufferRoundRobin());
 }
 
 OdometryEstimationGPU::~OdometryEstimationGPU() {
@@ -83,14 +84,14 @@ OdometryEstimationGPU::~OdometryEstimationGPU() {
 void OdometryEstimationGPU::create_frame(EstimationFrame::Ptr& new_frame) {
   const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
 
-  new_frame->frame = gtsam_ext::PointCloudGPU::clone(*new_frame->frame);
+  new_frame->frame = gtsam_points::PointCloudGPU::clone(*new_frame->frame);
   for (int i = 0; i < params->voxelmap_levels; i++) {
     if (!new_frame->frame->size()) {
       break;
     }
 
     const double resolution = params->voxel_resolution * std::pow(params->voxelmap_scaling_factor, i);
-    auto voxelmap = std::make_shared<gtsam_ext::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
+    auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
     voxelmap->insert(*new_frame->frame);
     new_frame->voxelmaps.push_back(voxelmap);
   }
@@ -131,7 +132,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int curr
     const auto& buffer = stream_buffer.second;
 
     for (const auto& voxelmap : target->voxelmaps) {
-      auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(target_key, source_key, voxelmap, source->frame, stream, buffer);
+      auto factor = gtsam::make_shared<gtsam_points::IntegratedVGICPFactorGPU>(target_key, source_key, voxelmap, source->frame, stream, buffer);
       factor->set_enable_surface_validation(true);
       factors.add(factor);
     }
@@ -148,7 +149,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int curr
     const auto& buffer = stream_buffer.second;
 
     for (const auto& voxelmap : target->voxelmaps) {
-      auto factor = gtsam::make_shared<gtsam_ext::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, voxelmap, source->frame, stream, buffer);
+      auto factor = gtsam::make_shared<gtsam_points::IntegratedVGICPFactorGPU>(fixed_target_pose, source_key, voxelmap, source->frame, stream, buffer);
       factor->set_enable_surface_validation(true);
       factors.add(factor);
     }
@@ -211,14 +212,14 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
     return;
   }
 
-  std::vector<gtsam_ext::GaussianVoxelMap::ConstPtr> keyframes_(keyframes.size());
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> delta_from_keyframes(keyframes.size());
+  std::vector<gtsam_points::GaussianVoxelMap::ConstPtr> keyframes_(keyframes.size());
+  std::vector<Eigen::Isometry3d> delta_from_keyframes(keyframes.size());
   for (int i = 0; i < keyframes.size(); i++) {
     keyframes_[i] = keyframes[i]->voxelmaps.back();
     delta_from_keyframes[i] = keyframes[i]->T_world_imu.inverse() * frames[current]->T_world_imu;
   }
 
-  const double overlap = gtsam_ext::overlap_gpu(keyframes_, frames[current]->frame, delta_from_keyframes, *stream);
+  const double overlap = gtsam_points::overlap_gpu(keyframes_, frames[current]->frame, delta_from_keyframes, *stream);
   if (overlap > params->keyframe_max_overlap) {
     return;
   }
@@ -235,7 +236,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   // Remove keyframes without overlap to the new keyframe
   for (int i = 0; i < keyframes.size(); i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelmaps.back(), new_keyframe->frame, delta, *stream);
+    const double overlap = gtsam_points::overlap_gpu(keyframes[i]->voxelmaps.back(), new_keyframe->frame, delta, *stream);
     if (overlap < params->keyframe_min_overlap) {
       marginalized_keyframes.push_back(keyframes[i]);
       keyframes.erase(keyframes.begin() + i);
@@ -252,10 +253,10 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
   std::vector<double> scores(keyframes.size() - 1, 0.0);
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const auto& keyframe = keyframes[i];
-    const double overlap_latest = gtsam_ext::overlap_gpu(keyframe->voxelmaps.back(), new_keyframe->frame, keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu, *stream);
+    const double overlap_latest = gtsam_points::overlap_gpu(keyframe->voxelmaps.back(), new_keyframe->frame, keyframe->T_world_imu.inverse() * new_keyframe->T_world_imu, *stream);
 
-    std::vector<gtsam_ext::GaussianVoxelMap::ConstPtr> other_keyframes;
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> delta_from_others;
+    std::vector<gtsam_points::GaussianVoxelMap::ConstPtr> other_keyframes;
+    std::vector<Eigen::Isometry3d> delta_from_others;
     for (int j = 0; j < keyframes.size() - 1; j++) {
       if (i == j) {
         continue;
@@ -266,7 +267,7 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
       delta_from_others.push_back(other->T_world_imu.inverse() * keyframe->T_world_imu);
     }
 
-    const double overlap_others = gtsam_ext::overlap_gpu(other_keyframes, keyframe->frame, delta_from_others, *stream);
+    const double overlap_others = gtsam_points::overlap_gpu(other_keyframes, keyframe->frame, delta_from_others, *stream);
     scores[i] = overlap_latest * (1.0 - overlap_others);
   }
 
@@ -313,7 +314,7 @@ void OdometryEstimationGPU::update_keyframes_displacement(int current) {
 
   for (int i = 0; i < keyframes.size() - 1; i++) {
     const Eigen::Isometry3d delta = keyframes[i]->T_world_imu.inverse() * new_keyframe->T_world_imu;
-    const double overlap = gtsam_ext::overlap_gpu(keyframes[i]->voxelmaps.back(), new_keyframe->frame, delta, *stream);
+    const double overlap = gtsam_points::overlap_gpu(keyframes[i]->voxelmaps.back(), new_keyframe->frame, delta, *stream);
 
     if (overlap < 0.01) {
       std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;
@@ -370,7 +371,7 @@ void OdometryEstimationGPU::update_keyframes_entropy(const gtsam::NonlinearFacto
     valid_factors.push_back(factor->clone());
   }
 
-  gtsam_ext::NonlinearFactorSetGPU factor_set;
+  gtsam_points::NonlinearFactorSetGPU factor_set;
   factor_set.add(valid_factors);
   factor_set.linearize(values);
   auto linearized = valid_factors.linearize(values);

@@ -79,7 +79,7 @@ private:
   std::thread thread;
 
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;
-  ConcurrentVector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>> input_imu_queue;
+  ConcurrentVector<Eigen::Matrix<double, 7, 1>> input_imu_queue;
   ConcurrentVector<EstimationFrame::ConstPtr> input_frame_queue;
 
   ConcurrentVector<SubMap::Ptr> output_submap_queue;

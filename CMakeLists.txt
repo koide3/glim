@@ -25,17 +25,9 @@ find_package(Boost REQUIRED timer serialization)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
 find_package(GTSAM REQUIRED)
+find_package(gtsam_points REQUIRED)
 find_package(spdlog REQUIRED)
-
-find_package(OpenMP)
-if (OPENMP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
-
-set(JSON_BuildTests OFF CACHE INTERNAL "")
-add_subdirectory(thirdparty/json)
-add_subdirectory(thirdparty/gtsam_ext)
+find_package(OpenMP REQUIRED)
 
 ###########
 ## Build ##
@@ -48,9 +40,9 @@ endif()
 
 # GPU-related
 if(BUILD_WITH_CUDA)
-  add_definitions(-DBUILD_GTSAM_EXT_GPU)
+  add_definitions(-DBUILD_GTSAM_POINTS_GPU)
   set(GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
-  list(APPEND glim_LIBRARIES gtsam_ext_cuda)
+  # list(APPEND glim_LIBRARIES gtsam_points_cuda)
 endif()
 
 add_library(glim SHARED
@@ -94,20 +86,19 @@ add_library(glim SHARED
 target_include_directories(glim PUBLIC
   include
   thirdparty/json/include
-  thirdparty/gtsam_ext/include
   ${EIGEN3_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIRS}
-  ${Iridescence_INCLUDE_DIRS}
 )
 target_link_libraries(glim
-  gtsam_ext
+  gtsam_points::gtsam_points
   ${OpenCV_LIBRARIES}
   ${GTSAM_LIBRARIES}
   ${Boost_LIBRARIES}
   spdlog::spdlog
+  OpenMP::OpenMP_CXX
 )
-list(APPEND glim_LIBRARIES glim gtsam_ext)
+list(APPEND glim_LIBRARIES glim)
 
 # Create shared libraries for estimation modules
 list(APPEND module_srcs
@@ -140,8 +131,8 @@ endforeach()
 # Install
 install(TARGETS ${glim_LIBRARIES})
 install(DIRECTORY include/ DESTINATION include)
-install(DIRECTORY thirdparty/gtsam_ext/include/ DESTINATION include)
-install(DIRECTORY thirdparty/gtsam_ext/thirdparty/nanoflann/include/ DESTINATION include)
+# install(DIRECTORY thirdparty/gtsam_points/include/ DESTINATION include)
+# install(DIRECTORY thirdparty/gtsam_points/thirdparty/nanoflann/include/ DESTINATION include)
 
 
 if(BUILD_WITH_VIEWER)
@@ -151,13 +142,12 @@ if(BUILD_WITH_VIEWER)
   )
   target_include_directories(standard_viewer PUBLIC
     include
-    thirdparty/gtsam_ext/include
-    ${Iridescence_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
     ${OpenCV_INCLUDE_DIRS}
   )
   target_link_libraries(standard_viewer
-    ${Iridescence_LIBRARIES}
+    gtsam_points::gtsam_points
+    Iridescence::Iridescence
   )
 
   # Interactive viewer
@@ -170,14 +160,13 @@ if(BUILD_WITH_VIEWER)
   target_include_directories(interactive_viewer PUBLIC
     include
     thirdparty/json/include
-    thirdparty/gtsam_ext/include
-    ${Iridescence_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
     ${OpenCV_INCLUDE_DIRS}
     ${GTSAM_INCLUDE_DIRS}
   )
   target_link_libraries(interactive_viewer
-    ${Iridescence_LIBRARIES}
+    gtsam_points::gtsam_points
+    Iridescence::Iridescence
   )
 
   list(APPEND glim_LIBRARIES interactive_viewer)
@@ -199,7 +188,7 @@ if(DEFINED ENV{ROS_VERSION})
     # ROS1
     find_package(catkin REQUIRED)
     catkin_package(
-      INCLUDE_DIRS include thirdparty/gtsam_ext/include
+      INCLUDE_DIRS include thirdparty/gtsam_points/include
       LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES}
     )
   endif()

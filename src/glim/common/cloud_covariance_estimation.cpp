@@ -15,10 +15,10 @@ CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads) : re
 CloudCovarianceEstimation::~CloudCovarianceEstimation() {}
 
 void CloudCovarianceEstimation::estimate(
-  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  const std::vector<Eigen::Vector4d>& points,
   const std::vector<int>& neighbors,
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& normals,
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>& covs) const {
+  std::vector<Eigen::Vector4d>& normals,
+  std::vector<Eigen::Matrix4d>& covs) const {
   //
   if (points.empty()) {
     return;
@@ -34,11 +34,11 @@ void CloudCovarianceEstimation::estimate(
 }
 
 void CloudCovarianceEstimation::estimate(
-  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
+  const std::vector<Eigen::Vector4d>& points,
   const std::vector<int>& neighbors,
   const int k_neighbors,
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& normals,
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>& covs) const {
+  std::vector<Eigen::Vector4d>& normals,
+  std::vector<Eigen::Matrix4d>& covs) const {
   if (points.empty()) {
     return;
   }
@@ -47,7 +47,7 @@ void CloudCovarianceEstimation::estimate(
   assert(k_correspondences * points.size() == neighbors.size());
   assert(k_neighbors <= k_correspondences);
 
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> pt_cross(points.size());
+  std::vector<Eigen::Matrix4d> pt_cross(points.size());
 #pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
   for (int i = 0; i < points.size(); i++) {
     pt_cross[i] = points[i] * points[i].transpose();
@@ -83,12 +83,9 @@ void CloudCovarianceEstimation::estimate(
   }
 }
 
-std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCovarianceEstimation::estimate(
-  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
-  const std::vector<int>& neighbors,
-  const int k_neighbors) const {
+std::vector<Eigen::Matrix4d> CloudCovarianceEstimation::estimate(const std::vector<Eigen::Vector4d>& points, const std::vector<int>& neighbors, const int k_neighbors) const {
   if (points.empty()) {
-    return std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>();
+    return std::vector<Eigen::Matrix4d>();
   }
 
   const int k_correspondences = neighbors.size() / points.size();
@@ -96,13 +93,13 @@ std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCov
   assert(k_neighbors <= k_correspondences);
 
   // Precompute pt * pt.transpose()
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> pt_cross(points.size());
+  std::vector<Eigen::Matrix4d> pt_cross(points.size());
   for (int i = 0; i < points.size(); i++) {
     pt_cross[i] = points[i] * points[i].transpose();
   }
 
   // Calculate covariances
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> covs(points.size());
+  std::vector<Eigen::Matrix4d> covs(points.size());
   for (int i = 0; i < points.size(); i++) {
     Eigen::Vector4d sum_points = Eigen::Vector4d::Zero();
     Eigen::Matrix4d sum_cross = Eigen::Matrix4d::Zero();
@@ -123,11 +120,9 @@ std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCov
   return covs;
 }
 
-std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> CloudCovarianceEstimation::estimate(
-  const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>& points,
-  const std::vector<int>& neighbors) const {
+std::vector<Eigen::Matrix4d> CloudCovarianceEstimation::estimate(const std::vector<Eigen::Vector4d>& points, const std::vector<int>& neighbors) const {
   if (points.empty()) {
-    return std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>>();
+    return std::vector<Eigen::Matrix4d>();
   }
 
   const int k = neighbors.size() / points.size();

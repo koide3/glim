@@ -2,11 +2,11 @@
 
 #include <glim/frontend/odometry_estimation_imu.hpp>
 
-namespace gtsam_ext {
+namespace gtsam_points {
 class VoxelizedFrame;
 class StreamTempBufferRoundRobin;
 class CUDAStream;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -67,8 +67,8 @@ private:
   std::vector<EstimationFrame::ConstPtr> keyframes;
 
   // CUDA-related
-  std::unique_ptr<gtsam_ext::CUDAStream> stream;
-  std::unique_ptr<gtsam_ext::StreamTempBufferRoundRobin> stream_buffer_roundrobin;
+  std::unique_ptr<gtsam_points::CUDAStream> stream;
+  std::unique_ptr<gtsam_points::StreamTempBufferRoundRobin> stream_buffer_roundrobin;
 };
 
 }  // namespace glim

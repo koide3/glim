@@ -9,7 +9,7 @@ CallbackSlot<void(const EstimationFrame::ConstPtr& frame)> SubMappingCallbacks::
 CallbackSlot<void(int id, const EstimationFrame::ConstPtr&)> SubMappingCallbacks::on_new_keyframe;
 
 CallbackSlot<void(gtsam::NonlinearFactorGraph&, gtsam::Values&)> SubMappingCallbacks::on_optimize_submap;
-CallbackSlot<void(const gtsam_ext::LevenbergMarquardtOptimizationStatus&, const gtsam::Values& values)> SubMappingCallbacks::on_optimization_status;
+CallbackSlot<void(const gtsam_points::LevenbergMarquardtOptimizationStatus&, const gtsam::Values& values)> SubMappingCallbacks::on_optimization_status;
 CallbackSlot<void(const SubMap::ConstPtr&)> SubMappingCallbacks::on_new_submap;
 
 // global map
@@ -19,8 +19,8 @@ CallbackSlot<void(const SubMap::ConstPtr& frame)> GlobalMappingCallbacks::on_ins
 
 CallbackSlot<void(const std::vector<SubMap::Ptr>& submaps)> GlobalMappingCallbacks::on_update_submaps;
 
-CallbackSlot<void(gtsam_ext::ISAM2Ext&, gtsam::NonlinearFactorGraph&, gtsam::Values&)> GlobalMappingCallbacks::on_smoother_update;
-CallbackSlot<void(gtsam_ext::ISAM2Ext&, const gtsam_ext::ISAM2ResultExt& result)> GlobalMappingCallbacks::on_smoother_update_result;
+CallbackSlot<void(gtsam_points::ISAM2Ext&, gtsam::NonlinearFactorGraph&, gtsam::Values&)> GlobalMappingCallbacks::on_smoother_update;
+CallbackSlot<void(gtsam_points::ISAM2Ext&, const gtsam_points::ISAM2ResultExt& result)> GlobalMappingCallbacks::on_smoother_update_result;
 
 CallbackSlot<void()> GlobalMappingCallbacks::request_to_optimize;
 CallbackSlot<void(double)> GlobalMappingCallbacks::request_to_find_overlapping_submaps;

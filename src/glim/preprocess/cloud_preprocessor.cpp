@@ -3,8 +3,8 @@
 #include <fstream>
 #include <iostream>
 #include <spdlog/spdlog.h>
-#include <gtsam_ext/ann/kdtree.hpp>
-#include <gtsam_ext/types/point_cloud_cpu.hpp>
+#include <gtsam_points/ann/kdtree.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
@@ -41,7 +41,7 @@ CloudPreprocessor::~CloudPreprocessor() {}
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
   spdlog::trace("preprocessing input: {} points", raw_points->size());
 
-  gtsam_ext::PointCloud::Ptr frame(new gtsam_ext::PointCloud);
+  gtsam_points::PointCloud::Ptr frame(new gtsam_points::PointCloud);
   frame->num_points = raw_points->size();
   frame->times = const_cast<double*>(raw_points->times.data());
   frame->points = const_cast<Eigen::Vector4d*>(raw_points->points.data());
@@ -52,9 +52,9 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   // Downsampling
   if (params.use_random_grid_downsampling) {
     const double rate = params.downsample_target > 0 ? static_cast<double>(params.downsample_target) / frame->size() : params.downsample_rate;
-    frame = gtsam_ext::randomgrid_sampling(frame, params.downsample_resolution, rate, mt);
+    frame = gtsam_points::randomgrid_sampling(frame, params.downsample_resolution, rate, mt);
   } else {
-    frame = gtsam_ext::voxelgrid_sampling(frame, params.downsample_resolution);
+    frame = gtsam_points::voxelgrid_sampling(frame, params.downsample_resolution);
   }
 
   if (frame->size() < 100) {
@@ -77,7 +77,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   // Sort by time
   std::sort(indices.begin(), indices.end(), [&](const int lhs, const int rhs) { return frame->times[lhs] < frame->times[rhs]; });
-  frame = gtsam_ext::sample(frame, indices);
+  frame = gtsam_points::sample(frame, indices);
 
   if (params.global_shutter) {
     std::fill(frame->times, frame->times + frame->size(), 0.0);
@@ -85,7 +85,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 
   // Nearest neighbor search
   if (params.enable_outlier_removal) {
-    frame = gtsam_ext::remove_outliers(frame, params.outlier_removal_k, params.outlier_std_mul_factor, params.num_threads);
+    frame = gtsam_points::remove_outliers(frame, params.outlier_removal_k, params.outlier_std_mul_factor, params.num_threads);
   }
 
   // Create a preprocessed frame
@@ -108,7 +108,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 }
 
 std::vector<int> CloudPreprocessor::find_neighbors(const Eigen::Vector4d* points, const int num_points, const int k) const {
-  gtsam_ext::KdTree tree(points, num_points);
+  gtsam_points::KdTree tree(points, num_points);
 
   std::vector<int> neighbors(num_points * k);
 

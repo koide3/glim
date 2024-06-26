@@ -2,10 +2,14 @@
 
 #include <glim/frontend/odometry_estimation_imu.hpp>
 
-namespace gtsam_ext {
-class iVox;
+namespace gtsam_points {
+
 class GaussianVoxelMapCPU;
-}  // namespace gtsam_ext
+struct FlatContainer;
+template <typename VoxelContents>
+class IncrementalVoxelMap;
+using iVox = IncrementalVoxelMap<FlatContainer>;
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -21,13 +25,13 @@ public:
 
 public:
   // Registration params
-  std::string registration_type;         ///< Registration type (GICP or VGICP)
-  int max_iterations;                    ///< Maximum number of iterations
-  int lru_thresh;                        ///< LRU cache threshold
-  double target_downsampling_rate;       ///< Downsampling rate for points to be inserted into the target
+  std::string registration_type;    ///< Registration type (GICP or VGICP)
+  int max_iterations;               ///< Maximum number of iterations
+  int lru_thresh;                   ///< LRU cache threshold
+  double target_downsampling_rate;  ///< Downsampling rate for points to be inserted into the target
 
-  double ivox_resolution;                ///< iVox resolution (for GICP)
-  double ivox_min_dist;                  ///< Minimum distance between points in an iVox cell (for GICP)
+  double ivox_resolution;  ///< iVox resolution (for GICP)
+  double ivox_min_dist;    ///< Minimum distance between points in an iVox cell (for GICP)
 
   double vgicp_resolution;               ///< Voxelmap resolution (for VGICP)
   int vgicp_voxelmap_levels;             ///< Multi-resolution voxelmap levesl (for VGICP)
@@ -53,11 +57,11 @@ private:
 
 private:
   // Registration params
-  std::mt19937 mt;                                                                ///< RNG
-  Eigen::Isometry3d last_T_target_imu;                                            ///< Last IMU pose w.r.t. target model
-  std::vector<std::shared_ptr<gtsam_ext::GaussianVoxelMapCPU>> target_voxelmaps;  ///< VGICP target voxelmap
-  std::shared_ptr<gtsam_ext::iVox> target_ivox;                                   ///< GICP target iVox
-  EstimationFrame::ConstPtr target_ivox_frame;                                    ///< Target points (just for visualization)
+  std::mt19937 mt;                                                                   ///< RNG
+  Eigen::Isometry3d last_T_target_imu;                                               ///< Last IMU pose w.r.t. target model
+  std::vector<std::shared_ptr<gtsam_points::GaussianVoxelMapCPU>> target_voxelmaps;  ///< VGICP target voxelmap
+  std::shared_ptr<gtsam_points::iVox> target_ivox;                                   ///< GICP target iVox
+  EstimationFrame::ConstPtr target_ivox_frame;                                       ///< Target points (just for visualization)
 };
 
 }  // namespace glim

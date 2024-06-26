@@ -11,10 +11,10 @@ class Values;
 class NonlinearFactorGraph;
 }  // namespace gtsam
 
-namespace gtsam_ext {
+namespace gtsam_points {
 class ISAM2Ext;
 class StreamTempBufferRoundRobin;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -66,7 +66,7 @@ public:
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;
-  virtual std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points() override;
+  virtual std::vector<Eigen::Vector4d> export_points() override;
 
   /**
    * @brief Load a mapping result from a dumped directory
@@ -92,11 +92,11 @@ private:
   std::any stream_buffer_roundrobin;
 
   std::vector<SubMap::Ptr> submaps;
-  std::vector<gtsam_ext::PointCloud::Ptr> subsampled_submaps;
+  std::vector<gtsam_points::PointCloud::Ptr> subsampled_submaps;
 
   std::unique_ptr<gtsam::Values> new_values;
   std::unique_ptr<gtsam::NonlinearFactorGraph> new_factors;
 
-  std::unique_ptr<gtsam_ext::ISAM2Ext> isam2;
+  std::unique_ptr<gtsam_points::ISAM2Ext> isam2;
 };
 }  // namespace glim

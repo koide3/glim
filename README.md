@@ -30,7 +30,7 @@ Tested on Ubuntu 20.04 with CUDA 11.6 / Ubuntu 22.04 with CUDA 11.8 / NVIDIA Jet
 - [nanoflann](https://github.com/jlblancoc/nanoflann)
 - [OpenCV](https://opencv.org/)
 - [GTSAM](https://github.com/borglab/gtsam)
-- [gtsam_ext](https://github.com/koide3/gtsam_ext)
+- [gtsam_points](https://github.com/koide3/gtsam_points)
 
 ### Optional
 - [CUDA](https://developer.nvidia.com/cuda-toolkit)

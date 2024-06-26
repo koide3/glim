@@ -71,7 +71,7 @@ public:
    */
   void save(const std::string& path);
 
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points();
+  std::vector<Eigen::Vector4d> export_points();
 
 private:
   void run();
@@ -83,7 +83,7 @@ private:
   std::thread thread;
 
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;
-  ConcurrentVector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>> input_imu_queue;
+  ConcurrentVector<Eigen::Matrix<double, 7, 1>> input_imu_queue;
   ConcurrentVector<SubMap::Ptr> input_submap_queue;
 
   int optimization_interval;

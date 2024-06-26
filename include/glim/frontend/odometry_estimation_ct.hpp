@@ -11,12 +11,17 @@ namespace gtsam {
 class Values;
 }
 
-namespace gtsam_ext {
-class iVox;
-class iVoxCovarianceEstimation;
+namespace gtsam_points {
+struct FlatContainer;
+template <typename VoxelContents>
+class IncrementalVoxelMap;
+using iVox = IncrementalVoxelMap<FlatContainer>;
+
+class IncrementalCovarianceVoxelMap;
+using iVoxCovarianceEstimation = IncrementalCovarianceVoxelMap;
 class IncrementalFixedLagSmootherExt;
 class IncrementalFixedLagSmootherExtWithFallback;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -70,12 +75,12 @@ private:
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
   int marginalized_cursor;
-  std::vector<EstimationFrame::Ptr> frames;      ///< Estimation frames
-  std::shared_ptr<gtsam_ext::iVox> target_ivox;  ///< Target iVox
-  EstimationFrame::ConstPtr target_ivox_frame;   ///< Target iVox points (just for visualization)
+  std::vector<EstimationFrame::Ptr> frames;         ///< Estimation frames
+  std::shared_ptr<gtsam_points::iVox> target_ivox;  ///< Target iVox
+  EstimationFrame::ConstPtr target_ivox_frame;      ///< Target iVox points (just for visualization)
 
   // Optimizer
-  using FixedLagSmootherExt = gtsam_ext::IncrementalFixedLagSmootherExtWithFallback;
+  using FixedLagSmootherExt = gtsam_points::IncrementalFixedLagSmootherExtWithFallback;
   std::unique_ptr<FixedLagSmootherExt> smoother;
 };
 

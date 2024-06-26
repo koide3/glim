@@ -5,9 +5,9 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/BetweenFactor.h>
-#include <gtsam_ext/types/point_cloud.hpp>
-#include <gtsam_ext/factors/integrated_gicp_factor.hpp>
-#include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
+#include <gtsam_points/types/point_cloud.hpp>
+#include <gtsam_points/factors/integrated_gicp_factor.hpp>
+#include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
 
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/primitives/primitives.hpp>
@@ -32,14 +32,14 @@ ManualLoopCloseModal::ManualLoopCloseModal() : request_to_open(false) {
 
 ManualLoopCloseModal::~ManualLoopCloseModal() {}
 
-void ManualLoopCloseModal::set_target(const gtsam::Key target_key, const gtsam_ext::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose) {
+void ManualLoopCloseModal::set_target(const gtsam::Key target_key, const gtsam_points::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose) {
   this->target_key = target_key;
   this->target = target;
   this->target_pose = target_pose;
   this->target_drawable = std::make_shared<glk::PointCloudBuffer>(target->points, target->size());
 }
 
-void ManualLoopCloseModal::set_source(const gtsam::Key source_key, const gtsam_ext::PointCloud::ConstPtr& source, const Eigen::Isometry3d& source_pose) {
+void ManualLoopCloseModal::set_source(const gtsam::Key source_key, const gtsam_points::PointCloud::ConstPtr& source, const Eigen::Isometry3d& source_pose) {
   this->source_key = source_key;
   this->source = source;
   this->source_pose = source_pose;
@@ -129,9 +129,9 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align(guik::ProgressInt
   gtsam::NonlinearFactorGraph graph;
   graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(0, gtsam::Pose3::Identity(), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
 
-  auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(0, 1, target, source);
+  auto factor = gtsam::make_shared<gtsam_points::IntegratedGICPFactor>(0, 1, target, source);
   factor->set_num_threads(4);
-  factor->set_max_corresponding_distance(max_correspondence_distance);
+  factor->set_max_correspondence_distance(max_correspondence_distance);
   graph.add(factor);
 
   gtsam::Values values;
@@ -139,14 +139,14 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align(guik::ProgressInt
   values.insert(1, gtsam::Pose3(model_control->model_matrix().cast<double>()));
 
   progress.set_text("Optimizing");
-  gtsam_ext::LevenbergMarquardtExtParams lm_params;
+  gtsam_points::LevenbergMarquardtExtParams lm_params;
   lm_params.setMaxIterations(20);
-  lm_params.callback = [&](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
+  lm_params.callback = [&](const gtsam_points::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
     progress.increment();
     progress.set_text((boost::format("Optimizing iter:%d error:%.3f") % status.iterations % status.error).str());
   };
 
-  gtsam_ext::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
+  gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();
 
   const gtsam::Pose3 estimated = values.at<gtsam::Pose3>(0).inverse() * values.at<gtsam::Pose3>(1);
@@ -161,9 +161,9 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
   values.insert(0, gtsam::Pose3::Identity());
   values.insert(1, relative);
 
-  auto factor = gtsam::make_shared<gtsam_ext::IntegratedGICPFactor>(0, 1, target, source);
+  auto factor = gtsam::make_shared<gtsam_points::IntegratedGICPFactor>(0, 1, target, source);
   factor->set_num_threads(4);
-  factor->set_max_corresponding_distance(max_correspondence_distance);
+  factor->set_max_correspondence_distance(max_correspondence_distance);
 
   const auto linearized = factor->linearize(values);
   const auto H = linearized->hessianBlockDiagonal()[1];

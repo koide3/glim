@@ -6,9 +6,9 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 
-#include <gtsam_ext/types/point_cloud_cpu.hpp>
-#include <gtsam_ext/factors/linear_damping_factor.hpp>
-#include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
+#include <gtsam_points/factors/linear_damping_factor.hpp>
+#include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
@@ -149,16 +149,16 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     new_frame->raw_frame = raw_frame;
 
     // Transform points into IMU frame
-    std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> points_imu(raw_frame->size());
+    std::vector<Eigen::Vector4d> points_imu(raw_frame->size());
     for (int i = 0; i < raw_frame->size(); i++) {
       points_imu[i] = T_imu_lidar * raw_frame->points[i];
     }
 
-    std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> normals;
-    std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> covs;
+    std::vector<Eigen::Vector4d> normals;
+    std::vector<Eigen::Matrix4d> covs;
     covariance_estimation->estimate(points_imu, raw_frame->neighbors, normals, covs);
 
-    auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(points_imu);
+    auto frame = std::make_shared<gtsam_points::PointCloudCPU>(points_imu);
     frame->add_covs(covs);
     frame->add_normals(normals);
     new_frame->frame = frame;
@@ -182,9 +182,9 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     new_values.insert(B(0), gtsam::imuBias::ConstantBias(new_frame->imu_bias));
 
     // Prior for initial IMU states
-    new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(X(0), 6, params->init_pose_damping_scale);
+    new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(X(0), 6, params->init_pose_damping_scale);
     new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0));
-    new_factors.emplace_shared<gtsam_ext::LinearDampingFactor>(B(0), 6, 1e2);
+    new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(B(0), 6, 1e2);
     new_factors.add(create_factors(current, nullptr, new_values));
 
     /*
@@ -248,7 +248,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   // Motion prediction for deskewing (intra-scan)
   std::vector<double> pred_imu_times;
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> pred_imu_poses;
+  std::vector<Eigen::Isometry3d> pred_imu_poses;
   imu_integration->integrate_imu(raw_frame->stamp, raw_frame->scan_end_time, predicted_nav_world_imu, last_imu_bias, pred_imu_times, pred_imu_poses);
 
   // Create EstimationFrame
@@ -278,11 +278,11 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     pt = T_imu_lidar * pt;
   }
 
-  std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> deskewed_normals;
-  std::vector<Eigen::Matrix4d, Eigen::aligned_allocator<Eigen::Matrix4d>> deskewed_covs;
+  std::vector<Eigen::Vector4d> deskewed_normals;
+  std::vector<Eigen::Matrix4d> deskewed_covs;
   covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
 
-  auto frame = std::make_shared<gtsam_ext::PointCloudCPU>(deskewed);
+  auto frame = std::make_shared<gtsam_points::PointCloudCPU>(deskewed);
   frame->add_covs(deskewed_covs);
   frame->add_normals(deskewed_normals);
   new_frame->frame = frame;

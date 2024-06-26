@@ -39,7 +39,7 @@ public:
  */
 class CloudPreprocessor {
 public:
-  using Points = std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>;
+  using Points = std::vector<Eigen::Vector4d>;
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   /**

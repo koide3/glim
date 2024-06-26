@@ -44,7 +44,7 @@ public:
 
 private:
   std::vector<double> odom_stamps;
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> T_odom_sensor;
+  std::vector<Eigen::Isometry3d> T_odom_sensor;
 
   Eigen::Isometry3d T_world_odom;
 };

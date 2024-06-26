@@ -56,9 +56,7 @@ public:
   /**
    * @brief Export all the submap points
    */
-  virtual std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> export_points() {
-    return std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>>();
-  }
+  virtual std::vector<Eigen::Vector4d> export_points() { return std::vector<Eigen::Vector4d>(); }
 
   /**
    * @brief Load a global mapping module from a shared library
@@ -67,4 +65,4 @@ public:
    */
   static std::shared_ptr<GlobalMappingBase> load_module(const std::string& so_name);
 };
-}
+}  // namespace glim

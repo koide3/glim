@@ -3,8 +3,8 @@
 #include <boost/format.hpp>
 
 #include <gtsam/inference/Symbol.h>
-#include <gtsam_ext/factors/bundle_adjustment_factor_evm.hpp>
-#include <gtsam_ext/factors/bundle_adjustment_factor_lsq.hpp>
+#include <gtsam_points/factors/bundle_adjustment_factor_evm.hpp>
+#include <gtsam_points/factors/bundle_adjustment_factor_lsq.hpp>
 
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/primitives/primitives.hpp>
@@ -34,10 +34,7 @@ BundleAdjustmentModal::BundleAdjustmentModal() {
 
 BundleAdjustmentModal::~BundleAdjustmentModal() {}
 
-void BundleAdjustmentModal::set_frames(
-  const std::vector<SubMap::ConstPtr>& submaps,
-  const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& submap_poses,
-  const Eigen::Vector3d& center) {
+void BundleAdjustmentModal::set_frames(const std::vector<SubMap::ConstPtr>& submaps, const std::vector<Eigen::Isometry3d>& submap_poses, const Eigen::Vector3d& center) {
   //
   this->submaps.clear();
   this->submap_poses.clear();
@@ -234,7 +231,7 @@ gtsam::NonlinearFactor::shared_ptr BundleAdjustmentModal::create_factor() {
 
   const auto extracted_points = extract_points(radius);
 
-  gtsam_ext::PlaneEVMFactor::shared_ptr factor(new gtsam_ext::PlaneEVMFactor());
+  gtsam_points::PlaneEVMFactor::shared_ptr factor(new gtsam_points::PlaneEVMFactor());
   for (const auto& submap_point : extracted_points) {
     const int submap_index = submap_point.first;
     const int point_index = submap_point.second;

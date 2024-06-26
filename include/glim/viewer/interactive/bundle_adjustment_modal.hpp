@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gtsam/nonlinear/NonlinearFactor.h>
-#include <gtsam_ext/types/point_cloud.hpp>
+#include <gtsam_points/types/point_cloud.hpp>
 #include <glk/drawable.hpp>
 
 #include <glim/backend/sub_map.hpp>
@@ -24,10 +24,7 @@ public:
   BundleAdjustmentModal();
   ~BundleAdjustmentModal();
 
-  void set_frames(
-    const std::vector<SubMap::ConstPtr>& submaps,
-    const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& submap_poses,
-    const Eigen::Vector3d& center);
+  void set_frames(const std::vector<SubMap::ConstPtr>& submaps, const std::vector<Eigen::Isometry3d>& submap_poses, const Eigen::Vector3d& center);
 
   gtsam::NonlinearFactor::shared_ptr run();
 
@@ -59,7 +56,7 @@ private:
   Eigen::Vector4d center;
   std::vector<glim::SubMap::ConstPtr> submaps;
   std::vector<std::shared_ptr<const glk::Drawable>> submap_drawables;
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> submap_poses;
+  std::vector<Eigen::Isometry3d> submap_poses;
 };
 
 }  // namespace glim

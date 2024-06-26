@@ -46,8 +46,8 @@ public:
   Eigen::Isometry3d T_origin_endpoint_L;  ///< frame.front() pose w.r.t. the origin
   Eigen::Isometry3d T_origin_endpoint_R;  ///< frame.back() pose w.r.t. the origin
 
-  gtsam_ext::PointCloud::Ptr frame;                              ///< Merged submap frame
-  std::vector<gtsam_ext::GaussianVoxelMap::Ptr> voxelmaps;  ///< Multi-resolution voxelmaps
+  gtsam_points::PointCloud::Ptr frame;                         ///< Merged submap frame
+  std::vector<gtsam_points::GaussianVoxelMap::Ptr> voxelmaps;  ///< Multi-resolution voxelmaps
 
   std::vector<EstimationFrame::ConstPtr> frames;       ///< Optimized odometry frames
   std::vector<EstimationFrame::ConstPtr> odom_frames;  ///< Original odometry frames

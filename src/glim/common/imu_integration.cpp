@@ -81,7 +81,7 @@ int IMUIntegration::integrate_imu(
   const gtsam::NavState& state,
   const gtsam::imuBias::ConstantBias& bias,
   std::vector<double>& pred_times,
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& pred_poses) {
+  std::vector<Eigen::Isometry3d>& pred_poses) {
   //
   imu_measurements->resetIntegrationAndSetBias(bias);
 
@@ -119,9 +119,9 @@ int IMUIntegration::integrate_imu(
   const gtsam::NavState& state,
   const gtsam::imuBias::ConstantBias& bias,
   std::vector<double>& pred_times,
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& pred_poses,
-  std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>& pred_vels,
-  std::vector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& measurements) {
+  std::vector<Eigen::Isometry3d>& pred_poses,
+  std::vector<Eigen::Vector3d>& pred_vels,
+  std::vector<Eigen::Matrix<double, 7, 1>>& measurements) {
   //
   imu_measurements->resetIntegrationAndSetBias(bias);
 
@@ -163,7 +163,7 @@ const gtsam::PreintegratedImuMeasurements& IMUIntegration::integrated_measuremen
   return *imu_measurements;
 }
 
-const std::deque<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>>& IMUIntegration::imu_data_in_queue() const {
+const std::deque<Eigen::Matrix<double, 7, 1>>& IMUIntegration::imu_data_in_queue() const {
   return imu_queue;
 }
 

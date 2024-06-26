@@ -13,11 +13,11 @@ class Values;
 class NonlinearFactorGraph;
 }  // namespace gtsam
 
-namespace gtsam_ext {
+namespace gtsam_points {
 class ISAM2Ext;
 class ISAM2ResultExt;
 class LevenbergMarquardtOptimizationStatus;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -66,7 +66,7 @@ struct SubMappingCallbacks {
    * @param status  Optimization status
    * @param values  Current estimate
    */
-  static CallbackSlot<void(const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values)> on_optimization_status;
+  static CallbackSlot<void(const gtsam_points::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values)> on_optimization_status;
 
   /**
    * @brief SubMap creation callback
@@ -117,14 +117,14 @@ struct GlobalMappingCallbacks {
    * @param new_factors  New factors to be inserted into the factor graph
    * @param new_values   New values to be inserted into the factor graph
    */
-  static CallbackSlot<void(gtsam_ext::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values)> on_smoother_update;
+  static CallbackSlot<void(gtsam_points::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values)> on_smoother_update;
 
   /**
    * @brief Global optimization result callback (just after optimization)
    * @param isam2   iSAM2 optimizer
    * @param result  iSAM2 result
    */
-  static CallbackSlot<void(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result)> on_smoother_update_result;
+  static CallbackSlot<void(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result)> on_smoother_update_result;
 
   /**
    * @brief Request the global mapping module to perform optimization

@@ -68,7 +68,7 @@ void AsyncGlobalMapping::save(const std::string& path) {
   spdlog::info("saved");
 }
 
-std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> AsyncGlobalMapping::export_points() {
+std::vector<Eigen::Vector4d> AsyncGlobalMapping::export_points() {
   saving = true;
   std::this_thread::sleep_for(std::chrono::seconds(1));
   auto points = global_mapping->export_points();

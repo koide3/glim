@@ -1,6 +1,6 @@
 # Home
 
-Code will be made public on github. API lists are available at [gtsam_ext](https://staff.aist.go.jp/k.koide/projects/doxygen/gtsam_ext/) / [glim](https://staff.aist.go.jp/k.koide/projects/doxygen/glim/) / [glim_ext](https://staff.aist.go.jp/k.koide/projects/doxygen/glim_ext/).
+Code will be made public on github. API lists are available at [gtsam_points](https://staff.aist.go.jp/k.koide/projects/doxygen/gtsam_points/) / [glim](https://staff.aist.go.jp/k.koide/projects/doxygen/glim/) / [glim_ext](https://staff.aist.go.jp/k.koide/projects/doxygen/glim_ext/).
 
 ## Introduction
 
@@ -25,7 +25,7 @@ Tested on Ubuntu 20.04 with CUDA 11.6 / Ubuntu 22.04 with CUDA 11.8 / NVIDIA Jet
 
 ## API List
 
-* **[gtsam_ext](https://staff.aist.go.jp/k.koide/projects/doxygen/gtsam_ext/):** GTSAM factors for range-based SLAM (MIT License)
+* **[gtsam_points](https://staff.aist.go.jp/k.koide/projects/doxygen/gtsam_points/):** GTSAM factors for range-based SLAM (MIT License)
 * **[glim](https://staff.aist.go.jp/k.koide/projects/doxygen/glim/):** Main LiDAR-IMU SLAM package (GPLv3)
 * **[glim_ext](https://staff.aist.go.jp/k.koide/projects/doxygen/glim_ext/):** Example implementations of GLIM extension modules (GPLv3)
 

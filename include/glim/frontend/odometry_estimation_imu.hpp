@@ -13,10 +13,10 @@ class ImuFactor;
 class NonlinearFactorGraph;
 }  // namespace gtsam
 
-namespace gtsam_ext {
+namespace gtsam_points {
 class IncrementalFixedLagSmootherExt;
 class IncrementalFixedLagSmootherExtWithFallback;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -99,7 +99,7 @@ protected:
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
   // Optimizer
-  using FixedLagSmootherExt = gtsam_ext::IncrementalFixedLagSmootherExtWithFallback;
+  using FixedLagSmootherExt = gtsam_points::IncrementalFixedLagSmootherExtWithFallback;
   std::unique_ptr<FixedLagSmootherExt> smoother;
 };
 

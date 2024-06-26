@@ -13,10 +13,10 @@ class Values;
 class NonlinearFactorGraph;
 }  // namespace gtsam
 
-namespace gtsam_ext {
+namespace gtsam_points {
 class IncrementalFixedLagSmootherExt;
 class IncrementalFixedLagSmootherExtWithFallback;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -106,7 +106,7 @@ struct OdometryEstimationCallbacks {
    * @param new_values   New values to be inserted into the graph
    */
   static CallbackSlot<void(
-    gtsam_ext::IncrementalFixedLagSmootherExtWithFallback& smoother,
+    gtsam_points::IncrementalFixedLagSmootherExtWithFallback& smoother,
     gtsam::NonlinearFactorGraph& new_factors,
     gtsam::Values& new_values,
     std::map<std::uint64_t, double>& new_stamps)>
@@ -116,7 +116,7 @@ struct OdometryEstimationCallbacks {
    * @brief Odometry estimation optimization callback (just after optimization)
    * @param smoother     FixedLagSmoother
    */
-  static CallbackSlot<void(gtsam_ext::IncrementalFixedLagSmootherExtWithFallback& smoother)> on_smoother_update_finish;
+  static CallbackSlot<void(gtsam_points::IncrementalFixedLagSmootherExtWithFallback& smoother)> on_smoother_update_finish;
 
   /**
    * @brief Smoother corruption callback

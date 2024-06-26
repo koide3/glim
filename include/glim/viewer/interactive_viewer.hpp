@@ -18,10 +18,10 @@ class NonlinearFactor;
 class NonlinearFactorGraph;
 }  // namespace gtsam
 
-namespace gtsam_ext {
+namespace gtsam_points {
 class ISAM2Ext;
 class ISAM2ResultExt;
-}  // namespace gtsam_ext
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -58,8 +58,8 @@ protected:
 
   void globalmap_on_insert_submap(const SubMap::ConstPtr& submap);
   void globalmap_on_update_submaps(const std::vector<SubMap::Ptr>& updated_submaps);
-  void globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values);
-  void globalmap_on_smoother_update_result(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result);
+  void globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values);
+  void globalmap_on_smoother_update_result(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result);
 
 protected:
   std::atomic_bool request_to_clear;
@@ -97,7 +97,7 @@ protected:
   std::unique_ptr<BundleAdjustmentModal> bundle_adjustment_modal;
 
   // Submaps
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> submap_poses;
+  std::vector<Eigen::Isometry3d> submap_poses;
   std::vector<SubMap::ConstPtr> submaps;
 
   // Factors

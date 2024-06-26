@@ -8,13 +8,13 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/BetweenFactor.h>
 
-#include <gtsam_ext/ann/ivox.hpp>
-#include <gtsam_ext/ann/ivox_covariance_estimation.hpp>
-#include <gtsam_ext/ann/kdtree.hpp>
-#include <gtsam_ext/types/point_cloud_cpu.hpp>
-#include <gtsam_ext/factors/integrated_ct_gicp_factor.hpp>
-#include <gtsam_ext/optimizers/levenberg_marquardt_ext.hpp>
-#include <gtsam_ext/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
+#include <gtsam_points/ann/ivox.hpp>
+#include <gtsam_points/ann/ivox_covariance_estimation.hpp>
+#include <gtsam_points/ann/kdtree.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
+#include <gtsam_points/factors/integrated_ct_gicp_factor.hpp>
+#include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
+#include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
@@ -53,7 +53,9 @@ OdometryEstimationCT::OdometryEstimationCT(const OdometryEstimationCTParams& par
   covariance_estimation.reset(new CloudCovarianceEstimation(params.num_threads));
 
   marginalized_cursor = 0;
-  target_ivox.reset(new gtsam_ext::iVox(params.ivox_resolution, params.ivox_min_points_dist, params.ivox_lru_thresh));
+  target_ivox.reset(new gtsam_points::iVox(params.ivox_resolution));
+  target_ivox->voxel_insertion_setting().set_min_dist_in_cell(params.ivox_min_points_dist);
+  target_ivox->set_lru_horizon(params.ivox_lru_thresh);
 
   gtsam::ISAM2Params isam2_params;
   if (params.use_isam2_dogleg) {
@@ -81,7 +83,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   new_frame->imu_bias.setZero();
   new_frame->raw_frame = raw_frame;
 
-  gtsam_ext::PointCloudCPU::Ptr frame_cpu(new gtsam_ext::PointCloudCPU(raw_frame->points));
+  gtsam_points::PointCloudCPU::Ptr frame_cpu(new gtsam_points::PointCloudCPU(raw_frame->points));
   frame_cpu->add_times(raw_frame->times);
 
   covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors, frame_cpu->normals_storage, frame_cpu->covs_storage);
@@ -138,9 +140,10 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
     // Create CT-GICP factor
     gtsam::NonlinearFactorGraph graph;
-    auto factor = gtsam::make_shared<gtsam_ext::IntegratedCT_GICPFactor_<gtsam_ext::iVox, gtsam_ext::PointCloud>>(X(current), Y(current), target_ivox, new_frame->frame, target_ivox);
+    auto factor =
+      gtsam::make_shared<gtsam_points::IntegratedCT_GICPFactor_<gtsam_points::iVox, gtsam_points::PointCloud>>(X(current), Y(current), target_ivox, new_frame->frame, target_ivox);
     factor->set_num_threads(params.num_threads);
-    factor->set_max_corresponding_distance(params.max_correspondence_distance);
+    factor->set_max_correspondence_distance(params.max_correspondence_distance);
     graph.add(factor);
 
     // Location consistency & constant velocity constraints
@@ -149,14 +152,14 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
       .emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(current), Y(current), gtsam::Pose3(), gtsam::noiseModel::Isotropic::Precision(6, params.constant_velocity_inf_scale));
 
     // LM configuration
-    gtsam_ext::LevenbergMarquardtExtParams lm_params;
+    gtsam_points::LevenbergMarquardtExtParams lm_params;
     lm_params.setlambdaInitial(1e-10);
     lm_params.setAbsoluteErrorTol(1e-2);
     lm_params.setMaxIterations(params.lm_max_iterations);
     // lm_params.set_verbose();
 
     try {
-      values = gtsam_ext::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+      values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
     } catch (std::exception& e) {
       spdlog::error("an exception was caught during odometry estimation");
       spdlog::error("{}", e.what());
@@ -200,7 +203,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   frames.push_back(new_frame);
 
   // Transform points into the global coordinate and insert them into the iVox
-  auto transformed = gtsam_ext::PointCloudCPU::clone(*new_frame->frame);
+  auto transformed = gtsam_points::PointCloudCPU::clone(*new_frame->frame);
   for (int i = 0; i < transformed->size(); i++) {
     transformed->points[i] = new_frame->T_world_sensor() * new_frame->frame->points[i];
     transformed->covs[i] = new_frame->T_world_sensor().matrix() * new_frame->frame->covs[i] * new_frame->T_world_sensor().matrix().transpose();
@@ -257,7 +260,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     frame->imu_bias.setZero();
 
     frame->frame_id = FrameID::LIDAR;
-    frame->frame = std::make_shared<gtsam_ext::PointCloudCPU>(target_ivox->voxel_points());
+    frame->frame = std::make_shared<gtsam_points::PointCloudCPU>(target_ivox->voxel_points());
 
     std::vector<EstimationFrame::ConstPtr> keyframes = {frame};
     Callbacks::on_update_keyframes(keyframes);

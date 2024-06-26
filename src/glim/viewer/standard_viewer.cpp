@@ -4,8 +4,8 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam_ext/optimizers/isam2_result_ext.hpp>
-#include <gtsam_ext/optimizers/levenberg_marquardt_optimization_status.hpp>
+#include <gtsam_points/optimizers/isam2_result_ext.hpp>
+#include <gtsam_points/optimizers/levenberg_marquardt_optimization_status.hpp>
 
 #include <glim/common/callbacks.hpp>
 #include <glim/frontend/callbacks.hpp>
@@ -251,7 +251,7 @@ void StandardViewer::set_callbacks() {
   /*** Submapping callbacks ***/
   // New keyframe callback
   SubMappingCallbacks::on_new_keyframe.add([this](int id, const EstimationFrame::ConstPtr& keyframe) {
-    gtsam_ext::PointCloud::ConstPtr frame = keyframe->frame;
+    gtsam_points::PointCloud::ConstPtr frame = keyframe->frame;
 
     invoke([this, id, keyframe, frame] {
       auto viewer = guik::LightViewer::instance();
@@ -320,7 +320,7 @@ void StandardViewer::set_callbacks() {
       auto viewer = guik::LightViewer::instance();
       auto sub_viewer = viewer->sub_viewer("submap");
 
-      std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> lines;
+      std::vector<Eigen::Vector3f> lines;
       for (const auto& factor : factors) {
         if (submap_keyframes.size() <= factor.first || submap_keyframes.size() <= factor.second) {
           continue;
@@ -335,7 +335,7 @@ void StandardViewer::set_callbacks() {
   });
 
   // Submap optimization status callback
-  SubMappingCallbacks::on_optimization_status.add([this](const gtsam_ext::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
+  SubMappingCallbacks::on_optimization_status.add([this](const gtsam_points::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
     spdlog::debug("--- submap optimization ---");
     spdlog::debug(status.to_short_string());
   });
@@ -371,7 +371,7 @@ void StandardViewer::set_callbacks() {
     const SubMap::ConstPtr latest_submap = submaps.back();
 
     std::vector<int> submap_ids(submaps.size());
-    std::vector<Eigen::Isometry3f, Eigen::aligned_allocator<Eigen::Isometry3f>> submap_poses(submaps.size());
+    std::vector<Eigen::Isometry3f> submap_poses(submaps.size());
     for (int i = 0; i < submaps.size(); i++) {
       submap_ids[i] = submaps[i]->id;
       submap_poses[i] = submaps[i]->T_world_origin.cast<float>();
@@ -380,7 +380,7 @@ void StandardViewer::set_callbacks() {
     invoke([this, latest_submap, submap_ids, submap_poses] {
       auto viewer = guik::LightViewer::instance();
 
-      std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> submap_positions(submap_ids.size());
+      std::vector<Eigen::Vector3f> submap_positions(submap_ids.size());
 
       for (int i = 0; i < submap_ids.size(); i++) {
         submap_positions[i] = submap_poses[i].translation();
@@ -410,7 +410,7 @@ void StandardViewer::set_callbacks() {
   });
 
   // Smoother update callback
-  GlobalMappingCallbacks::on_smoother_update.add([this](gtsam_ext::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values) {
+  GlobalMappingCallbacks::on_smoother_update.add([this](gtsam_points::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values) {
     std::vector<std::pair<int, int>> between_factors;
     for (const auto& factor : new_factors) {
       if (factor->keys().size() != 2) {
@@ -430,7 +430,7 @@ void StandardViewer::set_callbacks() {
   });
 
   // Smoother update result callback
-  GlobalMappingCallbacks::on_smoother_update_result.add([this](gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result) {
+  GlobalMappingCallbacks::on_smoother_update_result.add([this](gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
     spdlog::debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
     spdlog::debug(result.to_string());
   });

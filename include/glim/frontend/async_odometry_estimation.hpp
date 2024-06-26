@@ -82,7 +82,7 @@ private:
 
   // Input queues
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;
-  ConcurrentVector<Eigen::Matrix<double, 7, 1>, Eigen::aligned_allocator<Eigen::Matrix<double, 7, 1>>> input_imu_queue;
+  ConcurrentVector<Eigen::Matrix<double, 7, 1>> input_imu_queue;
   ConcurrentVector<PreprocessedFrame::Ptr> input_frame_queue;
 
   // Output queues

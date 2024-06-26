@@ -4,7 +4,7 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 
-#include <gtsam_ext/types/point_cloud_cpu.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
 
 #include <glim/util/console_colors.hpp>
 
@@ -138,7 +138,7 @@ SubMap::Ptr SubMap::load(const std::string& path) {
     submap->odom_frames.push_back(odom_frame);
   }
 
-  submap->frame = gtsam_ext::PointCloudCPU::load(path);
+  submap->frame = gtsam_points::PointCloudCPU::load(path);
 
   return submap;
 }

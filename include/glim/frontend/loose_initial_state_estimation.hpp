@@ -3,9 +3,12 @@
 #include <memory>
 #include <glim/frontend/initial_state_estimation.hpp>
 
-namespace gtsam_ext {
-class iVox;
-}  // namespace gtsam_ext
+namespace gtsam_points {
+struct FlatContainer;
+template <typename VoxelContents>
+class IncrementalVoxelMap;
+using iVox = IncrementalVoxelMap<FlatContainer>;
+}  // namespace gtsam_points
 
 namespace glim {
 
@@ -29,7 +32,7 @@ private:
 
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 
-  std::shared_ptr<gtsam_ext::iVox> target_ivox;
+  std::shared_ptr<gtsam_points::iVox> target_ivox;
   std::vector<std::pair<double, Eigen::Isometry3d>> T_odom_lidar;
 
   std::unique_ptr<IMUIntegration> imu_integration;

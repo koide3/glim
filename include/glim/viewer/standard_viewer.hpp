@@ -65,7 +65,7 @@ private:
   Eigen::Vector2f auto_z_range;
 
   std::unique_ptr<TrajectoryManager> trajectory;
-  std::vector<Eigen::Isometry3f, Eigen::aligned_allocator<Eigen::Isometry3f>> submap_keyframes;
+  std::vector<Eigen::Isometry3f> submap_keyframes;
 
   std::vector<std::pair<int, int>> global_between_factors;
 

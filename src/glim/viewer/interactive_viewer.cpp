@@ -20,9 +20,9 @@
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
-#include <gtsam_ext/factors/integrated_matching_cost_factor.hpp>
-#include <gtsam_ext/factors/integrated_vgicp_factor_gpu.hpp>
-#include <gtsam_ext/optimizers/isam2_result_ext.hpp>
+#include <gtsam_points/factors/integrated_matching_cost_factor.hpp>
+#include <gtsam_points/factors/integrated_vgicp_factor_gpu.hpp>
+#include <gtsam_points/optimizers/isam2_result_ext.hpp>
 
 #include <glk/thin_lines.hpp>
 #include <glk/pointcloud_buffer.hpp>
@@ -301,8 +301,8 @@ void InteractiveViewer::update_viewer() {
 
   viewer->shader_setting().add<Eigen::Vector2f>("z_range", z_range + auto_z_range);
 
-  std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> factor_lines;
-  std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f>> factor_colors;
+  std::vector<Eigen::Vector3f> factor_lines;
+  std::vector<Eigen::Vector4f> factor_colors;
   factor_lines.reserve(global_factors.size() * 2);
   factor_colors.reserve(global_factors.size() * 2);
 
@@ -382,7 +382,7 @@ void InteractiveViewer::globalmap_on_insert_submap(const SubMap::ConstPtr& subma
  * @brief Submap pose update callback
  */
 void InteractiveViewer::globalmap_on_update_submaps(const std::vector<SubMap::Ptr>& updated_submaps) {
-  std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> poses(updated_submaps.size());
+  std::vector<Eigen::Isometry3d> poses(updated_submaps.size());
   std::transform(updated_submaps.begin(), updated_submaps.end(), poses.begin(), [](const SubMap::ConstPtr& submap) { return submap->T_world_origin; });
 
   invoke([this, poses] {
@@ -396,7 +396,7 @@ void InteractiveViewer::globalmap_on_update_submaps(const std::vector<SubMap::Pt
 /**
  * @brief Smoother update callback
  */
-void InteractiveViewer::globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values) {
+void InteractiveViewer::globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values) {
   auto factors = this->new_factors.get_all_and_clear();
   new_factors.add(factors);
 
@@ -406,11 +406,11 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2,
     if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factor)) {
       inserted_factors.push_back(std::make_tuple(FactorType::BETWEEN, factor->keys()[0], factor->keys()[1]));
     }
-    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedMatchingCostFactor>(factor)) {
+    if (boost::dynamic_pointer_cast<gtsam_points::IntegratedMatchingCostFactor>(factor)) {
       inserted_factors.push_back(std::make_tuple(FactorType::MATCHING_COST, factor->keys()[0], factor->keys()[1]));
     }
-#ifdef BUILD_GTSAM_EXT_GPU
-    if (boost::dynamic_pointer_cast<gtsam_ext::IntegratedVGICPFactorGPU>(factor)) {
+#ifdef BUILD_GTSAM_POINTS_GPU
+    if (boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor)) {
       inserted_factors.push_back(std::make_tuple(FactorType::MATCHING_COST, factor->keys()[0], factor->keys()[1]));
     }
 #endif
@@ -425,7 +425,7 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_ext::ISAM2Ext& isam2,
 /**
  * @brief Smoother update result callback
  */
-void InteractiveViewer::globalmap_on_smoother_update_result(gtsam_ext::ISAM2Ext& isam2, const gtsam_ext::ISAM2ResultExt& result) {
+void InteractiveViewer::globalmap_on_smoother_update_result(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
   const std::string text = result.to_string();
   guik::LightViewer::instance()->append_text(text);
 }

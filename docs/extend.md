@@ -45,7 +45,7 @@ In the following, we show the graph structures and variables in the odometry est
     Because **frontend_ct** performs LiDAR-only estimation, it does not create ```V(i)``` and ```B(i)```, and ```X(i)``` represents the LiDAR pose instead of the IMU pose.
 
 !!! info
-    ["velocity_suppressor.cpp"](https://github.com/koide3/glim_ext/blob/master/modules/frontend/velocity_suppressor/src/glim_ext/velocity_suppressor.cpp) in **gtsam_ext** shows a simple example to insert velocity suppression factors into the odometry estimation factor graph.
+    ["velocity_suppressor.cpp"](https://github.com/koide3/glim_ext/blob/master/modules/frontend/velocity_suppressor/src/glim_ext/velocity_suppressor.cpp) in **gtsam_points** shows a simple example to insert velocity suppression factors into the odometry estimation factor graph.
 
 #### Variables in the global optimization
 
