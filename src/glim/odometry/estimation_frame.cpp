@@ -1,4 +1,4 @@
-#include <glim/frontend/estimation_frame.hpp>
+#include <glim/odometry/estimation_frame.hpp>
 
 #include <spdlog/spdlog.h>
 

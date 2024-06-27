@@ -21,7 +21,7 @@
 !!! note
     To see if estimated covariances are fine, change ```color_mode``` in the standard viewer to ```NORMAL```. If point colors are uniform on flat planes, covariances should be ok.
 
-## CPU-based LiDAR-IMU Odometry Estimation (config_frontend_cpu.json)
+## CPU-based LiDAR-IMU Odometry Estimation (config_odometry_cpu.json)
 
 - **registration_type** (default GICP) : Either of *"GICP"* or *"VGICP"*.
     - *"GICP"* uses iVox-based GICP scan matching that is accurate and robust in many cases.
@@ -30,7 +30,7 @@
     - *"VGICP"* uses voxelized GICP scan matching that is faster but requires tuning **vgicp_resolution** parameter for good estimation in indoor environments.
         - **vgicp_resolution** (default 0.5 m) : Resolution of VIGP voxels used for VGICP scan matching. Use a small value for indoor environments (e.g., 0.25 ~ 0.5 m) and a large value for outdoor environments (0.5 ~ 2.0 m).
 
-## GPU-based LiDAR-IMU Odometry Estimation (config_frontend.json)
+## GPU-based LiDAR-IMU Odometry Estimation (config_odometry.json)
 
 - **voxel_resolution** (default 0.25 m) : Base VGICP voxel resolution. Use a small value for indoor environments (e.g., 0.1 ~ 0.25 m).
 - **voxelmap_levels** (default 2 levels): Multi resolution voxel levels. Increasing this parameter makes estimation robust to large displacement.
@@ -40,7 +40,7 @@
     - *"DISPLACEMENT"* uses the conventional displacement-based keyframe management that is more intuitive to tune. Change **keyframe_delta_(trans|rot)** to tune the keyframe insertion frequency.
     - *"ENTROPY"* uses an entropy-based keyframe management. This strategy is often difficult to tune and is not recommended.
 
-## LiDAR-only Odometry Estimation (config_frontend_ct.json)
+## LiDAR-only Odometry Estimation (config_odometry_ct.json)
 
 - **max_correspondence_distance** (default 2.0 m) : Maximum corresponding distance for scan matching. 
 

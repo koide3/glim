@@ -3,7 +3,6 @@
 #include <atomic>
 #include <thread>
 #include <spdlog/spdlog.h>
-#include <glim/common/callbacks.hpp>
 #include <glim/backend/sub_map.hpp>
 #include <glim/backend/callbacks.hpp>
 #include <glim/util/concurrent_vector.hpp>
@@ -59,7 +58,6 @@ InteractiveViewer::InteractiveViewer() {
   using std::placeholders::_2;
   using std::placeholders::_3;
 
-  CommonCallbacks::on_notification.add([this](NotificationLevel level, const std::string& message) { guik::LightViewer::instance()->append_text(message); });
   GlobalMappingCallbacks::on_insert_submap.add(std::bind(&InteractiveViewer::globalmap_on_insert_submap, this, _1));
   GlobalMappingCallbacks::on_update_submaps.add(std::bind(&InteractiveViewer::globalmap_on_update_submaps, this, _1));
   GlobalMappingCallbacks::on_smoother_update.add(std::bind(&InteractiveViewer::globalmap_on_smoother_update, this, _1, _2, _3));

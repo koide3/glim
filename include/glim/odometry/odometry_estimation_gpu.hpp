@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glim/frontend/odometry_estimation_imu.hpp>
+#include <glim/odometry/odometry_estimation_imu.hpp>
 
 namespace gtsam_points {
 class VoxelizedFrame;
@@ -41,7 +41,7 @@ public:
 };
 
 /**
- * @brief GPU-based tightly coupled LiDAR-IMU frontend
+ * @brief GPU-based tightly coupled LiDAR-IMU odometry
  *
  */
 class OdometryEstimationGPU : public OdometryEstimationIMU {

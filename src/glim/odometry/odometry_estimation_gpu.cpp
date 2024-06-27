@@ -1,4 +1,4 @@
-#include <glim/frontend/odometry_estimation_gpu.hpp>
+#include <glim/odometry/odometry_estimation_gpu.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -25,7 +25,7 @@
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 
@@ -36,8 +36,8 @@ using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 
 OdometryEstimationGPUParams::OdometryEstimationGPUParams() : OdometryEstimationIMUParams() {
-  // frontend config
-  Config config(GlobalConfig::get_config_path("config_frontend"));
+  // odometry config
+  Config config(GlobalConfig::get_config_path("config_odometry"));
 
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
   voxelmap_levels = config.param<int>("odometry_estimation", "voxelmap_levels", 2);

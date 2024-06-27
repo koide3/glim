@@ -1,4 +1,4 @@
-#include <glim/frontend/odometry_estimation_ct.hpp>
+#include <glim/odometry/odometry_estimation_ct.hpp>
 
 #include <future>
 
@@ -19,7 +19,7 @@
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 
@@ -28,7 +28,7 @@ using gtsam::symbol_shorthand::Y;
 using Callbacks = OdometryEstimationCallbacks;
 
 OdometryEstimationCTParams::OdometryEstimationCTParams() {
-  Config config(GlobalConfig::get_config_path("config_frontend"));
+  Config config(GlobalConfig::get_config_path("config_odometry"));
 
   num_threads = config.param<int>("odometry_estimation", "num_threads", 4);
   max_correspondence_distance = config.param<double>("odometry_estimation", "max_correspondence_distance", 1.0);
@@ -56,6 +56,7 @@ OdometryEstimationCT::OdometryEstimationCT(const OdometryEstimationCTParams& par
   target_ivox.reset(new gtsam_points::iVox(params.ivox_resolution));
   target_ivox->voxel_insertion_setting().set_min_dist_in_cell(params.ivox_min_points_dist);
   target_ivox->set_lru_horizon(params.ivox_lru_thresh);
+  target_ivox->set_neighbor_voxel_mode(1);
 
   gtsam::ISAM2Params isam2_params;
   if (params.use_isam2_dogleg) {
@@ -118,7 +119,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
       } else {
         const double delta_time = (frames[last]->stamp + frames[last]->frame->times[frames[last]->frame->size() - 1]) - frames[last - 1]->stamp;
         const gtsam::Pose3 delta_pose = smoother->calculateEstimate<gtsam::Pose3>(X(last - 1)).inverse() * smoother->calculateEstimate<gtsam::Pose3>(Y(last));
-        last_twist = 0.5 * gtsam::Pose3::Logmap(delta_pose) / delta_time;
+        last_twist = 0.85 * gtsam::Pose3::Logmap(delta_pose) / delta_time;
       }
     }
 

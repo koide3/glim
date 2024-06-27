@@ -42,10 +42,10 @@ In the following, we show the graph structures and variables in the odometry est
     In the odometry estimation, old variables are eliminated from the graph when they leave the sliding optimization window specified by the **smoother_lag** param (e.g., 5 sec). You thus need to ensure that additional factors refer to only variables in this optimization window. 
 
 !!! note
-    Because **frontend_ct** performs LiDAR-only estimation, it does not create ```V(i)``` and ```B(i)```, and ```X(i)``` represents the LiDAR pose instead of the IMU pose.
+    Because **odometry_ct** performs LiDAR-only estimation, it does not create ```V(i)``` and ```B(i)```, and ```X(i)``` represents the LiDAR pose instead of the IMU pose.
 
 !!! info
-    ["velocity_suppressor.cpp"](https://github.com/koide3/glim_ext/blob/master/modules/frontend/velocity_suppressor/src/glim_ext/velocity_suppressor.cpp) in **gtsam_points** shows a simple example to insert velocity suppression factors into the odometry estimation factor graph.
+    ["velocity_suppressor.cpp"](https://github.com/koide3/glim_ext/blob/master/modules/odometry/velocity_suppressor/src/glim_ext/velocity_suppressor.cpp) in **gtsam_points** shows a simple example to insert velocity suppression factors into the odometry estimation factor graph.
 
 #### Variables in the global optimization
 
@@ -69,7 +69,7 @@ The global callback slot is a mechanism to hook processing steps in the mapping 
 
 ```cpp
 
-#include <glim/frontend/callback.hpp>
+#include <glim/odometry/callback.hpp>
 
 using namespace glim;
 
@@ -101,7 +101,7 @@ GLIM offers a mechanism to load extension modules from shared libraries at run-t
 
 
 ```cpp title="my_extension_module.cpp"
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 #include <glim/util/extension_module.hpp>
 
 using namespace glim;

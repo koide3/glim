@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <glim/frontend/initial_state_estimation.hpp>
+#include <glim/odometry/initial_state_estimation.hpp>
 
 namespace gtsam_points {
 struct FlatContainer;

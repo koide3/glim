@@ -56,13 +56,7 @@ public:
    * @brief Number of data in the input queue (for load control)
    * @return Input queue size
    */
-  int input_queue_size() const;
-
-  /**
-   * @brief Number of data in the output queue
-   * @return Output queue size
-   */
-  int output_queue_size() const;
+  int workload() const;
 
   /**
    * @brief Save the mapping result

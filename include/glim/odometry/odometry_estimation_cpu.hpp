@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glim/frontend/odometry_estimation_imu.hpp>
+#include <glim/odometry/odometry_estimation_imu.hpp>
 
 namespace gtsam_points {
 
@@ -39,7 +39,7 @@ public:
 };
 
 /**
- * @brief CPU-based semi-tightly coupled LiDAR-IMU frontend
+ * @brief CPU-based semi-tightly coupled LiDAR-IMU odometry
  */
 class OdometryEstimationCPU : public OdometryEstimationIMU {
 public:

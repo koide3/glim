@@ -49,12 +49,12 @@ private:
   bool show_current_points;
   int current_color_mode;
 
-  bool show_frontend_scans;
-  bool show_frontend_keyframes;
+  bool show_odometry_scans;
+  bool show_odometry_keyframes;
   bool show_submaps;
   bool show_factors;
 
-  bool show_frontend_status;
+  bool show_odometry_status;
   int last_id;
   int last_num_points;
   std::pair<double, double> last_point_stamps;

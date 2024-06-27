@@ -1,7 +1,7 @@
-#include <glim/frontend/odometry_estimation_base.hpp>
+#include <glim/odometry/odometry_estimation_base.hpp>
 
 #include <glim/util/load_module.hpp>
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 

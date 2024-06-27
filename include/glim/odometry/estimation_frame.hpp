@@ -51,12 +51,11 @@ public:
   Eigen::Vector3d v_world_imu;           ///< IMU velocity in the world frame
   Eigen::Matrix<double, 6, 1> imu_bias;  ///< IMU bias
 
-  PreprocessedFrame::ConstPtr raw_frame;             ///< Raw input point cloud
+  PreprocessedFrame::ConstPtr raw_frame;             ///< Raw input point cloud (LiDAR frame)
   Eigen::Matrix<double, 8, -1> imu_rate_trajectory;  ///< IMU-rate trajectory 8 x N  [t, x, y, z, qx, qy, qz, qw]
 
-  FrameID frame_id;                          ///< Coordinate frame of $frame
-  gtsam_points::PointCloud::ConstPtr frame;  ///< Deskewed points for state estimation
-
+  FrameID frame_id;                                            ///< Coordinate frame of $frame
+  gtsam_points::PointCloud::ConstPtr frame;                    ///< Deskewed points for state estimation
   std::vector<gtsam_points::GaussianVoxelMap::Ptr> voxelmaps;  ///< Multi-resolution voxelmaps
 };
 }  // namespace glim

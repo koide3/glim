@@ -153,7 +153,7 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
 
       Eigen::Vector3d values(1e-3, 1.0, 1.0);
       Eigen::Matrix4d c = Eigen::Matrix4d::Zero();
-      c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().inverse();
+      c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().transpose();
       return c;
     }
 
@@ -172,7 +172,7 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
       values = values.array().max(1e-3);
 
       Eigen::Matrix4d c = Eigen::Matrix4d::Zero();
-      c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().inverse();
+      c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().transpose();
       return c;
     }
 

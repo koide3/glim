@@ -7,9 +7,8 @@
 #include <gtsam_points/optimizers/isam2_result_ext.hpp>
 #include <gtsam_points/optimizers/levenberg_marquardt_optimization_status.hpp>
 
-#include <glim/common/callbacks.hpp>
-#include <glim/frontend/callbacks.hpp>
-#include <glim/frontend/estimation_frame.hpp>
+#include <glim/odometry/callbacks.hpp>
+#include <glim/odometry/estimation_frame.hpp>
 #include <glim/backend/callbacks.hpp>
 #include <glim/util/config.hpp>
 #include <glim/util/logging.hpp>
@@ -38,12 +37,12 @@ StandardViewer::StandardViewer() {
   show_current_points = true;
   current_color_mode = 0;
 
-  show_frontend_scans = true;
-  show_frontend_keyframes = true;
+  show_odometry_scans = true;
+  show_odometry_keyframes = true;
   show_submaps = true;
   show_factors = true;
 
-  show_frontend_status = false;
+  show_odometry_status = false;
   last_id = last_num_points = 0;
   last_point_stamps = std::make_pair(0.0, 0.0);
   last_imu_vel.setZero();
@@ -94,8 +93,6 @@ void StandardViewer::set_callbacks() {
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
-
-  CommonCallbacks::on_notification.add([this](NotificationLevel level, const std::string& message) { guik::LightViewer::instance()->append_text(message); });
 
   /*** Frontend callbacks ***/
 
@@ -210,7 +207,7 @@ void StandardViewer::set_callbacks() {
       for (const auto& keyframe : keyframes) {
         const Eigen::Isometry3f pose = resolve_pose(keyframe);
 
-        const std::string name = "frontend_keyframe_" + std::to_string(keyframe->id);
+        const std::string name = "odometry_keyframe_" + std::to_string(keyframe->id);
         auto drawable = viewer->find_drawable(name);
         if (drawable.first == nullptr) {
           auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(keyframe->frame->points, keyframe->frame->size());
@@ -219,7 +216,7 @@ void StandardViewer::set_callbacks() {
           drawable.first->add("model_matrix", pose.matrix());
         }
 
-        viewer->update_drawable("frontend_keyframe_coord_" + std::to_string(keyframe->id), glk::Primitives::coordinate_system(), guik::VertexColor(pose));
+        viewer->update_drawable("odometry_keyframe_coord_" + std::to_string(keyframe->id), glk::Primitives::coordinate_system(), guik::VertexColor(pose));
       }
     });
   });
@@ -242,8 +239,8 @@ void StandardViewer::set_callbacks() {
     invoke([this, keyframes] {
       auto viewer = guik::LightViewer::instance();
       for (const auto& keyframe : keyframes) {
-        viewer->remove_drawable("frontend_keyframe_" + std::to_string(keyframe->id));
-        viewer->remove_drawable("frontend_keyframe_coord_" + std::to_string(keyframe->id));
+        viewer->remove_drawable("odometry_keyframe_" + std::to_string(keyframe->id));
+        viewer->remove_drawable("odometry_keyframe_coord_" + std::to_string(keyframe->id));
       }
     });
   });
@@ -489,11 +486,11 @@ bool StandardViewer::drawable_filter(const std::string& name) {
     return false;
   }
 
-  if (!show_frontend_scans && starts_with(name, "frame_")) {
+  if (!show_odometry_scans && starts_with(name, "frame_")) {
     return false;
   }
 
-  if (!show_frontend_keyframes && starts_with(name, "frontend_keyframe_")) {
+  if (!show_odometry_keyframes && starts_with(name, "odometry_keyframe_")) {
     return false;
   }
 
@@ -543,19 +540,19 @@ void StandardViewer::drawable_selection() {
   }
 
   ImGui::Separator();
-  bool show_frontend = show_frontend_scans || show_frontend_keyframes;
-  if (ImGui::Checkbox("frontend", &show_frontend)) {
-    show_frontend_scans = show_frontend_keyframes = show_frontend;
+  bool show_odometry = show_odometry_scans || show_odometry_keyframes;
+  if (ImGui::Checkbox("odometry", &show_odometry)) {
+    show_odometry_scans = show_odometry_keyframes = show_odometry;
   }
 
   ImGui::SameLine();
   if (ImGui::Button("Status")) {
-    show_frontend_status = true;
+    show_odometry_status = true;
   }
 
-  ImGui::Checkbox("scans", &show_frontend_scans);
+  ImGui::Checkbox("scans", &show_odometry_scans);
   ImGui::SameLine();
-  ImGui::Checkbox("keyframes", &show_frontend_keyframes);
+  ImGui::Checkbox("keyframes", &show_odometry_keyframes);
 
   ImGui::Separator();
   bool show_backend = show_submaps || show_factors;
@@ -574,8 +571,8 @@ void StandardViewer::drawable_selection() {
 
   ImGui::End();
 
-  if (show_frontend_status) {
-    ImGui::Begin("frontend status", &show_frontend_status, ImGuiWindowFlags_AlwaysAutoResize);
+  if (show_odometry_status) {
+    ImGui::Begin("odometry status", &show_odometry_status, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("frame ID:%d", last_id);
     ImGui::Text("points:%d", last_num_points);
     ImGui::Text("stamp:%.3f ~ %.3f", last_point_stamps.first, last_point_stamps.second);

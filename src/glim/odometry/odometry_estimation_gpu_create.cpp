@@ -1,4 +1,4 @@
-#include <glim/frontend/odometry_estimation_gpu.hpp>
+#include <glim/odometry/odometry_estimation_gpu.hpp>
 
 extern "C" glim::OdometryEstimationBase* create_odometry_estimation_module() {
   glim::OdometryEstimationGPUParams params;

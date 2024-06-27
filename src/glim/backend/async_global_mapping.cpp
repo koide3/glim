@@ -51,12 +51,8 @@ void AsyncGlobalMapping::join() {
   // }
 }
 
-int AsyncGlobalMapping::input_queue_size() const {
+int AsyncGlobalMapping::workload() const {
   return input_submap_queue.size();
-}
-
-int AsyncGlobalMapping::output_queue_size() const {
-  return 0;
 }
 
 void AsyncGlobalMapping::save(const std::string& path) {

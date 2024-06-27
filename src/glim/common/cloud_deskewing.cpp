@@ -38,6 +38,7 @@ std::vector<Eigen::Vector4d> CloudDeskewing::deskew(
   std::vector<Eigen::Isometry3d> T_lidar0_lidar1(time_table.size());
   for (int i = 0; i < time_table.size(); i++) {
     const double dt = time_table[i];
+    // Maybe this is not correct. Need to check.
     const Eigen::Isometry3d T_imu1_imu0(gtsam::Pose3::Expmap(dt * vel).matrix());
     T_lidar0_lidar1[i] = T_lidar_imu * T_imu1_imu0.inverse() * T_imu_lidar;
   }

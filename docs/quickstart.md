@@ -12,7 +12,7 @@
 3. Confirm the sensor configuration and ROS topic parameters are set as follows:
 ```json
 glim/config/config.json
-  "config_frontend": "config_frontend_gpu.json",
+  "config_odometry": "config_odometry_gpu.json",
   "config_backend": "config_backend_gpu.json",
 glim/config/config_sensors.json
   "T_lidar_imu": [-0.006, 0.012, -0.008, 0, 0, 0, 1],
@@ -22,10 +22,10 @@ glim/config/config_ros.json
 ```
 
 !!! tip
-    If you want to try the **CPU-based odometry estimation and global optimization**, set ```config_frontend``` to ```config_frontend_cpu.json``` and ```config_backend``` to ```config_backend_cpu.json```.
+    If you want to try the **CPU-based odometry estimation and global optimization**, set ```config_odometry``` to ```config_odometry_cpu.json``` and ```config_backend``` to ```config_backend_cpu.json```.
 
 !!! tip
-    If you want to try the **LiDAR-only odometry estimation without IMU data**, set ```config_frontend``` to ```config_frontend_ct.json```, and set ```enable_imu``` in ```config_backend_cpu.json``` to ```false``` for both the sub- and global mapping modules.
+    If you want to try the **LiDAR-only odometry estimation without IMU data**, set ```config_odometry``` to ```config_odometry_ct.json```, and set ```enable_imu``` in ```config_backend_cpu.json``` to ```false``` for both the sub- and global mapping modules.
 
 
 ## Executables

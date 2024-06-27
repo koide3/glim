@@ -28,7 +28,6 @@
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
 #include <glim/common/imu_integration.hpp>
-#include <glim/common/callbacks.hpp>
 #include <glim/backend/callbacks.hpp>
 
 namespace glim {

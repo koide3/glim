@@ -1,4 +1,4 @@
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 #include <gtsam_unstable/nonlinear/FixedLagSmoother.h>
 

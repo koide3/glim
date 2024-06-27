@@ -21,28 +21,27 @@ if(BUILD_WITH_MARCH_NATIVE)
   set(CMAKE_CXX_FLAGS "-march=native ${CMAKE_CXX_FLAGS}")
 endif()
 
-find_package(Boost REQUIRED timer serialization)
+find_package(Boost REQUIRED serialization)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
 find_package(GTSAM REQUIRED)
 find_package(gtsam_points REQUIRED)
-find_package(spdlog REQUIRED)
+find_package(TBB REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(spdlog REQUIRED)
+
+if(BUILD_WITH_VIEWER)
+  find_package(Iridescence REQUIRED)
+endif()
 
 ###########
 ## Build ##
 ###########
 
-# Viewer
-if(BUILD_WITH_VIEWER)
-  find_package(Iridescence REQUIRED)
-endif()
-
 # GPU-related
 if(BUILD_WITH_CUDA)
   add_definitions(-DBUILD_GTSAM_POINTS_GPU)
-  set(GPU_SRCS src/glim/frontend/odometry_estimation_gpu.cpp)
-  # list(APPEND glim_LIBRARIES gtsam_points_cuda)
+  set(GPU_SRCS src/glim/odometry/odometry_estimation_gpu.cpp)
 endif()
 
 add_library(glim SHARED
@@ -57,20 +56,19 @@ add_library(glim SHARED
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
-  src/glim/common/callbacks.cpp
   src/glim/common/imu_integration.cpp
   src/glim/common/cloud_deskewing.cpp
   src/glim/common/cloud_covariance_estimation.cpp
-  # frontend
-  src/glim/frontend/callbacks.cpp
-  src/glim/frontend/estimation_frame.cpp
-  src/glim/frontend/initial_state_estimation.cpp
-  src/glim/frontend/loose_initial_state_estimation.cpp
-  src/glim/frontend/odometry_estimation_base.cpp
-  src/glim/frontend/async_odometry_estimation.cpp
-  src/glim/frontend/odometry_estimation_imu.cpp
-  src/glim/frontend/odometry_estimation_ct.cpp
-  src/glim/frontend/odometry_estimation_cpu.cpp
+  # odometry
+  src/glim/odometry/callbacks.cpp
+  src/glim/odometry/estimation_frame.cpp
+  src/glim/odometry/initial_state_estimation.cpp
+  src/glim/odometry/loose_initial_state_estimation.cpp
+  src/glim/odometry/odometry_estimation_base.cpp
+  src/glim/odometry/async_odometry_estimation.cpp
+  src/glim/odometry/odometry_estimation_imu.cpp
+  src/glim/odometry/odometry_estimation_ct.cpp
+  src/glim/odometry/odometry_estimation_cpu.cpp
   # backend
   src/glim/backend/callbacks.cpp
   src/glim/backend/sub_map.cpp
@@ -84,32 +82,34 @@ add_library(glim SHARED
   ${GPU_SRCS}
 )
 target_include_directories(glim PUBLIC
-  include
-  thirdparty/json/include
-  ${EIGEN3_INCLUDE_DIR}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include>
   ${OpenCV_INCLUDE_DIRS}
-  ${GTSAM_INCLUDE_DIRS}
 )
 target_link_libraries(glim
+  Boost::boost
+  Boost::serialization
+  Eigen3::Eigen
+  GTSAM::GTSAM
   gtsam_points::gtsam_points
-  ${OpenCV_LIBRARIES}
-  ${GTSAM_LIBRARIES}
-  ${Boost_LIBRARIES}
-  spdlog::spdlog
+  TBB::tbb
   OpenMP::OpenMP_CXX
+  spdlog::spdlog
+  $<TARGET_NAME_IF_EXISTS:Iridescence::Iridescence>
+  ${OpenCV_LIBRARIES}
 )
 list(APPEND glim_LIBRARIES glim)
 
 # Create shared libraries for estimation modules
 list(APPEND module_srcs
-  src/glim/frontend/odometry_estimation_ct_create.cpp
-  src/glim/frontend/odometry_estimation_cpu_create.cpp
+  src/glim/odometry/odometry_estimation_ct_create.cpp
+  src/glim/odometry/odometry_estimation_cpu_create.cpp
   src/glim/backend/sub_mapping_create.cpp
   src/glim/backend/global_mapping_create.cpp
 )
 if(BUILD_WITH_CUDA)
   list(APPEND module_srcs
-    src/glim/frontend/odometry_estimation_gpu_create.cpp
+    src/glim/odometry/odometry_estimation_gpu_create.cpp
   )
 endif()
 
@@ -141,11 +141,11 @@ if(BUILD_WITH_VIEWER)
     src/glim/viewer/standard_viewer.cpp
   )
   target_include_directories(standard_viewer PUBLIC
-    include
-    ${EIGEN3_INCLUDE_DIR}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     ${OpenCV_INCLUDE_DIRS}
   )
   target_link_libraries(standard_viewer
+    Eigen3::Eigen
     gtsam_points::gtsam_points
     Iridescence::Iridescence
   )
@@ -158,13 +158,11 @@ if(BUILD_WITH_VIEWER)
     src/glim/viewer/offline_viewer.cpp
   )
   target_include_directories(interactive_viewer PUBLIC
-    include
-    thirdparty/json/include
-    ${EIGEN3_INCLUDE_DIR}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     ${OpenCV_INCLUDE_DIRS}
-    ${GTSAM_INCLUDE_DIRS}
   )
   target_link_libraries(interactive_viewer
+    Eigen3::Eigen
     gtsam_points::gtsam_points
     Iridescence::Iridescence
   )

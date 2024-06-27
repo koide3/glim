@@ -5,7 +5,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <glim/frontend/estimation_frame.hpp>
+#include <glim/odometry/estimation_frame.hpp>
 
 namespace glim {
 

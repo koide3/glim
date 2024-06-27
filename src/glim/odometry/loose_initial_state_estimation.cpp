@@ -1,4 +1,4 @@
-#include <glim/frontend/loose_initial_state_estimation.hpp>
+#include <glim/odometry/loose_initial_state_estimation.hpp>
 
 #include <sstream>
 #include <spdlog/spdlog.h>
@@ -18,19 +18,18 @@
 
 #include <glim/util/config.hpp>
 #include <glim/util/convert_to_string.hpp>
-#include <glim/common/callbacks.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 
 LooseInitialStateEstimation::LooseInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias) : T_lidar_imu(T_lidar_imu) {
-  glim::Config config(glim::GlobalConfig::get_config_path("config_frontend"));
+  glim::Config config(glim::GlobalConfig::get_config_path("config_odometry"));
   num_threads = config.param("odometry_estimation", "num_threads", 2);
   window_size = config.param("odometry_estimation", "initialization_window_size", 1.0);
 
-  target_ivox.reset(new gtsam_points::iVox(0.5));
+  target_ivox.reset(new gtsam_points::iVox(1.0));
   covariance_estimation.reset(new CloudCovarianceEstimation(num_threads));
   imu_integration.reset(new glim::IMUIntegration());
 }

@@ -1,4 +1,4 @@
-#include <glim/frontend/odometry_estimation_cpu.hpp>
+#include <glim/odometry/odometry_estimation_cpu.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -20,7 +20,7 @@
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 
@@ -31,8 +31,8 @@ using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 
 OdometryEstimationCPUParams::OdometryEstimationCPUParams() : OdometryEstimationIMUParams() {
-  // frontend config
-  Config config(GlobalConfig::get_config_path("config_frontend"));
+  // odometry config
+  Config config(GlobalConfig::get_config_path("config_odometry"));
 
   registration_type = config.param<std::string>("odometry_estimation", "registration_type", "VGICP");
   max_iterations = config.param<int>("odometry_estimation", "max_iterations", 5);
@@ -55,7 +55,6 @@ OdometryEstimationCPU::OdometryEstimationCPU(const OdometryEstimationCPUParams& 
     target_ivox.reset(new gtsam_points::iVox(params.ivox_resolution));
     target_ivox->voxel_insertion_setting().set_min_dist_in_cell(params.ivox_min_dist);
     target_ivox->set_lru_horizon(params.lru_thresh);
-
     target_ivox->set_neighbor_voxel_mode(1);
   } else if (params.registration_type == "VGICP") {
     target_voxelmaps.resize(params.vgicp_voxelmap_levels);
@@ -152,7 +151,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   //   factors.emplace_shared<gtsam::LinearContainerFactor>(linearized->at(i), values);
   // }
 
-  // TODO: Extract a relative pose covariance from a frame-to-model matching result? How?
+  // TODO: Extract a relative pose covariance from a frame-to-model matching result?
   factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
   factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(T_target_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
 

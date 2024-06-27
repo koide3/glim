@@ -24,7 +24,7 @@ catkin_make -DENABLE_ORBSLAM=ON \
 
 ### Odometry estimation modules
 
-#### [ORB_SLAM-based loose visual integration](https://github.com/koide3/glim_ext/tree/master/modules/frontend/orb_slam_frontend)
+#### [ORB_SLAM-based loose visual integration](https://github.com/koide3/glim_ext/tree/master/modules/odometry/orb_slam_frontend)
 
 - Loosely coupled visual odometry estimation constraints based on ORB_SLAM3
 - Dependency: [ORB_SLAM3](https://github.com/UZ-SLAMLab/ORB_SLAM3) (GPL-3.0)
@@ -34,11 +34,11 @@ catkin_make -DENABLE_ORBSLAM=ON \
 </div>
 
 
-#### [Velocity suppressor](https://github.com/koide3/glim_ext/tree/master/modules/frontend/velocity_suppressor)
+#### [Velocity suppressor](https://github.com/koide3/glim_ext/tree/master/modules/odometry/velocity_suppressor)
 
 - Constraints to regulate IMU velocity
 
-#### [IMU calibration validator](https://github.com/koide3/glim_ext/tree/master/modules/frontend/imu_validator)
+#### [IMU calibration validator](https://github.com/koide3/glim_ext/tree/master/modules/odometry/imu_validator)
 
 - Utility module to validate the LiDAR-IMU transformation (See [FAQ](faq.md))
 

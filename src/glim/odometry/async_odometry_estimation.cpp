@@ -1,4 +1,4 @@
-#include <glim/frontend/async_odometry_estimation.hpp>
+#include <glim/odometry/async_odometry_estimation.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -38,12 +38,8 @@ void AsyncOdometryEstimation::join() {
   }
 }
 
-int AsyncOdometryEstimation::input_queue_size() const {
+int AsyncOdometryEstimation::workload() const {
   return input_frame_queue.size() + internal_frame_queue_size;
-}
-
-int AsyncOdometryEstimation::output_queue_size() const {
-  return output_estimation_results.size();
 }
 
 void AsyncOdometryEstimation::get_results(std::vector<EstimationFrame::ConstPtr>& estimation_results, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
@@ -52,7 +48,7 @@ void AsyncOdometryEstimation::get_results(std::vector<EstimationFrame::ConstPtr>
 }
 
 void AsyncOdometryEstimation::run() {
-  double last_imu_time = 0.0;
+  double last_imu_time = enable_imu ? 0.0 : std::numeric_limits<double>::max();
   std::deque<std::pair<double, cv::Mat>> images;
   std::deque<PreprocessedFrame::Ptr> raw_frames;
 
@@ -84,9 +80,11 @@ void AsyncOdometryEstimation::run() {
     }
 
     while (!images.empty()) {
-      // if (!end_of_sequence && enable_imu && images.front().first > last_imu_time) {
-      //   break;
-      // }
+      if (!end_of_sequence && images.front().first > last_imu_time) {
+        spdlog::debug("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f})", images.front().first, last_imu_time);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        break;
+      }
 
       const auto image = images.front();
       odometry_estimation->insert_image(image.first, image.second);
@@ -94,7 +92,7 @@ void AsyncOdometryEstimation::run() {
     }
 
     while (!raw_frames.empty()) {
-      if (!end_of_sequence && enable_imu && raw_frames.front()->scan_end_time > last_imu_time) {
+      if (!end_of_sequence && raw_frames.front()->scan_end_time > last_imu_time) {
         spdlog::debug("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f})", raw_frames.front()->scan_end_time, last_imu_time);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         break;

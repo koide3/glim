@@ -5,7 +5,7 @@
 #include <atomic>
 
 #include <glim/util/concurrent_vector.hpp>
-#include <glim/frontend/odometry_estimation_base.hpp>
+#include <glim/odometry/odometry_estimation_base.hpp>
 
 namespace glim {
 
@@ -54,16 +54,9 @@ public:
   void join();
 
   /**
-   * @brief  Size of the input data queue size (for load control)
-   * @return int Input queue size
+   * @brief   Get the size of the input queue
    */
-  int input_queue_size() const;
-
-  /**
-   * @brief  Size of the output data queue size
-   * @return int Output queue size
-   */
-  int output_queue_size() const;
+  int workload() const;
 
   /**
    * @brief Get the estimation results

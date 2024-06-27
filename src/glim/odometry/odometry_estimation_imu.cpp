@@ -1,4 +1,4 @@
-#include <glim/frontend/odometry_estimation_imu.hpp>
+#include <glim/odometry/odometry_estimation_imu.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -16,9 +16,9 @@
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
-#include <glim/frontend/initial_state_estimation.hpp>
-#include <glim/frontend/loose_initial_state_estimation.hpp>
-#include <glim/frontend/callbacks.hpp>
+#include <glim/odometry/initial_state_estimation.hpp>
+#include <glim/odometry/loose_initial_state_estimation.hpp>
+#include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 
@@ -40,8 +40,8 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
     imu_bias.setZero();
   }
 
-  // frontend config
-  Config config(GlobalConfig::get_config_path("config_frontend"));
+  // odometry config
+  Config config(GlobalConfig::get_config_path("config_odometry"));
 
   fix_imu_bias = config.param<bool>("odometry_estimation", "fix_imu_bias", false);
 
@@ -118,6 +118,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   const int current = frames.size();
   const int last = current - 1;
 
+  // The very first frame
   if (frames.empty()) {
     init_estimation->insert_frame(raw_frame);
     auto init_state = init_estimation->initial_pose();
@@ -186,13 +187,6 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0));
     new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(B(0), 6, 1e2);
     new_factors.add(create_factors(current, nullptr, new_values));
-
-    /*
-    new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(
-      B(0),
-      gtsam::imuBias::ConstantBias(init_state->imu_bias),
-      gtsam::noiseModel::Isotropic::Precision(6, 1e2));
-      */
 
     smoother->update(new_factors, new_values, new_stamps);
     update_frames(current, new_factors);

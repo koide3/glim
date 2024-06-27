@@ -6,7 +6,7 @@
     "config_viewer": "config_viewer.json",
     "config_sensors": "config_sensors.json",
     "config_preprocess": "config_preprocess.json",
-    "config_frontend": "config_frontend_gpu.json",
+    "config_odometry": "config_odometry_gpu.json",
     "config_sub_mapping": "config_sub_mapping_gpu.json",
     "config_global_mapping": "config_global_mapping_gpu.json"
   }

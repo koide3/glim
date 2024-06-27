@@ -2,7 +2,7 @@
 
 ## IMU-related issues
 
-If you face troubles, which may be related to IMU (e.g., estimation gets degraded when the LiDAR rotates), try the [imu_validator](https://github.com/koide3/glim_ext/tree/master/modules/frontend/imu_validator) module to see if the LiDAR-IMU transformation is properly calibrated.
+If you face troubles, which may be related to IMU (e.g., estimation gets degraded when the LiDAR rotates), try the [imu_validator](https://github.com/koide3/glim_ext/tree/master/modules/odometry/imu_validator) module to see if the LiDAR-IMU transformation is properly calibrated.
 
 This module plots the linear acceleration vector in the world frame (which should be around [0, 0, +g] regardless of the LiDAR pose) and the angular velocity estimated by LiDAR and IMU (they should be similar and synchronized).
 
@@ -23,7 +23,7 @@ You can also check if IMU velocity and bias are properly estimated by clicking t
 Because the initial upward direction (gravity direction) of the map frame is simply estimated by the average of linear acceleration observations, and you must keep the sensor at rest for the first a few seconds.
 
 !!!tip
-    You can manually provide an initial gravity-aligned sensor pose by specifying ```odometry_estimation/init_T_world_imu``` in ```config_frontend_*.json``` to skip the initial state estimation.
+    You can manually provide an initial gravity-aligned sensor pose by specifying ```odometry_estimation/init_T_world_imu``` in ```config_odometry_*.json``` to skip the initial state estimation.
 
 
 ## error: function "omp_is_initial_device" has already been defined

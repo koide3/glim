@@ -34,12 +34,8 @@ void AsyncSubMapping::join() {
   }
 }
 
-int AsyncSubMapping::input_queue_size() const {
+int AsyncSubMapping::workload() const {
   return input_frame_queue.size();
-}
-
-int AsyncSubMapping::output_queue_size() const {
-  return output_submap_queue.size();
 }
 
 std::vector<SubMap::Ptr> AsyncSubMapping::get_results() {
@@ -60,7 +56,7 @@ void AsyncSubMapping::run() {
         break;
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       continue;
     }
 
@@ -80,7 +76,7 @@ void AsyncSubMapping::run() {
       sub_mapping->insert_frame(frame);
     }
   }
-  
+
   output_submap_queue.insert(sub_mapping->submit_end_of_sequence());
 }
-}
+}  // namespace glim

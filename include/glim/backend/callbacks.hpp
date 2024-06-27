@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glim/util/callback_slot.hpp>
-#include <glim/frontend/estimation_frame.hpp>
+#include <glim/odometry/estimation_frame.hpp>
 #include <glim/backend/sub_map.hpp>
 
 namespace cv {

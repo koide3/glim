@@ -4,7 +4,7 @@
 #include <Eigen/Geometry>
 #include <opencv2/core.hpp>
 
-#include <glim/frontend/estimation_frame.hpp>
+#include <glim/odometry/estimation_frame.hpp>
 #include <glim/backend/sub_map.hpp>
 
 namespace glim {
@@ -54,7 +54,7 @@ public:
    * @brief Load a sub mapping module from a shared library
    * @param so_name  Shared library name
    * @return         Loaded sub mapping module
-  */
+   */
   static std::shared_ptr<SubMappingBase> load_module(const std::string& so_name);
 };
-}
+}  // namespace glim

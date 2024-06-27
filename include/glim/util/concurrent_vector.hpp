@@ -10,6 +10,33 @@
 namespace glim {
 
 /**
+ * @brief Queue data policy
+ */
+struct DataStorePolicy {
+public:
+  template <typename T, typename Alloc>
+  void regulate(std::deque<T, Alloc>& queue) const {
+    if (queue.size() < max_size) {
+      return;
+    }
+
+    const size_t num_erase = queue.size() - max_size;
+    if (pop_front) {
+      queue.erase(queue.begin(), queue.begin() + num_erase);
+    } else {
+      queue.erase(queue.end() - num_erase, queue.end());
+    }
+  }
+
+  static DataStorePolicy UNLIMITED() { return DataStorePolicy(); }
+  static DataStorePolicy UPTO(const size_t max_size, const bool pop_front = true) { return DataStorePolicy{max_size, pop_front}; }
+
+public:
+  const size_t max_size = std::numeric_limits<size_t>::max();
+  const bool pop_front = true;
+};
+
+/**
  * @brief Simple thread-safe vector with mutex-lock
  *
  * @tparam T      Data type
@@ -18,7 +45,7 @@ namespace glim {
 template <typename T, typename Alloc = std::allocator<T>>
 class ConcurrentVector {
 public:
-  ConcurrentVector() { end_of_data = false; }
+  ConcurrentVector(const DataStorePolicy& policy = DataStorePolicy::UNLIMITED()) : policy(policy) { end_of_data = false; }
 
   void submit_end_of_data() {
     end_of_data = true;
@@ -43,6 +70,7 @@ public:
   void push_back(const T& value) {
     std::lock_guard<std::mutex> lock(mutex);
     values.push_back(value);
+    policy.regulate(values);
     cond.notify_one();
   }
 
@@ -73,6 +101,7 @@ public:
 
     std::lock_guard<std::mutex> lock(mutex);
     values.insert(values.end(), new_values.begin(), new_values.end());
+    policy.regulate(values);
     cond.notify_all();
   }
 
@@ -146,6 +175,8 @@ public:
   }
 
 private:
+  const DataStorePolicy policy;
+
   std::atomic_bool end_of_data;
   std::condition_variable cond;
 
