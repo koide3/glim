@@ -3,8 +3,8 @@
 #include <atomic>
 #include <thread>
 #include <spdlog/spdlog.h>
-#include <glim/backend/sub_map.hpp>
-#include <glim/backend/callbacks.hpp>
+#include <glim/mapping/sub_map.hpp>
+#include <glim/mapping/callbacks.hpp>
 #include <glim/util/concurrent_vector.hpp>
 #include <glim/util/config.hpp>
 

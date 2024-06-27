@@ -1,8 +1,8 @@
-#include <glim/backend/async_global_mapping.hpp>
+#include <glim/mapping/async_global_mapping.hpp>
 
 #include <spdlog/spdlog.h>
 
-#include <glim/backend/callbacks.hpp>
+#include <glim/mapping/callbacks.hpp>
 
 namespace glim {
 

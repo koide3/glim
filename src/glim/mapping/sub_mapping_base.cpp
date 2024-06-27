@@ -1,7 +1,7 @@
-#include <glim/backend/sub_mapping_base.hpp>
+#include <glim/mapping/sub_mapping_base.hpp>
 
 #include <glim/util/load_module.hpp>
-#include <glim/backend/callbacks.hpp>
+#include <glim/mapping/callbacks.hpp>
 
 namespace glim {
 

@@ -1,4 +1,4 @@
-#include <glim/backend/global_mapping.hpp>
+#include <glim/mapping/global_mapping.hpp>
 
 #include <unordered_set>
 #include <spdlog/spdlog.h>
@@ -28,7 +28,7 @@
 #include <glim/util/config.hpp>
 #include <glim/util/console_colors.hpp>
 #include <glim/common/imu_integration.hpp>
-#include <glim/backend/callbacks.hpp>
+#include <glim/mapping/callbacks.hpp>
 
 namespace glim {
 

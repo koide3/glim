@@ -1,4 +1,4 @@
-#include <glim/backend/sub_map.hpp>
+#include <glim/mapping/sub_map.hpp>
 
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>

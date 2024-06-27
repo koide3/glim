@@ -1,4 +1,4 @@
-#include <glim/backend/sub_mapping.hpp>
+#include <glim/mapping/sub_mapping.hpp>
 
 #include <spdlog/spdlog.h>
 #include <gtsam/inference/Symbol.h>
@@ -21,7 +21,7 @@
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
-#include <glim/backend/callbacks.hpp>
+#include <glim/mapping/callbacks.hpp>
 
 namespace glim {
 

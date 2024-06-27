@@ -9,7 +9,7 @@
 
 #include <glim/odometry/callbacks.hpp>
 #include <glim/odometry/estimation_frame.hpp>
-#include <glim/backend/callbacks.hpp>
+#include <glim/mapping/callbacks.hpp>
 #include <glim/util/config.hpp>
 #include <glim/util/logging.hpp>
 #include <glim/util/trajectory_manager.hpp>
@@ -94,7 +94,7 @@ void StandardViewer::set_callbacks() {
   using std::placeholders::_2;
   using std::placeholders::_3;
 
-  /*** Frontend callbacks ***/
+  /*** Odometry callbacks ***/
 
   // IMU state initialization update callback
   IMUStateInitializationCallbacks::on_updated.add([this](const PreprocessedFrame::ConstPtr& frame, const Eigen::Isometry3d& T_odom_lidar_) {
@@ -555,9 +555,9 @@ void StandardViewer::drawable_selection() {
   ImGui::Checkbox("keyframes", &show_odometry_keyframes);
 
   ImGui::Separator();
-  bool show_backend = show_submaps || show_factors;
-  if (ImGui::Checkbox("backend", &show_backend)) {
-    show_submaps = show_factors = show_backend;
+  bool show_mapping = show_submaps || show_factors;
+  if (ImGui::Checkbox("mapping", &show_mapping)) {
+    show_submaps = show_factors = show_mapping;
   }
 
   ImGui::Checkbox("submaps", &show_submaps);
