@@ -45,7 +45,7 @@
 - **max_correspondence_distance** (default 2.0 m) : Maximum corresponding distance for scan matching. 
 
 
-## Global Optimization (config_backend.json)
+## Global Optimization (config_mapping.json)
 
 ### Sub mapping
 - **enable_optimization** (default true) : In environments where the odometry estimation is sufficiently robust and accurate, you can set this false to disable submap optimization and save the processing cost.

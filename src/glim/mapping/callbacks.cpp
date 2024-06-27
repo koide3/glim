@@ -2,7 +2,7 @@
 
 namespace glim {
 
-// sub map
+// sub mapping
 CallbackSlot<void(const double, const cv::Mat&)> SubMappingCallbacks::on_insert_image;
 CallbackSlot<void(const double, const Eigen::Vector3d&, const Eigen::Vector3d&)> SubMappingCallbacks::on_insert_imu;
 CallbackSlot<void(const EstimationFrame::ConstPtr& frame)> SubMappingCallbacks::on_insert_frame;
@@ -12,7 +12,7 @@ CallbackSlot<void(gtsam::NonlinearFactorGraph&, gtsam::Values&)> SubMappingCallb
 CallbackSlot<void(const gtsam_points::LevenbergMarquardtOptimizationStatus&, const gtsam::Values& values)> SubMappingCallbacks::on_optimization_status;
 CallbackSlot<void(const SubMap::ConstPtr&)> SubMappingCallbacks::on_new_submap;
 
-// global map
+// global mapping
 CallbackSlot<void(const double, const cv::Mat&)> GlobalMappingCallbacks::on_insert_image;
 CallbackSlot<void(const double, const Eigen::Vector3d&, const Eigen::Vector3d&)> GlobalMappingCallbacks::on_insert_imu;
 CallbackSlot<void(const SubMap::ConstPtr& frame)> GlobalMappingCallbacks::on_insert_submap;

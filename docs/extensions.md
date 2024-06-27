@@ -48,11 +48,11 @@ catkin_make -DENABLE_ORBSLAM=ON \
 
 ### Global optimization modules
 
-#### [GNSS constraints](https://github.com/koide3/glim_ext/tree/master/modules/backend/gnss_backend) [ROS1 only]
+#### [GNSS constraints](https://github.com/koide3/glim_ext/tree/master/modules/mapping/gnss_backend) [ROS1 only]
 
 - Naive implementation of GNSS global optimization constraints
 
-#### [ScanContext loop detector](https://github.com/koide3/glim_ext/tree/master/modules/backend/scan_context_loop_detector)
+#### [ScanContext loop detector](https://github.com/koide3/glim_ext/tree/master/modules/mapping/scan_context_loop_detector)
 
 - Explicit loop detection based on ScanContext
 - Dependency: [ScanContext](https://github.com/irapkaist/scancontext) (CC BY-NC-SA 4.0)
@@ -61,7 +61,7 @@ catkin_make -DENABLE_ORBSLAM=ON \
 <iframe width="560" height="315" src="https://www.youtube.com/embed/7Pdffxhfg4o" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-#### [DBoW loop detector](https://github.com/koide3/glim_ext/tree/master/modules/backend/dbow_loop_detector)
+#### [DBoW loop detector](https://github.com/koide3/glim_ext/tree/master/modules/mapping/dbow_loop_detector)
 
 - Explicit loop detection based on DBoW3
 - Dependency: [DBoW3](https://github.com/rmsalinas/DBow3) ([LICENSE](https://github.com/rmsalinas/DBow3/blob/master/LICENSE.txt))

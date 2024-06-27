@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <thread>
-#include <glim/backend/sub_mapping.hpp>
+#include <glim/mapping/sub_mapping.hpp>
 #include <glim/util/concurrent_vector.hpp>
 
 namespace glim {

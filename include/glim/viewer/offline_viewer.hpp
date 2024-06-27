@@ -1,7 +1,7 @@
 #pragma once
 
-#include <glim/backend/global_mapping.hpp>
-#include <glim/backend/async_global_mapping.hpp>
+#include <glim/mapping/global_mapping.hpp>
+#include <glim/mapping/async_global_mapping.hpp>
 #include <glim/viewer/interactive_viewer.hpp>
 
 namespace guik {

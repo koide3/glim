@@ -2,7 +2,7 @@
 
 #include <glim/util/callback_slot.hpp>
 #include <glim/odometry/estimation_frame.hpp>
-#include <glim/backend/sub_map.hpp>
+#include <glim/mapping/sub_map.hpp>
 
 namespace cv {
 class Mat;

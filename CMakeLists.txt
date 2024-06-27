@@ -26,7 +26,6 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core)
 find_package(GTSAM REQUIRED)
 find_package(gtsam_points REQUIRED)
-find_package(TBB REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
 
@@ -69,15 +68,15 @@ add_library(glim SHARED
   src/glim/odometry/odometry_estimation_imu.cpp
   src/glim/odometry/odometry_estimation_ct.cpp
   src/glim/odometry/odometry_estimation_cpu.cpp
-  # backend
-  src/glim/backend/callbacks.cpp
-  src/glim/backend/sub_map.cpp
-  src/glim/backend/sub_mapping_base.cpp
-  src/glim/backend/global_mapping_base.cpp
-  src/glim/backend/async_sub_mapping.cpp
-  src/glim/backend/async_global_mapping.cpp
-  src/glim/backend/sub_mapping.cpp
-  src/glim/backend/global_mapping.cpp
+  # mapping
+  src/glim/mapping/callbacks.cpp
+  src/glim/mapping/sub_map.cpp
+  src/glim/mapping/sub_mapping_base.cpp
+  src/glim/mapping/global_mapping_base.cpp
+  src/glim/mapping/async_sub_mapping.cpp
+  src/glim/mapping/async_global_mapping.cpp
+  src/glim/mapping/sub_mapping.cpp
+  src/glim/mapping/global_mapping.cpp
   # GPU-related
   ${GPU_SRCS}
 )
@@ -92,7 +91,6 @@ target_link_libraries(glim
   Eigen3::Eigen
   GTSAM::GTSAM
   gtsam_points::gtsam_points
-  TBB::tbb
   OpenMP::OpenMP_CXX
   spdlog::spdlog
   $<TARGET_NAME_IF_EXISTS:Iridescence::Iridescence>
@@ -104,8 +102,8 @@ list(APPEND glim_LIBRARIES glim)
 list(APPEND module_srcs
   src/glim/odometry/odometry_estimation_ct_create.cpp
   src/glim/odometry/odometry_estimation_cpu_create.cpp
-  src/glim/backend/sub_mapping_create.cpp
-  src/glim/backend/global_mapping_create.cpp
+  src/glim/mapping/sub_mapping_create.cpp
+  src/glim/mapping/global_mapping_create.cpp
 )
 if(BUILD_WITH_CUDA)
   list(APPEND module_srcs

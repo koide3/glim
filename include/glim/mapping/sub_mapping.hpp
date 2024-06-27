@@ -3,7 +3,7 @@
 #include <any>
 #include <random>
 #include <memory>
-#include <glim/backend/sub_mapping_base.hpp>
+#include <glim/mapping/sub_mapping_base.hpp>
 
 namespace gtsam {
 class Values;

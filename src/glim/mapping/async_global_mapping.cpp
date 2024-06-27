@@ -9,7 +9,6 @@ namespace glim {
 AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping, const int optimization_interval)
 : global_mapping(global_mapping),
   optimization_interval(optimization_interval) {
-  saving = false;
   request_to_optimize = false;
   request_to_find_overlapping_submaps.store(-1.0);
 
@@ -57,19 +56,15 @@ int AsyncGlobalMapping::workload() const {
 
 void AsyncGlobalMapping::save(const std::string& path) {
   spdlog::info("saving to {}...", path);
-  saving = true;
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::lock_guard<std::mutex> lock(global_mapping_mutex);
   global_mapping->save(path);
-  saving = false;
   spdlog::info("saved");
 }
 
 std::vector<Eigen::Vector4d> AsyncGlobalMapping::export_points() {
-  saving = true;
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::lock_guard<std::mutex> lock(global_mapping_mutex);
+  spdlog::info("exporting points");
   auto points = global_mapping->export_points();
-  saving = false;
-
   return points;
 }
 
@@ -77,10 +72,6 @@ void AsyncGlobalMapping::run() {
   auto last_optimization_time = std::chrono::high_resolution_clock::now();
 
   while (!kill_switch) {
-    while (saving) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
     auto images = input_image_queue.get_all_and_clear();
     auto imu_frames = input_imu_queue.get_all_and_clear();
     auto submaps = input_submap_queue.get_all_and_clear();
@@ -92,10 +83,12 @@ void AsyncGlobalMapping::run() {
 
       const double min_overlap = request_to_find_overlapping_submaps.exchange(-1.0);
       if (min_overlap > 0.0) {
+        std::lock_guard<std::mutex> lock(global_mapping_mutex);
         global_mapping->find_overlapping_submaps(min_overlap);
       }
 
       if (request_to_optimize || std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(optimization_interval)) {
+        std::lock_guard<std::mutex> lock(global_mapping_mutex);
         request_to_optimize = false;
         global_mapping->optimize();
         last_optimization_time = std::chrono::high_resolution_clock::now();
@@ -105,15 +98,16 @@ void AsyncGlobalMapping::run() {
       continue;
     }
 
-    for (const auto& image : images) {
-      global_mapping->insert_image(image.first, image.second);
-    }
-
+    std::lock_guard<std::mutex> lock(global_mapping_mutex);
     for (const auto& imu : imu_frames) {
       const double stamp = imu[0];
       const Eigen::Vector3d linear_acc = imu.block<3, 1>(1, 0);
       const Eigen::Vector3d angular_vel = imu.block<3, 1>(4, 0);
       global_mapping->insert_imu(stamp, linear_acc, angular_vel);
+    }
+
+    for (const auto& image : images) {
+      global_mapping->insert_image(image.first, image.second);
     }
 
     for (const auto& submap : submaps) {

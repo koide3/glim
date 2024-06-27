@@ -3,7 +3,6 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include <glim/util/config.hpp>
-#include <glim/util/console_colors.hpp>
 
 namespace glim {
 

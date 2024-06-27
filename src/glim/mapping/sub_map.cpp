@@ -6,7 +6,6 @@
 
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 
-#include <glim/util/console_colors.hpp>
 
 namespace glim {
 

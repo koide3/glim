@@ -4,7 +4,7 @@
 #include <memory>
 #include <random>
 #include <boost/shared_ptr.hpp>
-#include <glim/backend/global_mapping_base.hpp>
+#include <glim/mapping/global_mapping_base.hpp>
 
 namespace gtsam {
 class Values;

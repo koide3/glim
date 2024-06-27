@@ -3,7 +3,6 @@
 #include <spdlog/spdlog.h>
 #include <ros/ros.h>
 #include <rosbag/message_instance.h>
-#include <glim/util/console_colors.hpp>
 #include <glim/util/extension_module.hpp>
 
 namespace glim {

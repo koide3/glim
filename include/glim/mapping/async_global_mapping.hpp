@@ -1,8 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <mutex>
 #include <thread>
-#include <glim/backend/global_mapping.hpp>
+#include <glim/mapping/global_mapping.hpp>
 #include <glim/util/concurrent_vector.hpp>
 
 namespace glim {
@@ -73,7 +74,6 @@ private:
 private:
   std::atomic_bool kill_switch;      ///< Flag to stop the thread immediately (Hard kill switch)
   std::atomic_bool end_of_sequence;  ///< Flag to stop the thread when the input queues become empty (Soft kill switch)
-  std::atomic_bool saving;
   std::thread thread;
 
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;
@@ -84,6 +84,7 @@ private:
   std::atomic_bool request_to_optimize;
   std::atomic<double> request_to_find_overlapping_submaps;
 
+  std::mutex global_mapping_mutex;
   std::shared_ptr<glim::GlobalMappingBase> global_mapping;
 };
 

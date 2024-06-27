@@ -5,7 +5,7 @@
 #include <opencv2/core.hpp>
 
 #include <glim/odometry/estimation_frame.hpp>
-#include <glim/backend/sub_map.hpp>
+#include <glim/mapping/sub_map.hpp>
 
 namespace glim {
 

@@ -20,7 +20,6 @@
 #include <gtsam_points/cuda/nonlinear_factor_set_gpu.hpp>
 
 #include <glim/util/config.hpp>
-#include <glim/util/console_colors.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>

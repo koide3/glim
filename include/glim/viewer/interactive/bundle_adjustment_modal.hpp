@@ -4,7 +4,7 @@
 #include <gtsam_points/types/point_cloud.hpp>
 #include <glk/drawable.hpp>
 
-#include <glim/backend/sub_map.hpp>
+#include <glim/mapping/sub_map.hpp>
 
 namespace guik {
 class GLCanvas;

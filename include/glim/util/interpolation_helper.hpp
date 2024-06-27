@@ -5,19 +5,36 @@
 
 namespace glim {
 
-enum class InterpolationHelperResult { SUCCESS, FAILURE, WAITING };
-enum class InterpolationHelperSearchMode { LINEAR, BINARY };
+/// @brief Interpolation helper result
+enum class InterpolationHelperResult {
+  SUCCESS,  ///< Successfully found values that cover the target timestamp
+  FAILURE,  ///< Failed because all values are newer than the target timestamp
+  WAITING   ///< Waiting because all values are older than the target timestamp
+};
 
+/// @brief Interpolation data search mode
+enum class InterpolationHelperSearchMode {
+  LINEAR,  ///< Linear search
+  BINARY   ///< Binary search
+};
+
+/// @brief A helper class to find the values that cover a given timestamp from a data stream.
 template <typename Value>
 class InterpolationHelper {
 public:
   using StampedValue = std::pair<double, Value>;
 
+  /// @brief Constructor.
+  /// @param search_mode  Search mode
   InterpolationHelper(InterpolationHelperSearchMode search_mode = InterpolationHelperSearchMode::LINEAR) : search_mode(search_mode) {}
   ~InterpolationHelper() {}
 
+  /// @brief Number of queued values.
   int size() const { return values.size(); }
 
+  /// @brief Add a new value.
+  /// @param stamp  Timestamp
+  /// @param value  Value
   void add(double stamp, const Value& value) {
     if (!values.empty() && values.back().first > stamp) {
       std::cerr << "inserting non-ordered values!!" << std::endl;
@@ -26,10 +43,17 @@ public:
     values.emplace_back(stamp, value);
   }
 
+  /// @brief Add a new value.
   void add(const std::pair<double, Value>& stamped_value) {  //
     values.emplace_back(stamped_value.first, stamped_value.second);
   }
 
+  /// @brief Find the values that cover the target timestamp.
+  /// @param stamp                Target timestamp
+  /// @param left_ptr             [out] The closest value that is older than the target timestamp (nullptr if not needed)
+  /// @param right_ptr            [out] The closest value that is newer than the target timestamp (nullptr if not needed)
+  /// @param remove_cursor_ptr    [out] The index of the value that is older than the left_ptr    (nullptr if not needed)
+  /// @return                     Seach result status
   InterpolationHelperResult find(const double stamp, StampedValue* left_ptr, StampedValue* right_ptr, int* remove_cursor_ptr) const {
     if (values.empty() || values.back().first < stamp) {
       return InterpolationHelperResult::WAITING;
@@ -72,6 +96,8 @@ public:
     return InterpolationHelperResult::SUCCESS;
   }
 
+  /// @brief Erase values older than the given cursor.
+  /// @param remove_cursor  Cursor index
   void erase(int remove_cursor) {
     if (remove_cursor <= 0) {
       return;

@@ -2,7 +2,6 @@
 
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>
-#include <glim/util/console_colors.hpp>
 
 namespace glim {
 

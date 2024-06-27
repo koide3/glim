@@ -4,7 +4,6 @@
 #include <spdlog/spdlog.h>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/serialization.hpp>
-#include <glim/util/console_colors.hpp>
 #include <glim/util/extension_module.hpp>
 
 namespace glim {

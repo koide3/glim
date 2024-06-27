@@ -3,8 +3,7 @@
 #include <gtsam_points/optimizers/linearization_hook.hpp>
 #include <gtsam_points/cuda/nonlinear_factor_set_gpu_create.hpp>
 
-#include <glim/util/console_colors.hpp>
-
+#include <spdlog/spdlog.h>
 #include <portable-file-dialogs.h>
 #include <glk/io/ply_io.hpp>
 #include <guik/recent_files.hpp>
@@ -133,7 +132,7 @@ std::shared_ptr<GlobalMapping> OfflineViewer::load_map(guik::ProgressInterface& 
   std::cout << "enable_optimization:" << params.enable_optimization << std::endl;
   std::shared_ptr<glim::GlobalMapping> global_mapping(new glim::GlobalMapping(params));
   if (!global_mapping->load(path)) {
-    std::cerr << console::bold_red << "error: failed to load " << path << console::reset << std::endl;
+    spdlog::error("failed to load {}", path);
     return nullptr;
   }
 

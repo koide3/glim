@@ -9,7 +9,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <glim/backend/sub_map.hpp>
+#include <glim/mapping/sub_map.hpp>
 #include <glim/util/concurrent_vector.hpp>
 
 namespace gtsam {

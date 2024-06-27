@@ -60,15 +60,15 @@ void AsyncSubMapping::run() {
       continue;
     }
 
-    for (const auto& image : images) {
-      sub_mapping->insert_image(image.first, image.second);
-    }
-
     for (const auto& imu : imu_frames) {
       const double stamp = imu[0];
       const Eigen::Vector3d linear_acc = imu.block<3, 1>(1, 0);
       const Eigen::Vector3d angular_vel = imu.block<3, 1>(4, 0);
       sub_mapping->insert_imu(stamp, linear_acc, angular_vel);
+    }
+
+    for (const auto& image : images) {
+      sub_mapping->insert_image(image.first, image.second);
     }
 
     for (const auto& frame : odom_frames) {
