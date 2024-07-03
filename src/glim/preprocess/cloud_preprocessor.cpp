@@ -51,9 +51,9 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   // Downsampling
   if (params.use_random_grid_downsampling) {
     const double rate = params.downsample_target > 0 ? static_cast<double>(params.downsample_target) / frame->size() : params.downsample_rate;
-    frame = gtsam_points::randomgrid_sampling(frame, params.downsample_resolution, rate, mt);
+    frame = gtsam_points::randomgrid_sampling(frame, params.downsample_resolution, rate, mt, params.num_threads);
   } else {
-    frame = gtsam_points::voxelgrid_sampling(frame, params.downsample_resolution);
+    frame = gtsam_points::voxelgrid_sampling(frame, params.downsample_resolution, params.num_threads);
   }
 
   if (frame->size() < 100) {
@@ -82,7 +82,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
     std::fill(frame->times, frame->times + frame->size(), 0.0);
   }
 
-  // Nearest neighbor search
+  // Outlier removal
   if (params.enable_outlier_removal) {
     frame = gtsam_points::remove_outliers(frame, params.outlier_removal_k, params.outlier_std_mul_factor, params.num_threads);
   }

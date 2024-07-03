@@ -19,6 +19,6 @@
     "outlier_removal_k": 10,
     "outlier_std_mul_factor": 1.0,
     "k_correspondences": 10,
-    "num_threads": 1
+    "num_threads": 2
   }
 }
