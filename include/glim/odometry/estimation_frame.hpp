@@ -23,18 +23,25 @@ struct EstimationFrame {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   /**
-   * @brief Make a clone of the estimation frame instance but without points data
+   * @brief Make a clone of the estimation frame. (Points data are shallow copied)
+   * @return EstimationFrame::Ptr   Cloned frame
+   */
+  EstimationFrame::Ptr clone() const;
+
+  /**
+   * @brief Make a clone of the estimation frame instance but without points data.
    * @return EstimationFrame::Ptr   Cloned frame without points
    */
   EstimationFrame::Ptr clone_wo_points() const;
+
   /**
-   * @brief Get the sensor pose according to frame_id
+   * @brief Get the sensor pose according to frame_id.
    * @return const Eigen::Isometry3d  Sensor pose
    */
   const Eigen::Isometry3d T_world_sensor() const;
 
   /**
-   * @brief Set the sensor pose
+   * @brief Set the sensor pose.
    * @param frame_id  Sensor coodinate frame
    * @param T         Sensor pose
    */

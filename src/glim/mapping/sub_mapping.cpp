@@ -1,9 +1,11 @@
 #include <glim/mapping/sub_mapping.hpp>
 
+#include <filesystem>
 #include <spdlog/spdlog.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/types/point_cloud_gpu.hpp>
@@ -17,6 +19,7 @@
 #include <gtsam_points/cuda/stream_temp_buffer_roundrobin.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/convert_to_string.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -91,21 +94,60 @@ void SubMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_ac
 void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   Callbacks::on_insert_frame(odom_frame_);
 
-  EstimationFrame::ConstPtr odom_frame = odom_frame_;
-  if (params.enable_gpu && !odom_frame->frame->points_gpu) {
-    EstimationFrame::Ptr frame(new EstimationFrame);
-    *frame = *odom_frame;
+  delayed_input_queue.emplace_back(odom_frame_);
+  if (delayed_input_queue.size() < 2) {
+    return;
+  }
+
+  EstimationFrame::Ptr odom_frame = delayed_input_queue.front()->clone();
+  delayed_input_queue.pop_front();
+  EstimationFrame::ConstPtr next_frame = delayed_input_queue.front();
+
+  if (params.enable_imu) {
+    gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
+    gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
+
+    std::vector<double> imu_stamps;
+    std::vector<Eigen::Isometry3d> imu_poses;
+    imu_integration->integrate_imu(odom_frame->stamp, next_frame->stamp, nav_world_imu, imu_bias, imu_stamps, imu_poses);
+
+    gtsam::Values values;
+    for (int i = 0; i < imu_stamps.size(); i++) {
+      values.insert(X(i), gtsam::Pose3(imu_poses[i].matrix()));
+    }
+
+    gtsam::NonlinearFactorGraph graph;
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3(odom_frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(imu_stamps.size() - 1), gtsam::Pose3(next_frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
+    for (int i = 1; i < imu_stamps.size(); i++) {
+      const double dt = (imu_stamps[i] - imu_stamps[i - 1]) / (next_frame->stamp - odom_frame->stamp);
+      const Eigen::Isometry3d T_last_current = imu_poses[i - 1].inverse() * imu_poses[i];
+      graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i - 1), X(i), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, dt + 1e-2));
+    }
+
+    gtsam::LevenbergMarquardtParams lm_params;
+    lm_params.setAbsoluteErrorTol(1e-6);
+    lm_params.setRelativeErrorTol(1e-6);
+    lm_params.setMaxIterations(5);
+    values = gtsam::LevenbergMarquardtOptimizer(graph, values, lm_params).optimize();
+
+    odom_frame->imu_rate_trajectory.resize(8, imu_stamps.size());
+    for (int i = 0; i < imu_stamps.size(); i++) {
+      const Eigen::Vector3d trans(imu_poses[i].translation());
+      const Eigen::Quaterniond quat(imu_poses[i].linear());
+      odom_frame->imu_rate_trajectory.col(i) << imu_stamps[i], trans, quat.x(), quat.y(), quat.z(), quat.w();
+    }
+  }
 
 #ifdef BUILD_GTSAM_POINTS_GPU
+  if (params.enable_gpu && !odom_frame->frame->points_gpu) {
     if (params.enable_gpu) {
       auto stream = std::static_pointer_cast<gtsam_points::CUDAStream>(this->stream);
-      auto frame_gpu = gtsam_points::PointCloudGPU::clone(*frame->frame, *stream);
-      frame->frame = frame_gpu;
+      auto frame_gpu = gtsam_points::PointCloudGPU::clone(*odom_frame->frame, *stream);
+      odom_frame->frame = frame_gpu;
     }
-#endif
-
-    odom_frame = frame;
   }
+#endif
 
   const int current = odom_frames.size();
   const int last = current - 1;
@@ -272,14 +314,23 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   gtsam_points::PointCloud::ConstPtr deskewed_frame = odom_frame->frame;
 
   // Re-perform deskewing
-  if (params.enable_imu && odom_frame->raw_frame) {
-    const gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
-    const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
+  if (params.enable_imu && odom_frame->raw_frame && odom_frame->imu_rate_trajectory.cols() >= 2) {
+    if (std::abs(odom_frame->stamp - odom_frame->imu_rate_trajectory(0, 0)) > 1e-3) {
+      spdlog::warn("inconsistent frame stamp and imu_rate stamp!! (odom_frame={} imu_rate_trajectory={})", odom_frame->stamp, odom_frame->imu_rate_trajectory(0, 0));
+    }
+    if (odom_frame->raw_frame->scan_end_time > odom_frame->imu_rate_trajectory.rightCols<1>()[0]) {
+      spdlog::warn("imu_rate stamp does not cover the scan duration range!! (frame={} scan_end_time={})", odom_frame->stamp, odom_frame->raw_frame->scan_end_time);
+    }
 
-    // TODO: smoothing-based pose estimation
-    std::vector<double> imu_pred_times;
-    std::vector<Eigen::Isometry3d> imu_pred_poses;
-    imu_integration->integrate_imu(odom_frame->raw_frame->stamp, odom_frame->raw_frame->scan_end_time, nav_world_imu, imu_bias, imu_pred_times, imu_pred_poses);
+    std::vector<double> imu_pred_times(odom_frame->imu_rate_trajectory.cols());
+    std::vector<Eigen::Isometry3d> imu_pred_poses(odom_frame->imu_rate_trajectory.cols());
+    for (int i = 0; i < odom_frame->imu_rate_trajectory.cols(); i++) {
+      const Eigen::Matrix<double, 8, 1> imu = odom_frame->imu_rate_trajectory.col(i).transpose();
+      imu_pred_times[i] = imu[0];
+      imu_pred_poses[i].setIdentity();
+      imu_pred_poses[i].translation() << imu[1], imu[2], imu[3];
+      imu_pred_poses[i].linear() = Eigen::Quaterniond(imu[7], imu[4], imu[5], imu[6]).toRotationMatrix();
+    }
 
     auto deskewed =
       deskewing

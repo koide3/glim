@@ -4,6 +4,12 @@
 
 namespace glim {
 
+EstimationFrame::Ptr EstimationFrame::clone() const {
+  EstimationFrame::Ptr cloned(new EstimationFrame);
+  *cloned = *this;
+  return cloned;
+}
+
 EstimationFrame::Ptr EstimationFrame::clone_wo_points() const {
   EstimationFrame::Ptr cloned(new EstimationFrame);
   *cloned = *this;

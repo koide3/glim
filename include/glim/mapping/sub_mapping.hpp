@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any>
+#include <deque>
 #include <random>
 #include <memory>
 #include <glim/mapping/sub_mapping_base.hpp>
@@ -84,6 +85,7 @@ private:
   std::shared_ptr<void> stream;
   std::shared_ptr<void> stream_buffer_roundrobin;
 
+  std::deque<EstimationFrame::ConstPtr> delayed_input_queue;
   std::vector<EstimationFrame::ConstPtr> odom_frames;
 
   std::vector<int> keyframe_indices;

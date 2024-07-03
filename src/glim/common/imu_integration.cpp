@@ -85,6 +85,9 @@ int IMUIntegration::integrate_imu(
   //
   imu_measurements->resetIntegrationAndSetBias(bias);
 
+  pred_times.push_back(start_time);
+  pred_poses.push_back(Eigen::Isometry3d(state.pose().matrix()));
+
   int cursor = 0;
   auto imu_itr = imu_queue.begin();
   double last_stamp = start_time;
@@ -108,6 +111,18 @@ int IMUIntegration::integrate_imu(
     pred_times.push_back(imu_stamp);
     pred_poses.push_back(Eigen::Isometry3d(predicted.pose().matrix()));
     last_stamp = imu_stamp;
+  }
+
+  const double dt = end_time - last_stamp;
+  if (dt > 0.0) {
+    Eigen::Matrix<double, 7, 1> last_imu_frame = imu_itr == imu_queue.end() ? *(imu_itr - 1) : *imu_itr;
+    const auto& a = last_imu_frame.block<3, 1>(1, 0);
+    const auto& w = last_imu_frame.block<3, 1>(4, 0);
+    imu_measurements->integrateMeasurement(a, w, dt);
+
+    auto predicted = imu_measurements->predict(state, bias);
+    pred_times.push_back(end_time);
+    pred_poses.push_back(Eigen::Isometry3d(predicted.pose().matrix()));
   }
 
   return cursor;

@@ -13,10 +13,24 @@
 #include <gtsam_points/factors/linear_damping_factor.hpp>
 #include <gtsam_points/factors/rotate_vector3_factor.hpp>
 
-BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Isotropic, "gtsam::noiseModel::Isotropic");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Unit, "gtsam_noiseModel::Unit");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Constrained, "gtsam_noiseModel::Constrained");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Base, "gtsam::noiseModel::Base");
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Gaussian, "gtsam::noiseModel::Gaussian");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Diagonal, "gtsam::noiseModel::Diagonal");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Isotropic, "gtsam::noiseModel::Isotropic");
 BOOST_CLASS_EXPORT_GUID(gtsam::SharedNoiseModel, "gtsam::SharedNoiseModel");
+BOOST_CLASS_EXPORT_GUID(gtsam::SharedDiagonal, "gtsam::SharedDiagonal");
+BOOST_CLASS_EXPORT_GUID(gtsam::SharedIsotropic, "gtsam::SharedIsotropic");
 
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Robust, "gtsam::noiseModel::Robust");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Base, "gtsam::noiseModel::mEstimator::Base");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Null, "gtsam::noiseModel::mEstimator::Null");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Fair, "gtsam::noiseModel::mEstimator::Fair");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Huber, "gtsam::noiseModel::mEstimator::Huber");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Tukey, "gtsam::noiseModel::mEstimator::Tukey");
+
+GTSAM_VALUE_EXPORT(gtsam::Rot3);
 GTSAM_VALUE_EXPORT(gtsam::Pose3);
 GTSAM_VALUE_EXPORT(gtsam::Vector3);
 GTSAM_VALUE_EXPORT(gtsam::imuBias::ConstantBias);
@@ -26,6 +40,8 @@ BOOST_CLASS_EXPORT_GUID(gtsam::JacobianFactor, "gtsam::JacobianFactor");
 BOOST_CLASS_EXPORT_GUID(gtsam::HessianFactor, "gtsam::HessianFactor");
 BOOST_CLASS_EXPORT_GUID(gtsam::NonlinearFactor, "gtsam::NonlinearFactor");
 BOOST_CLASS_EXPORT_GUID(gtsam::LinearContainerFactor, "gtsam::LinearContainerFactor");
+
+BOOST_CLASS_EXPORT_GUID(gtsam::NoiseModelFactor, "gtsam::NoiseModelFactor");
 
 BOOST_CLASS_EXPORT_GUID(gtsam::PriorFactor<gtsam::Pose3>, "gtsam::PriorFactor<gtsam::Pose3>");
 BOOST_CLASS_EXPORT_GUID(gtsam::PriorFactor<gtsam::Vector3>, "gtsam::PriorFactor<gtsam::Vector3>");

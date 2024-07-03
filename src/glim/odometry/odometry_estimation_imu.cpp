@@ -258,6 +258,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   if (params->save_imu_rate_trajectory) {
     new_frame->imu_rate_trajectory.resize(8, pred_imu_times.size());
+
     for (int i = 0; i < pred_imu_times.size(); i++) {
       const Eigen::Vector3d trans = pred_imu_poses[i].translation();
       const Eigen::Quaterniond quat(pred_imu_poses[i].linear());
@@ -312,6 +313,10 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
   Callbacks::on_update_frames(active_frames);
   spdlog::trace("frames updated");
+
+  if (smoother->fallbackHappened()) {
+    spdlog::warn("odometry estimation smoother fallback happened (time={})", raw_frame->stamp);
+  }
 
   return frames[current];
 }

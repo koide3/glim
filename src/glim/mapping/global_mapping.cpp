@@ -453,11 +453,17 @@ void GlobalMapping::save(const std::string& path) {
     }
   }
 
+  spdlog::info("serializing factor graph to {}/graph.bin", path);
   try {
     gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
-    gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
   } catch (boost::archive::archive_exception e) {
     spdlog::warn("failed to serialize factor graph!!");
+    spdlog::warn(e.what());
+  }
+  try {
+    gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
+  } catch (boost::archive::archive_exception e) {
+    spdlog::warn("failed to serialize values!!");
     spdlog::warn(e.what());
   }
 
@@ -600,10 +606,20 @@ bool GlobalMapping::load(const std::string& path) {
   gtsam::Values values;
   gtsam::NonlinearFactorGraph graph;
 
-  spdlog::info("deserializing factor graph");
-  gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
-  spdlog::info("deserializing values");
-  gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
+  try {
+    spdlog::info("deserializing factor graph");
+    gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
+  } catch (boost::archive::archive_exception e) {
+    spdlog::error("failed to deserialize factor graph!!");
+    spdlog::error(e.what());
+  }
+  try {
+    spdlog::info("deserializing values");
+    gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
+  } catch (boost::archive::archive_exception e) {
+    spdlog::error("failed to deserialize factor graph!!");
+    spdlog::error(e.what());
+  }
 
   spdlog::info("creating matching cost factors");
   for (const auto& factor : matching_cost_factors) {
