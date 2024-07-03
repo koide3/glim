@@ -111,7 +111,6 @@ std::vector<Eigen::Vector4d> CloudDeskewing::deskew(
       const Eigen::Quaterniond imu_quat_l(imu_poses[imu_cursor].linear());
       const Eigen::Quaterniond imu_quat_r(imu_poses[imu_cursor + 1].linear());
 
-      // SLERP interpolation (expmap/logmap may be expensive? need to measure)
       T_world_imu1.translation() = (1.0 - p) * imu_trans_l + p * imu_trans_r;
       T_world_imu1.linear() = imu_quat_l.slerp(p, imu_quat_r).toRotationMatrix();
     }

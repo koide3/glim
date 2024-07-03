@@ -104,6 +104,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   EstimationFrame::ConstPtr next_frame = delayed_input_queue.front();
 
   if (params.enable_imu) {
+    // Smoothing IMU-based pose estimation
     gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
     gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
@@ -313,7 +314,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 void SubMapping::insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame) {
   gtsam_points::PointCloud::ConstPtr deskewed_frame = odom_frame->frame;
 
-  // Re-perform deskewing
+  // Re-perform deskewing with smoothed IMU poses
   if (params.enable_imu && odom_frame->raw_frame && odom_frame->imu_rate_trajectory.cols() >= 2) {
     if (std::abs(odom_frame->stamp - odom_frame->imu_rate_trajectory(0, 0)) > 1e-3) {
       spdlog::warn("inconsistent frame stamp and imu_rate stamp!! (odom_frame={} imu_rate_trajectory={})", odom_frame->stamp, odom_frame->imu_rate_trajectory(0, 0));
