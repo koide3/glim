@@ -5,8 +5,10 @@
 #include <spdlog/spdlog.h>
 #include <glim/mapping/sub_map.hpp>
 #include <glim/mapping/callbacks.hpp>
+#include <glim/odometry/callbacks.hpp>
 #include <glim/util/concurrent_vector.hpp>
 #include <glim/util/config.hpp>
+#include <glim/util/trajectory_manager.hpp>
 
 #include <glim/viewer/interactive/manual_loop_close_modal.hpp>
 #include <glim/viewer/interactive/bundle_adjustment_modal.hpp>
@@ -41,6 +43,7 @@ InteractiveViewer::InteractiveViewer() {
   coord_scale = 1.0f;
   sphere_scale = 0.5f;
 
+  draw_current = true;
   draw_traj = false;
   draw_points = true;
   draw_factors = true;
@@ -54,10 +57,13 @@ InteractiveViewer::InteractiveViewer() {
 
   z_range = config.param("interactive_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
 
+  trajectory.reset(new TrajectoryManager);
+
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
 
+  OdometryEstimationCallbacks::on_new_frame.add(std::bind(&InteractiveViewer::odometry_on_new_frame, this, _1));
   GlobalMappingCallbacks::on_insert_submap.add(std::bind(&InteractiveViewer::globalmap_on_insert_submap, this, _1));
   GlobalMappingCallbacks::on_update_submaps.add(std::bind(&InteractiveViewer::globalmap_on_update_submaps, this, _1));
   GlobalMappingCallbacks::on_smoother_update.add(std::bind(&InteractiveViewer::globalmap_on_smoother_update, this, _1, _2, _3));
@@ -96,6 +102,10 @@ void InteractiveViewer::viewer_loop() {
     const auto starts_with = [](const std::string& name, const std::string& pattern) {
       return name.size() < pattern.size() ? false : std::equal(pattern.begin(), pattern.end(), name.begin());
     };
+
+    if (!draw_current && name == "current") {
+      return false;
+    }
 
     if (!draw_traj && starts_with(name, "traj")) {
       return false;
@@ -161,6 +171,8 @@ void InteractiveViewer::drawable_selection() {
   ImGui::Checkbox("Factors", &draw_factors);
   ImGui::SameLine();
   ImGui::Checkbox("Spheres", &draw_spheres);
+
+  ImGui::Checkbox("Current", &draw_current);
 
   bool do_update_viewer = false;
   do_update_viewer |= ImGui::DragFloat("coord scale", &coord_scale, 0.01f, 0.01f, 100.0f);
@@ -364,12 +376,25 @@ void InteractiveViewer::update_viewer() {
   viewer->update_drawable("traj", traj_line, guik::FlatGreen());
 }
 
+void InteractiveViewer::odometry_on_new_frame(const EstimationFrame::ConstPtr& new_frame) {
+  invoke([this, new_frame] {
+    auto viewer = guik::viewer();
+    auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
+
+    trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor());
+    const Eigen::Isometry3d pose = trajectory->odom2world(new_frame->T_world_sensor());
+    viewer->update_drawable("current", cloud_buffer, guik::FlatOrange(pose).set_point_scale(2.0f));
+  });
+}
+
 /**
  * @brief New submap insertion callback
  */
 void InteractiveViewer::globalmap_on_insert_submap(const SubMap::ConstPtr& submap) {
   std::shared_ptr<Eigen::Isometry3d> pose(new Eigen::Isometry3d(submap->T_world_origin));
   invoke([this, submap, pose] {
+    trajectory->update_anchor(submap->frames[submap->frames.size() / 2]->stamp, submap->T_world_origin);
+
     submap_poses.push_back(*pose);
     submaps.push_back(submap);
     update_viewer();
@@ -461,3 +486,7 @@ void InteractiveViewer::clear() {
 }
 
 }  // namespace glim
+
+extern "C" glim::ExtensionModule* create_extension_module() {
+  return new glim::InteractiveViewer();
+}

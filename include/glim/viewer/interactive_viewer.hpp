@@ -10,6 +10,7 @@
 #include <Eigen/Geometry>
 
 #include <glim/mapping/sub_map.hpp>
+#include <glim/util/extension_module.hpp>
 #include <glim/util/concurrent_vector.hpp>
 
 namespace gtsam {
@@ -25,10 +26,11 @@ class ISAM2ResultExt;
 
 namespace glim {
 
+class TrajectoryManager;
 class ManualLoopCloseModal;
 class BundleAdjustmentModal;
 
-class InteractiveViewer {
+class InteractiveViewer : public ExtensionModule {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -38,7 +40,7 @@ public:
   InteractiveViewer();
   virtual ~InteractiveViewer();
 
-  bool ok() const;
+  virtual bool ok() const override;
   void wait();
   void stop();
   void clear();
@@ -56,6 +58,7 @@ protected:
 
   void update_viewer();
 
+  void odometry_on_new_frame(const EstimationFrame::ConstPtr& new_frame);
   void globalmap_on_insert_submap(const SubMap::ConstPtr& submap);
   void globalmap_on_update_submaps(const std::vector<SubMap::Ptr>& updated_submaps);
   void globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values);
@@ -75,6 +78,7 @@ protected:
   float coord_scale;
   float sphere_scale;
 
+  bool draw_current;
   bool draw_traj;
   bool draw_points;
   bool draw_factors;
@@ -96,6 +100,9 @@ protected:
   std::unique_ptr<ManualLoopCloseModal> manual_loop_close_modal;
   std::unique_ptr<BundleAdjustmentModal> bundle_adjustment_modal;
 
+  // Odometry
+  std::unique_ptr<TrajectoryManager> trajectory;
+
   // Submaps
   std::vector<Eigen::Isometry3d> submap_poses;
   std::vector<SubMap::ConstPtr> submaps;
@@ -106,4 +113,4 @@ protected:
   // Factors to be inserted into the global mapping graph
   ConcurrentVector<boost::shared_ptr<gtsam::NonlinearFactor>> new_factors;
 };
-}
+}  // namespace glim

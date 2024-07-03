@@ -319,8 +319,11 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     if (std::abs(odom_frame->stamp - odom_frame->imu_rate_trajectory(0, 0)) > 1e-3) {
       spdlog::warn("inconsistent frame stamp and imu_rate stamp!! (odom_frame={} imu_rate_trajectory={})", odom_frame->stamp, odom_frame->imu_rate_trajectory(0, 0));
     }
-    if (odom_frame->raw_frame->scan_end_time > odom_frame->imu_rate_trajectory.rightCols<1>()[0]) {
-      spdlog::warn("imu_rate stamp does not cover the scan duration range!! (frame={} scan_end_time={})", odom_frame->stamp, odom_frame->raw_frame->scan_end_time);
+    if (odom_frame->raw_frame->scan_end_time > odom_frame->imu_rate_trajectory.rightCols<1>()[0] + 1e-3) {
+      spdlog::warn(
+        "imu_rate stamp does not cover the scan duration range!! (imu_rate_end={} scan_end={})",
+        odom_frame->imu_rate_trajectory.rightCols<1>()[0],
+        odom_frame->raw_frame->scan_end_time);
     }
 
     std::vector<double> imu_pred_times(odom_frame->imu_rate_trajectory.cols());
