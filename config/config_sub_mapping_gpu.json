@@ -36,7 +36,7 @@
     "keyframe_update_interval_trans": 1.0,
     "max_keyframe_overlap": 0.6,
     // Relative pose factors
-    "create_between_factors": true,
+    "create_between_factors": false,
     "between_registration_type": "GICP",
     // Registration error factors
     "registration_error_factor_type": "VGICP_GPU",
