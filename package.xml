@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>3D LiDAR-IMU mapping framework</description>
   <maintainer email="k.koide@aist.go.jp">k.koide</maintainer>
-  <license>GPLv3</license>
+  <license>MIT</license>
 
   <depend>fmt</depend>
   <depend>spdlog</depend>
