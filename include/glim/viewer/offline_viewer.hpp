@@ -13,7 +13,7 @@ namespace glim {
 
 class OfflineViewer : public InteractiveViewer {
 public:
-  OfflineViewer();
+  OfflineViewer(const std::string& init_map_path = "");
   virtual ~OfflineViewer() override;
 
 private:
@@ -26,6 +26,7 @@ private:
   bool export_map(guik::ProgressInterface& progress, const std::string& path);
 
 private:
+  std::string init_map_path;
   std::unique_ptr<guik::ProgressModal> progress_modal;
 
   std::unique_ptr<AsyncGlobalMapping> async_global_mapping;

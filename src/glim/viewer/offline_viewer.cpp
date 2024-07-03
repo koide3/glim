@@ -12,7 +12,7 @@
 
 namespace glim {
 
-OfflineViewer::OfflineViewer() {}
+OfflineViewer::OfflineViewer(const std::string& init_map_path) : init_map_path(init_map_path) {}
 
 OfflineViewer::~OfflineViewer() {}
 
@@ -28,7 +28,7 @@ void OfflineViewer::setup_ui() {
 }
 
 void OfflineViewer::main_menu() {
-  bool start_open_map = false;
+  bool start_open_map = false || !init_map_path.empty();
   bool start_close_map = false;
   bool start_save_map = false;
   bool start_export_map = false;
@@ -71,11 +71,19 @@ void OfflineViewer::main_menu() {
 
   // open map
   if (start_open_map) {
+    std::string map_path;
+
     guik::RecentFiles recent_files("offline_viewer_open");
-    const std::string path = pfd::select_folder("Select a dump directory", recent_files.most_recent()).result();
-    if (!path.empty()) {
-      recent_files.push(path);
-      progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, path](guik::ProgressInterface& progress) { return load_map(progress, path); });
+    if (init_map_path.empty()) {
+      map_path = pfd::select_folder("Select a dump directory", recent_files.most_recent()).result();
+    } else {
+      map_path = init_map_path;
+      init_map_path.clear();
+    }
+
+    if (!map_path.empty()) {
+      recent_files.push(map_path);
+      progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path](guik::ProgressInterface& progress) { return load_map(progress, map_path); });
     }
   }
   auto open_result = progress_modal->run<std::shared_ptr<GlobalMapping>>("open");
