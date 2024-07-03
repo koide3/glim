@@ -1,10 +1,5 @@
 ![GLIM](docs/assets/logo2.png "GLIM Logo")
 
-## Important Notes
-
-Releases after v0.1.1 (239a75cf2bbc2dcc594dee3d801b005ae04a19b7, Nov, 27th, 2023) can be subject to the change to a non-permissive license.  
-Note that v0.1.1 and earlier remain on the MIT license.
-
 ## Introduction
 
 **GLIM** is a versatile and extensible range-based 3D mapping framework.
