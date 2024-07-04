@@ -20,13 +20,16 @@ You can also check if IMU velocity and bias are properly estimated by clicking t
 
 ## The created map is tilted
 
-Because the initial upward direction (gravity direction) of the map frame is simply estimated by the average of linear acceleration observations, and you must keep the sensor at rest for the first a few seconds.
+Because the initial upward direction (gravity direction) of the map frame is estimated through a loose-coupling-based LiDAR-IMU fusion that may fail in dynamic motion. Try to keep the sensor at rest for the first a few seconds.
 
 !!!tip
     You can manually provide an initial gravity-aligned sensor pose by specifying ```odometry_estimation/init_T_world_imu``` in ```config_odometry_*.json``` to skip the initial state estimation.
 
 
-## error: function "omp_is_initial_device" has already been defined
+## failed to load (modulename) module or (modulename).so
 
-Clang-14 causes ```omp_is_initial_device```-related build errors when compiling CUDA codes. The error can be suppressed by commenting out the line causing it in ```omp.h``` (L496 of ```/usr/lib/llvm-14/lib/clang/14.0.0/include/omp.h``` in my case).  
-(This is not an elegant solution of course, and I think we should just use gcc to avoid this error.)
+This error indicates that the shared library of the module is not visible to the current environment.
+
+1. Reload ROS-related paths : ```source ros2_ws/install/setup.bash```.
+2. `echo $LD_LIBRARY_PATH` and see if the library paths of related packages are contained (e.g., `/home/user/ros2_ws/install/glim/lib`). If not, re-install ROS and all packages from scratch.
+

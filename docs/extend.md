@@ -125,22 +125,18 @@ extern "C" ExtensionModule* create_extension_module() {
 
 
 ```cmake title="CMakeLists.txt"
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5.2)
 project(my_extension_module)
+
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(glim REQUIRED)
 
 add_library(my_extension_module SHARED
   src/my_extension_module.cpp
 )
-target_include_directories(my_extension_module PRIVATE
-  ${glim_INCLUDE_DIRS}
-)
 target_link_libraries(my_extension_module
-  ${glim_LIBRARIES}
-)
-target_compile_options(my_extension_module PRIVATE
-  -std=c++17
+  glim::glim
 )
 ```
 

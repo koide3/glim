@@ -13,7 +13,8 @@
 ```json
 glim/config/config.json
   "config_odometry": "config_odometry_gpu.json",
-  "config_mapping": "config_mapping_gpu.json",
+  "config_sub_mapping": "config_sub_mapping_gpu.json",
+  "config_global_mapping": "config_global_mapping_gpu.json",
 glim/config/config_sensors.json
   "T_lidar_imu": [-0.006, 0.012, -0.008, 0, 0, 0, 1],
 glim/config/config_ros.json
@@ -22,10 +23,16 @@ glim/config/config_ros.json
 ```
 
 !!! tip
-    If you want to try the **CPU-based odometry estimation and global optimization**, set ```config_odometry``` to ```config_odometry_cpu.json``` and ```config_mapping``` to ```config_mapping_cpu.json```.
+    If you want to try the **CPU-based odometry estimation and global optimization**, in `config.json`, set   
+      `"config_odometry"` : `"config_odometry_cpu.json"`,  
+      `"config_sub_mapping"` : `"config_sub_mapping_cpu.json"`,  
+      `"config_global_mapping"` : `"config_global_mapping_cpu.json"`,
 
 !!! tip
-    If you want to try the **LiDAR-only odometry estimation without IMU data**, set ```config_odometry``` to ```config_odometry_ct.json```, and set ```enable_imu``` in ```config_mapping_cpu.json``` to ```false``` for both the sub- and global mapping modules.
+    If you want to try the **LiDAR-only odometry estimation without IMU data**,  in `config.json`, set  
+      `"config_odometry"` : `"config_odometry_ct.json"`,  
+    and, in `config_sub_mapping_gpu.json` and `config_global_mapping_gpu.json`, set  
+      `"enable_imu"` : `false`
 
 
 ## Executables
@@ -118,10 +125,11 @@ ros2 run glim_ros glim_rosbag os1_128_01
 GLIM reads parameter settings from JSON files in a config root directory, which is set to ```glim/config``` by default. It first reads ```config.json``` that describes relative paths to submodule parameter files, and then reads parameters of submodules from specified configuration files. The config root directory can be changed by setting ```config_path``` ROS param when starting GLIM executables.
 
 !!! note
-    If ```config_path``` starts with "/", the path is interpreted as an absolute path. Otherwise, ```config_path``` is interpreted as a path relative to ```glim``` directory.
+    If ```config_path``` starts with "/", the path is interpreted as an absolute path. Otherwise, ```config_path``` is interpreted as a path relative to ```glim``` directory.  
+    `realpath` command is useful to run GLIM with local configuration files out of the package directory: (e.g., `ros2 run glim_ros glim_rosnode --ros-args -p config_path:=$(realpath config)`)
 
 !!! note
-    On ROS2, you need to run ```colcon build``` to apply changes of the configuration files because ROS2 requires to place config files in the install directory. 
+    On ROS2, you need to run ```colcon build``` to apply changes of the configuration files in the package directory because ROS2 requires to place config files in the install directory. To avoid this, use `--symlink-install` option for `colcon build`.
 
 !!! info
     See [Important parameters](parameters.md) to understand parameters that should be fine-tuned.
@@ -160,11 +168,15 @@ ros2 run glim_ros glim_rosnode --ros-args -p config_path:=$(realpath ./config)
 
 ## Mapping result
 
-The mapping result data (dump data) is saved at ```/tmp/dump``` when closing glim_rosnode or glim_rosbag. The dump data can be visualized and edited using the offline viewer (```rosrun glim_ros offline_viewer```).
+The mapping result data (dump data) is saved in ```/tmp/dump``` when closing glim_rosnode or glim_rosbag. The dump data can be visualized and edited using the offline viewer (```rosrun glim_ros offline_viewer```).
 
 **Example dump data**: [dump_os1_128.tar.gz](https://drive.google.com/file/d/1lOGGYpIicmBYZeaxKzwXc5NaK6d-krMn/view?usp=sharing)
 
 ### Offline viewer (manual map editing and point cloud export)
+
+<div class="youtube">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/YUbiNTa36cc?si=G95A6sReF-_GiqYz" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
 
 ```bash
 # ROS1

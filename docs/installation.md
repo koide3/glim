@@ -1,5 +1,5 @@
 
-GLIM is tested on Ubuntu 20.04 with CUDA 11.6 / Ubuntu 22.04 with CUDA 11.8 / NVIDIA Jetson Xavier and Orin (JetPack 5.0.1).
+GLIM is tested on Ubuntu 22.04 with CUDA 12.2 / NVIDIA Jetson Orin (JetPack 6.0).
 
 ## Install from source
 
@@ -14,7 +14,7 @@ sudo apt install libomp-dev libboost-all-dev libmetis-dev \
 git clone https://github.com/borglab/gtsam
 cd gtsam && git checkout 4.2a9
 mkdir build && cd build
-# For Ubuntu 20.04 or older, remove -DGTSAM_USE_SYSTEM_EIGEN=ON
+# For Ubuntu 20.04 or older, set -DGTSAM_USE_SYSTEM_EIGEN=OFF
 cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
          -DGTSAM_BUILD_TESTS=OFF \
          -DGTSAM_WITH_TBB=OFF \
@@ -30,13 +30,21 @@ mkdir iridescence/build && cd iridescence/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 sudo make install
+
+
+# Install gtsam_points
+git clone https://github.com/koide3/gtsam_points
+mkdir gtsam_points/build && cd gtsam_points/build
+cmake .. -DBUILD_WITH_CUDA=ON
+make -j$(nproc)
+sudo make install
 ```
 
 ### Installation for ROS1
 
 ```bash
 cd ~/catkin_ws/src
-git clone https://github.com/koide3/glim --recursive
+git clone https://github.com/koide3/glim
 git clone https://github.com/koide3/glim_ros1
 
 cd ~/catkin_ws
@@ -52,7 +60,7 @@ catkin_make
 ### Installation for ROS2
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/koide3/glim --recursive
+git clone https://github.com/koide3/glim
 git clone https://github.com/koide3/glim_ros2
  
 cd ~/ros2_ws
@@ -66,4 +74,4 @@ colcon build
 ```
 
 !!! note
-    While you can enable AVX intrinsics to speed up the mapping system by setting ```BUILD_WITH_MARCH_NATIVE=ON```, it sometimes causes segfaults unless you properly set ```march=native``` for *every* involved library. We recommend keeping it disabled if you are not sure.
+    While AVX intrinsics can be enabled to speed up the mapping process by setting ```BUILD_WITH_MARCH_NATIVE=ON```, it sometimes causes segfaults unless ```march=native``` is properly set for *every* involved library. We recommend keeping it disabled if you are not sure.

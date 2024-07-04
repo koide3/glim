@@ -2,6 +2,9 @@
 
 ## Open-source extension modules
 
+!!!warning
+    glim_ext is under preparation.
+
 [glim_ext](https://github.com/koide3/glim_ext) provides example implementations of extension modules that demonstrate the extensibility of GLIM. All the implemented modules are decoupled from GLIM main components and inter-module communication is conducted via the [global callback slot mechanism](extend.md).
 
 !!! warning

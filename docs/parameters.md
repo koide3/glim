@@ -5,7 +5,7 @@
 
 ## ROS-related (config_ros.json)
 
-- **acc_scale** (default 1.0) : Linear acceleration scaling factor. Set this to 9.80665 if the unit of IMU linear acceleration is [g] but not [m/s^2] (e.g., Livox Avia). 
+- **acc_scale** (default 1.0) : Linear acceleration scaling factor. Set this to 9.80665 if the unit of IMU linear acceleration is [g] but not [m/s^2] (e.g., Livox LiDARs). 
 - **(imu|points|image)_topics** : Input data topics.
 
 ## Sensor configuration (config_sensors.json)
@@ -21,15 +21,6 @@
 !!! note
     To see if estimated covariances are fine, change ```color_mode``` in the standard viewer to ```NORMAL```. If point colors are uniform on flat planes, covariances should be ok.
 
-## CPU-based LiDAR-IMU Odometry Estimation (config_odometry_cpu.json)
-
-- **registration_type** (default GICP) : Either of *"GICP"* or *"VGICP"*.
-    - *"GICP"* uses iVox-based GICP scan matching that is accurate and robust in many cases.
-        - **ivox_resolution** (default 0.5 m) : Resolution of iVox voxels used for GICP scan matching. This parameter also controls the maximum corresponding distance and should be set to a large value in outdoor environments (e.g., 1.0 m).
-
-    - *"VGICP"* uses voxelized GICP scan matching that is faster but requires tuning **vgicp_resolution** parameter for good estimation in indoor environments.
-        - **vgicp_resolution** (default 0.5 m) : Resolution of VIGP voxels used for VGICP scan matching. Use a small value for indoor environments (e.g., 0.25 ~ 0.5 m) and a large value for outdoor environments (0.5 ~ 2.0 m).
-
 ## GPU-based LiDAR-IMU Odometry Estimation (config_odometry.json)
 
 - **voxel_resolution** (default 0.25 m) : Base VGICP voxel resolution. Use a small value for indoor environments (e.g., 0.1 ~ 0.25 m).
@@ -40,12 +31,21 @@
     - *"DISPLACEMENT"* uses the conventional displacement-based keyframe management that is more intuitive to tune. Change **keyframe_delta_(trans|rot)** to tune the keyframe insertion frequency.
     - *"ENTROPY"* uses an entropy-based keyframe management. This strategy is often difficult to tune and is not recommended.
 
+## CPU-based LiDAR-IMU Odometry Estimation (config_odometry_cpu.json)
+
+- **registration_type** (default GICP) : Either of *"GICP"* or *"VGICP"*.
+    - *"GICP"* uses iVox-based GICP scan matching that is accurate and robust in many cases.
+        - **ivox_resolution** (default 0.5 m) : Resolution of iVox voxels used for GICP scan matching. This parameter also controls the maximum corresponding distance and should be set to a large value in outdoor environments (e.g., 1.0 m).
+
+    - *"VGICP"* uses voxelized GICP scan matching that is faster but requires tuning **vgicp_resolution** parameter for good estimation in indoor environments.
+        - **vgicp_resolution** (default 0.5 m) : Resolution of VIGP voxels used for VGICP scan matching. Use a small value for indoor environments (e.g., 0.25 ~ 0.5 m) and a large value for outdoor environments (0.5 ~ 2.0 m).
+
 ## LiDAR-only Odometry Estimation (config_odometry_ct.json)
 
 - **max_correspondence_distance** (default 2.0 m) : Maximum corresponding distance for scan matching. 
 
 
-## Global Optimization (config_mapping.json)
+## Global Optimization (config_sub_mapping.json & config_global_mapping.json)
 
 ### Sub mapping
 - **enable_optimization** (default true) : In environments where the odometry estimation is sufficiently robust and accurate, you can set this false to disable submap optimization and save the processing cost.
@@ -56,7 +56,7 @@
 
 ### Common parameters for sub and global mapping
 - **enable_imu** (default true) : Must be false if the LiDAR-only odometry estimation is used.
-- **registration_error_factor_type** (default "VGICP") : Registration error computation type. Must be either of *"VGICP"* or *"VGICP_GPU"*.
-- **random_sampling_rate** (default 0.1) : Random sampling rate for points used for registration error computation. With the GPU implementation, you can use a large random sampling rate (e.g., 1.0 = disabling random sampling) to perform full global registration error minimization.
+- **registration_error_factor_type** (default "VGICP_GPU") : Registration error computation type. Must be either of *"VGICP"* or *"VGICP_GPU"*.
+- **random_sampling_rate** (default 1.0) : Random sampling rate for points used for registration error computation. With the GPU implementation, you can use a large random sampling rate (e.g., 1.0 = disabling random sampling) to perform full global registration error minimization.
 - **(submap|keyframe)_voxel_resolution** (default 0.5 m) : Base voxel resolution. Set a small value (e.g., 0.15 ~ 0.25 m) for indoor environments.
 - **(submap|keyframe)_voxelmap_levels** (default 2 levels) : Multi resolution voxel levels. Set this param to 2 or 3 for better convergence.
