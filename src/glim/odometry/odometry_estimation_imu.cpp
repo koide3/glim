@@ -31,7 +31,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
   // sensor config
   Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
   T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
-
+  imu_bias_noise = sensor_config.param<double>("sensors", "imu_bias_noise", 1e-3);
   auto bias = sensor_config.param<std::vector<double>>("sensors", "imu_bias");
   if (bias && bias->size() == 6) {
     imu_bias = Eigen::Map<const Eigen::Matrix<double, 6, 1>>(bias->data());
@@ -223,7 +223,8 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   new_values.insert(B(current), last_imu_bias);
 
   // Constant IMU bias assumption
-  new_factors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
+  new_factors.add(
+    gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Sigma(6, params->imu_bias_noise)));
   if (params->fix_imu_bias) {
     new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(params->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e3)));
   }

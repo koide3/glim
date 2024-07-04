@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(glim)
+project(glim VERSION 0.1.0 LANGUAGES CXX)
 
 add_compile_options(-std=c++17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -83,6 +83,7 @@ add_library(glim SHARED
 target_include_directories(glim PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include>
+  $<INSTALL_INTERFACE:include>
   ${OpenCV_INCLUDE_DIRS}
 )
 target_link_libraries(glim
@@ -120,17 +121,9 @@ foreach(module_src IN LISTS module_srcs)
   )
   target_link_libraries(${module_name}
     glim
-    spdlog::spdlog
   )
   list(APPEND glim_LIBRARIES ${module_name})
 endforeach()
-
-
-# Install
-install(TARGETS ${glim_LIBRARIES})
-install(DIRECTORY include/ DESTINATION include)
-# install(DIRECTORY thirdparty/gtsam_points/include/ DESTINATION include)
-# install(DIRECTORY thirdparty/gtsam_points/thirdparty/nanoflann/include/ DESTINATION include)
 
 
 if(BUILD_WITH_VIEWER)
@@ -138,14 +131,8 @@ if(BUILD_WITH_VIEWER)
   add_library(standard_viewer SHARED
     src/glim/viewer/standard_viewer.cpp
   )
-  target_include_directories(standard_viewer PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    ${OpenCV_INCLUDE_DIRS}
-  )
   target_link_libraries(standard_viewer
-    Eigen3::Eigen
-    gtsam_points::gtsam_points
-    Iridescence::Iridescence
+    glim
   )
 
   # Interactive viewer
@@ -155,19 +142,50 @@ if(BUILD_WITH_VIEWER)
     src/glim/viewer/interactive/bundle_adjustment_modal.cpp
     src/glim/viewer/offline_viewer.cpp
   )
-  target_include_directories(interactive_viewer PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    ${OpenCV_INCLUDE_DIRS}
-  )
   target_link_libraries(interactive_viewer
-    Eigen3::Eigen
-    gtsam_points::gtsam_points
-    Iridescence::Iridescence
+    glim
   )
 
-  list(APPEND glim_LIBRARIES interactive_viewer)
-  install(TARGETS standard_viewer interactive_viewer)
+  list(APPEND glim_LIBRARIES standard_viewer interactive_viewer)
 endif()
+
+#############
+## Install ##
+#############
+
+include(GNUInstallDirs)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(TARGETS ${glim_LIBRARIES}
+  EXPORT glim-targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+set(CMAKE_CONFIG_INSTALL_DIR
+  "${CMAKE_INSTALL_LIBDIR}/cmake/glim"
+  CACHE PATH "Install directory for CMake config files"
+)
+include(CMakePackageConfigHelpers)
+install(EXPORT glim-targets
+  FILE glim-targets.cmake
+  NAMESPACE glim::
+  DESTINATION ${CMAKE_CONFIG_INSTALL_DIR}
+)
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/glim-config.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/glim-config.cmake"
+  INSTALL_DESTINATION ${CMAKE_CONFIG_INSTALL_DIR}
+)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/glim-config-version.cmake"
+  VERSION ${VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/glim-config.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/glim-config-version.cmake"
+  DESTINATION ${CMAKE_CONFIG_INSTALL_DIR}
+)
 
 #################
 ## ROS-related ##

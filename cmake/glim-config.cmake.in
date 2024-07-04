@@ -1,0 +1,32 @@
+# Config file for the glim package
+#
+# Usage from an external project:
+#
+#  find_package(glim REQUIRED)
+#  target_link_libraries(MY_TARGET_NAME glim::glim)
+#
+@PACKAGE_INIT@
+
+include_guard()
+
+set(BUILD_WITH_CUDA @BUILD_WITH_CUDA@)
+set(BUILD_WITH_VIEWER @BUILD_WITH_VIEWER@)
+
+include(CMakeFindDependencyMacro)
+find_dependency(Boost REQUIRED serialization)
+find_dependency(Eigen3 REQUIRED)
+find_dependency(OpenCV REQUIRED COMPONENTS core)
+find_dependency(GTSAM REQUIRED)
+find_dependency(gtsam_points REQUIRED)
+find_dependency(OpenMP REQUIRED)
+find_dependency(spdlog REQUIRED)
+
+if(BUILD_WITH_CUDA)
+  find_dependency(CUDAToolkit REQUIRED)
+endif()
+
+if(BUILD_WITH_VIEWER)
+  find_dependency(Iridescence REQUIRED)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/glim-targets.cmake")
