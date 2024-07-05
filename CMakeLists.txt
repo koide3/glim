@@ -204,8 +204,8 @@ if(DEFINED ENV{ROS_VERSION})
     # ROS1
     find_package(catkin REQUIRED)
     catkin_package(
-      INCLUDE_DIRS include thirdparty/gtsam_points/include
-      LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES}
+      INCLUDE_DIRS include
+      LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog
     )
   endif()
 endif()
