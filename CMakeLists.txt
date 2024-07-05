@@ -76,6 +76,7 @@ add_library(glim SHARED
   src/glim/mapping/async_sub_mapping.cpp
   src/glim/mapping/async_global_mapping.cpp
   src/glim/mapping/sub_mapping.cpp
+  src/glim/mapping/sub_mapping_passthrough.cpp
   src/glim/mapping/global_mapping.cpp
   # GPU-related
   ${GPU_SRCS}
@@ -104,6 +105,7 @@ list(APPEND module_srcs
   src/glim/odometry/odometry_estimation_ct_create.cpp
   src/glim/odometry/odometry_estimation_cpu_create.cpp
   src/glim/mapping/sub_mapping_create.cpp
+  src/glim/mapping/sub_mapping_passthrough_create.cpp
   src/glim/mapping/global_mapping_create.cpp
 )
 if(BUILD_WITH_CUDA)
