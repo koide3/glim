@@ -25,6 +25,12 @@ public:
    */
   void drop_frame_points();
 
+  /// @brief Get the origin frame
+  EstimationFrame::ConstPtr origin_frame() const { return frames[frames.size() / 2]; }
+
+  /// @brief Get the origin odometry frame
+  EstimationFrame::ConstPtr origin_odom_frame() const { return odom_frames[frames.size() / 2]; }
+
   /**
    * @brief Save the submap
    * @param path  Save path

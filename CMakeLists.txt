@@ -52,6 +52,7 @@ add_library(glim SHARED
   src/glim/util/extension_module.cpp
   src/glim/util/load_module.cpp
   src/glim/util/data_validator.cpp
+  src/glim/util/serialization.cpp
   # preprocess
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
@@ -78,6 +79,7 @@ add_library(glim SHARED
   src/glim/mapping/sub_mapping.cpp
   src/glim/mapping/sub_mapping_passthrough.cpp
   src/glim/mapping/global_mapping.cpp
+  src/glim/mapping/global_mapping_pose_graph.cpp
   # GPU-related
   ${GPU_SRCS}
 )
@@ -107,6 +109,7 @@ list(APPEND module_srcs
   src/glim/mapping/sub_mapping_create.cpp
   src/glim/mapping/sub_mapping_passthrough_create.cpp
   src/glim/mapping/global_mapping_create.cpp
+  src/glim/mapping/global_mapping_pose_graph_create.cpp
 )
 if(BUILD_WITH_CUDA)
   list(APPEND module_srcs

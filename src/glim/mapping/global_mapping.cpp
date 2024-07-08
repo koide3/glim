@@ -26,6 +26,7 @@
 #include <gtsam_points/cuda/stream_temp_buffer_roundrobin.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/serialization.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/mapping/callbacks.hpp>
 
@@ -454,18 +455,8 @@ void GlobalMapping::save(const std::string& path) {
   }
 
   spdlog::info("serializing factor graph to {}/graph.bin", path);
-  try {
-    gtsam::serializeToBinaryFile(serializable_factors, path + "/graph.bin");
-  } catch (boost::archive::archive_exception e) {
-    spdlog::warn("failed to serialize factor graph!!");
-    spdlog::warn(e.what());
-  }
-  try {
-    gtsam::serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
-  } catch (boost::archive::archive_exception e) {
-    spdlog::warn("failed to serialize values!!");
-    spdlog::warn(e.what());
-  }
+  serializeToBinaryFile(serializable_factors, path + "/graph.bin");
+  serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
 
   std::ofstream ofs(path + "/graph.txt");
   ofs << "num_submaps: " << submaps.size() << std::endl;
