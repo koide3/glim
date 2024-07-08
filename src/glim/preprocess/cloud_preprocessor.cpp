@@ -64,8 +64,9 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
   std::vector<int> indices;
   indices.reserve(frame->size());
   for (int i = 0; i < frame->size(); i++) {
+    const bool is_finite = frame->points[i].allFinite();
     const double dist = (Eigen::Vector4d() << frame->points[i].head<3>(), 0.0).finished().norm();
-    if (dist > params.distance_near_thresh && dist < params.distance_far_thresh) {
+    if (dist > params.distance_near_thresh && dist < params.distance_far_thresh && is_finite) {
       indices.push_back(i);
     }
   }
