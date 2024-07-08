@@ -8,6 +8,7 @@
 #include <glim/odometry/callbacks.hpp>
 #include <glim/util/concurrent_vector.hpp>
 #include <glim/util/config.hpp>
+#include <glim/util/logging.hpp>
 #include <glim/util/trajectory_manager.hpp>
 
 #include <glim/viewer/interactive/manual_loop_close_modal.hpp>
@@ -28,6 +29,7 @@
 #include <glk/thin_lines.hpp>
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/primitives/primitives.hpp>
+#include <guik/spdlog_sink.hpp>
 #include <guik/viewer/light_viewer.hpp>
 
 namespace glim {
@@ -97,6 +99,7 @@ void InteractiveViewer::viewer_loop() {
   viewer->register_ui_callback("on_click", [this] { on_click(); });
   viewer->register_ui_callback("context_menu", [this] { context_menu(); });
   viewer->register_ui_callback("run_modals", [this] { run_modals(); });
+  viewer->register_ui_callback("logging", guik::create_logger_ui(glim::get_ringbuffer_sink(), 0.5));
 
   viewer->register_drawable_filter("filter", [this](const std::string& name) {
     const auto starts_with = [](const std::string& name, const std::string& pattern) {
@@ -129,7 +132,7 @@ void InteractiveViewer::viewer_loop() {
 
   setup_ui();
 
-  viewer->append_text("Starting interactive viewer");
+  spdlog::info("Starting interactive viewer");
 
   while (!kill_switch) {
     if (!viewer->spin_once()) {
@@ -450,7 +453,7 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isa
  */
 void InteractiveViewer::globalmap_on_smoother_update_result(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
   const std::string text = result.to_string();
-  guik::LightViewer::instance()->append_text(text);
+  spdlog::info(text);
 }
 
 bool InteractiveViewer::ok() const {
