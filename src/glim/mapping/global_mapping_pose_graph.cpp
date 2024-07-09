@@ -15,6 +15,7 @@
 #include <gtsam_points/optimizers/isam2_ext.hpp>
 #include <gtsam_points/optimizers/isam2_ext_dummy.hpp>
 #include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
+#include <gtsam_points/util/easy_profiler.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/serialization.hpp>
@@ -86,6 +87,7 @@ GlobalMappingPoseGraph::GlobalMappingPoseGraph(const GlobalMappingPoseGraphParam
 
 GlobalMappingPoseGraph::~GlobalMappingPoseGraph() {
   kill_switch = true;
+  loop_candidates.submit_end_of_data();
   loop_detection_thread.join();
 }
 
@@ -273,14 +275,26 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingPoseGraph::create_od
 void GlobalMappingPoseGraph::find_loop_candidates(int current) {
   std::vector<LoopCandidate> new_candidates;
   for (int i = 0; i < submaps.size() - 1; i++) {
-    // Skip if the travel distance is too short.
-    if (submap_targets[current]->travel_dist - submap_targets[i]->travel_dist < params.min_travel_dist) {
+    // Skip if the direct distance between submaps is too far.
+    const double direct_dist = (submaps[current]->T_world_origin.translation() - submaps[i]->T_world_origin.translation()).norm();
+    if (direct_dist > params.max_neighbor_dist) {
+      // Fast forward if the direct distance is too far.
+      if (i != 0 && direct_dist > params.max_neighbor_dist * 2) {
+        const int average_window = 3;
+        const int left = std::max(0, i - average_window);
+        const double travel_dist_avg = (submap_targets[i]->travel_dist - submap_targets[left]->travel_dist) / std::max(i - left, 1);
+        const int step = 0.8 * direct_dist / std::min(travel_dist_avg, 100.0);
+
+        i += step;
+      }
+
       continue;
     }
 
-    // Skip if the distance between submaps is too far.
-    if ((submaps[current]->T_world_origin.translation() - submaps[i]->T_world_origin.translation()).norm() > params.max_neighbor_dist) {
-      continue;
+    // Break if the travel distance is too short.
+    const double travel_dist = submap_targets[current]->travel_dist - submap_targets[i]->travel_dist;
+    if (travel_dist < params.min_travel_dist) {
+      break;
     }
 
     // Add a loop candidate.
@@ -304,14 +318,9 @@ void GlobalMappingPoseGraph::loop_detection_task() {
   std::deque<LoopCandidate> candidates_buffer;  // Local loop candidate buffer
 
   while (!kill_switch) {
-    auto new_candidates = loop_candidates.get_all_and_clear();
+    spdlog::debug("wait for loop candidates");
+    auto new_candidates = loop_candidates.get_all_and_clear_wait();
     candidates_buffer.insert(candidates_buffer.end(), new_candidates.begin(), new_candidates.end());
-
-    if (candidates_buffer.empty()) {
-      // Nothing to do for now.
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      continue;
-    }
 
     spdlog::debug("|candidates_buffer|={}", candidates_buffer.size());
 
@@ -335,6 +344,7 @@ void GlobalMappingPoseGraph::loop_detection_task() {
     std::vector<double> inlier_fractions(candidates.size());
     std::vector<gtsam::Pose3> T_target_source(candidates.size());
 
+    // Evaluate loop candidates in parallel.
 #pragma omp parallel for num_threads(params.num_threads) schedule(dynamic)
     for (int i = 0; i < candidates.size(); i++) {
       if (kill_switch) {

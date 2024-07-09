@@ -145,6 +145,28 @@ public:
   }
 
   /**
+   * @brief Get all the data and clear the container.
+   *        If the queue is empty, this method waits until a new data arrives or EOD is submitted.
+   * @return std::vector<T, Alloc>   All data or empty if EOD is submitted.
+   */
+  std::vector<T, Alloc> get_all_and_clear_wait() {
+    std::unique_lock<std::mutex> lock(mutex);
+
+    std::vector<T, Alloc> buffer;
+    cond.wait(lock, [this, &buffer] {
+      if (values.empty()) {
+        return static_cast<bool>(end_of_data);
+      }
+
+      buffer.assign(values.begin(), values.end());
+      values.clear();
+      return true;
+    });
+
+    return buffer;
+  }
+
+  /**
    * @brief Get all the data and clear the container
    * @return std::vector<T, Alloc>   All data
    */

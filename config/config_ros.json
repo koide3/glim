@@ -10,12 +10,7 @@
     "extension_modules": [
       "libstandard_viewer.so",
       "librviz_viewer.so"
-      // "libscan_context_loop_detector.so",
-      // "libdbow_loop_detector.so",
-      // "liborb_slam_frontend.so",
-      // "libgnss_backend.so",
-      // "libvelocity_suppressor.so",
-      // "libglim_callback_demo.so"
+      // "libimu_validator.so"
     ],
     // Topics
     "imu_topic": "/os_cloud_node/imu",
