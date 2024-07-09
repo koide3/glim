@@ -1,5 +1,6 @@
 #include <glim/mapping/sub_map.hpp>
 
+#include <fstream>
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
