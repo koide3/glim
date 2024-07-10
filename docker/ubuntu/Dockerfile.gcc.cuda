@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=gtsam_points
+ARG BASE_IMAGE=koide3/gtsam_points:jammy_cuda12.2
 FROM $BASE_IMAGE
 
 RUN apt-get update \
@@ -8,6 +8,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # with CUDA
+COPY . /root/glim
 WORKDIR /root/glim/build
 RUN cmake .. \
   -DBUILD_WITH_CUDA=ON \

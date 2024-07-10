@@ -7,6 +7,8 @@ on:
   pull_request:
     branches: [ master ]
     paths-ignore: '**.md'
+  repository_dispatch:
+    types: [trigger-event]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -17,45 +19,46 @@ jobs:
     strategy:
       matrix:
         DISTRO: [
-          { "base_image": "jammy", "suffix": "gcc" },
-          { "base_image": "jammy_cuda12.2", "suffix": "gcc.cuda" }
+          { "ubuntu": "noble", "suffix": "gcc" },
+          { "ubuntu": "noble", "suffix": "llvm" },
+          { "ubuntu": "jammy", "suffix": "gcc" },
+          { "ubuntu": "jammy", "suffix": "llvm" },
+          { "ubuntu": "jammy_cuda12.2", "suffix": "gcc.cuda" },
+          { "ubuntu": "jammy_cuda12.2", "suffix": "llvm.cuda" }
         ]
 
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: 'https://github.com/koide3/gtsam_points'
-          path: 'gtsam_points'
-          token: ${{ secrets.GH_PAT }}
-          submodules: recursive
-
-      - uses: actions/checkout@v2
-        with:
-          path: 'glim'
           token: ${{ secrets.GH_PAT }}
           submodules: recursive
 
       - name: Docker login
         continue-on-error: true
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Docker build (gtsam_points)
+      - name: Docker build
         uses: docker/build-push-action@v6
         with:
-          file: ${{github.workspace}}/docker/ubuntu/Dockerfile.${ matrix.DISTRO.suffix }
+          tags: koide3/glim:${{ matrix.DISTRO.ubuntu }}
+          file: ${{github.workspace}}/docker/ubuntu/Dockerfile.${{ matrix.DISTRO.suffix }}
           build-args: |
-            BASE_IMAGE=koide3/gtsam_docker:${{ matrix.DISTRO.ubuntu }}
-          context: gtsam_points
-          tags: gtsam_points
+            BASE_IMAGE=koide3/gtsam_points:${{ matrix.DISTRO.ubuntu }}
+          context: .
 
-      - name: Docker build (glim)
-        uses: docker/build-push-action@v6
+  dispatch:
+    needs: build
+    strategy:
+      matrix:
+        repo: ['koide3/glim_ros1', 'koide3/glim_ros2']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
         with:
-          file: ${{github.workspace}}/docker/ubuntu/Dockerfile.${ matrix.DISTRO.suffix }
-          build-args: |
-            BASE_IMAGE=gtsam_points
-          context: glim
-          tags: glim
+          token: ${{ secrets.GH_PAT }}
+          repository: ${{ matrix.repo }}
+          event-type: trigger-event

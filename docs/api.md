@@ -2,9 +2,8 @@
 
 ## Doxygen generated API list
 
-* [gtsam_points](https://staff.aist.go.jp/k.koide/projects/doxygen/gtsam_points/): GTSAM factors for range-based SLAM
-* [glim](https://staff.aist.go.jp/k.koide/projects/doxygen/glim/): Main LiDAR-IMU SLAM package
-* [glim_ext](https://staff.aist.go.jp/k.koide/projects/doxygen/glim_ext/): Example implementations of extension modules
+* [gtsam_points](https://koide3.github.io/gtsam_points/doc_cpp/index.html): GTSAM factors for range-based SLAM
+* [glim](https://koide3.github.io/glim/doc_cpp/index.html): LiDAR-IMU localization and mapping
 
 ## Related Repositories
 * [gtsam_points (https://github.com/koide3/gtsam_points)](https://github.com/koide3/gtsam_points)

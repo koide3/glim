@@ -1,0 +1,38 @@
+name: gendoc
+
+on:
+  push:
+    tags:
+      - '*'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  gendoc:
+    name: Generate documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name : Install dependencies
+        run: sudo apt-get install -y git cmake build-essential doxygen graphviz python3-dev
+
+      - name: Install python dependencies
+        run: python -m pip install mkdocs mkdocs-material
+
+      - name: Generate documentation
+        run: cd docs && make all
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: ./site/*
+
+      - name: Deploy documentation
+        run: cd docs && make deploy
