@@ -16,11 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        DISTRO: [focal, focal_llvm, jammy, jammy_llvm]
+        DISTRO: [
+          { "base_image": "jammy", "suffix": "gcc" },
+          { "base_image": "jammy_cuda12.2", "suffix": "gcc.cuda" }
+        ]
 
     steps:
       - uses: actions/checkout@v2
         with:
+          repository: 'https://github.com/koide3/gtsam_points'
+          path: 'gtsam_points'
+          token: ${{ secrets.GH_PAT }}
+          submodules: recursive
+
+      - uses: actions/checkout@v2
+        with:
+          path: 'glim'
           token: ${{ secrets.GH_PAT }}
           submodules: recursive
 
@@ -31,9 +42,20 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Docker build
-        uses: docker/build-push-action@v2
+      - name: Docker build (gtsam_points)
+        uses: docker/build-push-action@v6
         with:
-          file: ${{github.workspace}}/docker/${{ matrix.DISTRO }}/Dockerfile
-          context: .
-          push: false
+          file: ${{github.workspace}}/docker/ubuntu/Dockerfile.${ matrix.DISTRO.suffix }
+          build-args: |
+            BASE_IMAGE=koide3/gtsam_docker:${{ matrix.DISTRO.ubuntu }}
+          context: gtsam_points
+          tags: gtsam_points
+
+      - name: Docker build (glim)
+        uses: docker/build-push-action@v6
+        with:
+          file: ${{github.workspace}}/docker/ubuntu/Dockerfile.${ matrix.DISTRO.suffix }
+          build-args: |
+            BASE_IMAGE=gtsam_points
+          context: glim
+          tags: glim
