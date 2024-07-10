@@ -4,7 +4,7 @@ repo_url: https://github.com/koide3/glim
 site_url: https://glim.github.io/site
 site_description: "GLIM: Versatile and Extensible Open-Source 3D Range-based Mapping Framework"
 
-theme: 
+theme:
     name: material
     palette:
         primary: indigo
@@ -25,9 +25,8 @@ markdown_extensions:
     - pymdownx.snippets
     - pymdownx.superfences
     - pymdownx.emoji:
-        emoji_index: !!python/name:materialx.emoji.twemoji
-        emoji_generator: !!python/name:materialx.emoji.to_svg
-    - fontawesome_markdown
+        emoji_index: !!python/name:material.extensions.emoji.twemoji
+        emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 copyright: Copyright &copy; 2021 - 2022 Kenji Koide
 extra:

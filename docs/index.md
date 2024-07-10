@@ -15,7 +15,7 @@
     - RGB-D camera (e.g., Microsoft Azure Kinect)
 - ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/koide3/glim_ext) that offers example implementations of several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial odometry estimation).
 
-Tested on Ubuntu 22.04 with CUDA 12.2 / NVIDIA Jetson Orin.
+Tested on Ubuntu 22.04 / 24.04 with CUDA 12.2, and NVIDIA Jetson Orin.
 
 [![Build test status](assets/build.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
 [![ROS1](assets/ros1.svg)](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml)
@@ -31,12 +31,18 @@ Tested on Ubuntu 22.04 with CUDA 12.2 / NVIDIA Jetson Orin.
 ### Mapping with various range sensors
 
 <div class="youtube">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/rLqYo42eDTQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/_fwK4awbW18?si=R5m5502i7sKTbopg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+### Outdoor driving test with Livox MID360
+
+<div class="youtube">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/CIfRqeV0irE?si=WT-knUxMuGWjYcxQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
 
 See more in [Extension modules](extensions.md) and [Demo](demo.md) pages.
 
 ## Contact
 
-Kenji Koide [:material-home:](https://staff.aist.go.jp/k.koide/) [:material-mail:](mailto:k.koide@aist.go.jp) [:material-twitter:](https://twitter.com/k_koide3)  
+Kenji Koide [:material-home:](https://staff.aist.go.jp/k.koide/) [:material-mail:](mailto:k.koide@aist.go.jp) [:material-twitter:](https://twitter.com/k_koide3) <br>
 National Institute of Advanced Industrial Science and Technology (AIST), Japan

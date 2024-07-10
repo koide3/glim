@@ -5,12 +5,13 @@
 
 ## Prebuilt docker images
 
-We provide the following docker images for ROS1 and ROS2 environments on docker hub ([koide3/glim_ros](https://hub.docker.com/repository/docker/koide3/glim_ros)). 
+We provide the following docker images for ROS1 and ROS2 environments on docker hub ([koide3/glim_ros](https://hub.docker.com/repository/docker/koide3/glim_ros)).
 
 - koide3/glim_ros:noetic
-- koide3/glim_ros:noetic_cuda11.2
+- koide3/glim_ros:noetic_cuda12.2
 - koide3/glim_ros:humble
-- koide3/glim_ros:humble_cuda11.2
+- koide3/glim_ros:humble_cuda12.2
+- koide3/glim_ros:jazzy
 
 ### Example use
 

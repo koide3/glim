@@ -1,5 +1,5 @@
 
-GLIM is tested on Ubuntu 22.04 with CUDA 12.2 / NVIDIA Jetson Orin (JetPack 6.0).
+GLIM is tested on Ubuntu 22.04 / 24.04 with CUDA 12.2, and NVIDIA Jetson Orin (JetPack 6.0).
 
 ## Install from source
 
@@ -9,7 +9,7 @@ GLIM is tested on Ubuntu 22.04 with CUDA 12.2 / NVIDIA Jetson Orin (JetPack 6.0)
 sudo apt install libomp-dev libboost-all-dev libmetis-dev \
                  libfmt-dev libspdlog-dev \
                  libglm-dev libglfw3-dev libpng-dev libjpeg-dev
- 
+
 # Install GTSAM
 git clone https://github.com/borglab/gtsam
 cd gtsam && git checkout 4.2a9
@@ -62,7 +62,7 @@ catkin_make
 cd ~/ros2_ws/src
 git clone https://github.com/koide3/glim
 git clone https://github.com/koide3/glim_ros2
- 
+
 cd ~/ros2_ws
 colcon build
 
