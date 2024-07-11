@@ -3,8 +3,11 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include <glim/util/config.hpp>
+#include <glim/util/logging.hpp>
 
 namespace glim {
+
+InitialStateEstimation::InitialStateEstimation() : logger(create_module_logger("odom")) {}
 
 NaiveInitialStateEstimation::NaiveInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias)
 : stamp(0.0),
@@ -25,7 +28,7 @@ void NaiveInitialStateEstimation ::set_init_state(const Eigen::Isometry3d& init_
 
 void NaiveInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   if (linear_acc.norm() < 5.0 || linear_acc.norm() > 15.0) {
-    spdlog::warn("too large or small acc found ({}[m/s^2])", linear_acc.norm());
+    logger->warn("too large or small acc found ({}[m/s^2])", linear_acc.norm());
   }
 
   stamp = stamp;
@@ -62,7 +65,7 @@ EstimationFrame::ConstPtr NaiveInitialStateEstimation::initial_pose() {
 
   estimated->T_world_lidar = estimated->T_world_imu * T_lidar_imu.inverse();
 
-  spdlog::info("initial IMU state estimation done");
+  logger->info("initial IMU state estimation done");
 
   return estimated;
 }

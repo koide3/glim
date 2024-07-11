@@ -1,5 +1,7 @@
 #include <glim/util/logging.hpp>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace glim {
 
@@ -20,6 +22,24 @@ std::shared_ptr<spdlog::sinks::ringbuffer_sink_mt> get_ringbuffer_sink(int buffe
     ringbuffer_sink = std::make_shared<spdlog::sinks::ringbuffer_sink_mt>(buffer_size);
   }
   return ringbuffer_sink;
+}
+
+std::shared_ptr<spdlog::logger> create_module_logger(const std::string& module_name) {
+  std::shared_ptr<spdlog::logger> logger = spdlog::get(module_name);
+  if (logger) {
+    return logger;
+  }
+
+  logger = spdlog::stdout_color_mt(module_name);
+  logger->sinks().push_back(get_ringbuffer_sink());
+
+  if (get_default_logger()->level() < spdlog::level::info) {
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("/tmp/glim_" + module_name + ".log", true);
+    logger->sinks().push_back(file_sink);
+    logger->set_level(spdlog::level::trace);
+  }
+
+  return logger;
 }
 
 }  // namespace glim

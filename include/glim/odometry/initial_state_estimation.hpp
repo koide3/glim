@@ -5,6 +5,10 @@
 
 #include <glim/odometry/estimation_frame.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace glim {
 
 /**
@@ -13,6 +17,7 @@ namespace glim {
  */
 class InitialStateEstimation {
 public:
+  InitialStateEstimation();
   virtual ~InitialStateEstimation() {}
 
   /**
@@ -35,6 +40,10 @@ public:
    * @return nullptr                    If it's not ready
    */
   virtual EstimationFrame::ConstPtr initial_pose() = 0;
+
+protected:
+  // Logging
+  std::shared_ptr<spdlog::logger> logger;
 };
 
 /**

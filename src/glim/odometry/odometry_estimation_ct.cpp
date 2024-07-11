@@ -113,8 +113,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     gtsam::Vector6 last_twist = gtsam::Vector6::Zero();
     if (current >= 2) {
       if (!frames[last] || !frames[last - 1]) {
-        spdlog::warn("neither frames[last]={} nor frames[last - 1]={} is released!!", fmt::ptr(frames[last]), fmt::ptr(frames[last - 1]));
-        spdlog::warn("there might be a large time gap between point cloud frames");
+        logger->warn("neither frames[last]={} nor frames[last - 1]={} is released!!", fmt::ptr(frames[last]), fmt::ptr(frames[last - 1]));
+        logger->warn("there might be a large time gap between point cloud frames");
       } else {
         const double delta_time = (frames[last]->stamp + frames[last]->frame->times[frames[last]->frame->size() - 1]) - frames[last - 1]->stamp;
         const gtsam::Pose3 delta_pose = smoother->calculateEstimate<gtsam::Pose3>(X(last - 1)).inverse() * smoother->calculateEstimate<gtsam::Pose3>(Y(last));
@@ -161,8 +161,8 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     try {
       values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
     } catch (std::exception& e) {
-      spdlog::error("an exception was caught during odometry estimation");
-      spdlog::error("{}", e.what());
+      logger->error("an exception was caught during odometry estimation");
+      logger->error("{}", e.what());
     }
 
     const gtsam::Pose3 T_world_lidar_begin = values.at<gtsam::Pose3>(X(current));
@@ -234,9 +234,9 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
       Eigen::Isometry3d T_world_lidar = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
       frames[i]->set_T_world_sensor(FrameID::LIDAR, T_world_lidar);
     } catch (std::out_of_range& e) {
-      spdlog::error("caught {}", e.what());
-      spdlog::error("current={}", current);
-      spdlog::error("marginalized_cursor={}", marginalized_cursor);
+      logger->error("caught {}", e.what());
+      logger->error("current={}", current);
+      logger->error("marginalized_cursor={}", marginalized_cursor);
       Callbacks::on_smoother_corruption(frames[current]->stamp);
       break;
     }
