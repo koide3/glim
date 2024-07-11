@@ -2,9 +2,6 @@
 
 ## Open-source extension modules
 
-!!!warning
-    glim_ext is under preparation.
-
 [glim_ext](https://github.com/koide3/glim_ext) provides example implementations of extension modules that demonstrate the extensibility of GLIM. All the implemented modules are decoupled from GLIM main components and inter-module communication is conducted via the [global callback slot mechanism](extend.md).
 
 !!! warning
@@ -16,13 +13,11 @@
 ### Installation
 
 ```bash
-cd ~/catkin_ws/src
-git clone https://github.com/koide3/glim_ext --recursive
+cd ~/ros2_ws/src
+git clone https://github.com/koide3/glim_ext
 
-cd ~/catkin_ws
-catkin_make -DENABLE_ORBSLAM=ON \
-            -DENABLE_SCAN_CONTEXT=ON \
-            -DENABLE_DBOW=ON
+cd ~/ros2_ws
+colcon build
 ```
 
 ### Odometry estimation modules

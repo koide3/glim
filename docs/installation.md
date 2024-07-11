@@ -14,7 +14,6 @@ sudo apt install libomp-dev libboost-all-dev libmetis-dev \
 git clone https://github.com/borglab/gtsam
 cd gtsam && git checkout 4.2a9
 mkdir build && cd build
-# For Ubuntu 20.04 or older, set -DGTSAM_USE_SYSTEM_EIGEN=OFF
 cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
          -DGTSAM_BUILD_TESTS=OFF \
          -DGTSAM_WITH_TBB=OFF \
