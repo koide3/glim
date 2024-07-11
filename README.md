@@ -16,8 +16,8 @@
 Tested on Ubuntu 22.04 /24.04 with CUDA 12.2, and NVIDIA Jetson Orin.
 
 [![Build](https://github.com/koide3/glim/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
-[![ROS1](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml/badge.svg)](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml)
-[![ROS2](https://github.com/koide3/glim_ros2/actions/workflows/docker_push.yml/badge.svg)](https://github.com/koide3/glim_ros2/actions/workflows/docker_push.yml)
+[![ROS1](https://github.com/koide3/glim_ros1/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim_ros1/actions/workflows/build.yml)
+[![ROS2](https://github.com/koide3/glim_ros2/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim_ros2/actions/workflows/build.yml)
 
 ## Dependencies
 ### Mandatory
