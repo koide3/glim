@@ -1,11 +1,14 @@
 #include <glim/mapping/sub_mapping_base.hpp>
 
+#include <glim/util/logging.hpp>
 #include <glim/util/load_module.hpp>
 #include <glim/mapping/callbacks.hpp>
 
 namespace glim {
 
 using Callbacks = SubMappingCallbacks;
+
+SubMappingBase::SubMappingBase() : logger(create_module_logger("submap")) {}
 
 void SubMappingBase::insert_image(const double stamp, const cv::Mat& image) {
   Callbacks::on_insert_image(stamp, image);

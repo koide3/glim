@@ -11,6 +11,10 @@
 
 #include <glim/util/extension_module.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace glim {
 
 class TrajectoryManager;
@@ -71,5 +75,8 @@ private:
 
   std::mutex invoke_queue_mutex;
   std::vector<std::function<void()>> invoke_queue;
+  
+  // Logging
+  std::shared_ptr<spdlog::logger> logger;
 };
 }

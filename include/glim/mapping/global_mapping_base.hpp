@@ -6,6 +6,10 @@
 
 #include <glim/mapping/sub_map.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace glim {
 
 /**
@@ -14,6 +18,7 @@ namespace glim {
  */
 class GlobalMappingBase {
 public:
+  GlobalMappingBase();
   virtual ~GlobalMappingBase() {}
 
   /**
@@ -64,5 +69,8 @@ public:
    * @return         Loaded global mapping module
    */
   static std::shared_ptr<GlobalMappingBase> load_module(const std::string& so_name);
+
+protected:
+  std::shared_ptr<spdlog::logger> logger;
 };
 }  // namespace glim

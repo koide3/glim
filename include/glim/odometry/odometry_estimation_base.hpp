@@ -7,6 +7,10 @@
 #include <glim/odometry/estimation_frame.hpp>
 #include <glim/preprocess/preprocessed_frame.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace glim {
 
 /**
@@ -15,6 +19,7 @@ namespace glim {
  */
 class OdometryEstimationBase {
 public:
+  OdometryEstimationBase();
   virtual ~OdometryEstimationBase() {}
 
   /**
@@ -57,6 +62,10 @@ public:
    * @return         Loaded odometry estimation module
    */
   static std::shared_ptr<OdometryEstimationBase> load_module(const std::string& so_name);
+
+protected:
+  // Logging
+  std::shared_ptr<spdlog::logger> logger;
 };
 
 }  // namespace glim

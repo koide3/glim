@@ -70,7 +70,7 @@ GlobalMappingParams::~GlobalMappingParams() {}
 GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params) {
 #ifndef BUILD_GTSAM_POINTS_GPU
   if (params.enable_gpu) {
-    spdlog::error("GPU-based factors cannot be used because GLIM is built without GPU option!!");
+    logger->error("GPU-based factors cannot be used because GLIM is built without GPU option!!");
   }
 #endif
 
@@ -108,6 +108,8 @@ void GlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear
 }
 
 void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
+  logger->debug("insert_submap id={} |frame|={}", submap->id, submap->frame->size());
+
   const int current = submaps.size();
   const int last = current - 1;
   insert_submap(current, submap);
@@ -148,7 +150,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
   if (params.enable_imu) {
     if (submap->odom_frames.front()->frame_id != FrameID::IMU) {
-      spdlog::warn("odom frames are not estimated in the IMU frame while global mapping requires IMU estimation");
+      logger->warn("odom frames are not estimated in the IMU frame while global mapping requires IMU estimation");
     }
 
     // Local velocities
@@ -189,7 +191,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
       imu_integration->erase_imu_data(imu_read_cursor);
 
       if (num_integrated < 2) {
-        spdlog::warn("insufficient IMU data between submaps (global_mapping)!!");
+        logger->warn("insufficient IMU data between submaps (global_mapping)!!");
         new_factors->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last * 2 + 1), V(current * 2), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       } else {
         new_factors
@@ -203,8 +205,8 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
     auto result = isam2->update(*new_factors, *new_values);
     Callbacks::on_smoother_update_result(*isam2, result);
   } catch (std::exception& e) {
-    spdlog::error("an exception was caught during global map optimization!!");
-    spdlog::error(e.what());
+    logger->error("an exception was caught during global map optimization!!");
+    logger->error(e.what());
   }
   new_values.reset(new gtsam::Values);
   new_factors.reset(new gtsam::NonlinearFactorGraph);
@@ -308,7 +310,7 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
     }
   }
 
-  spdlog::info("new overlapping {} submap pairs found", new_factors.size());
+  logger->info("new overlapping {} submap pairs found", new_factors.size());
 
   gtsam::Values new_values;
   Callbacks::on_smoother_update(*isam2, new_factors, new_values);
@@ -361,11 +363,11 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   factor->set_num_threads(2);
   graph.add(factor);
 
-  spdlog::debug("--- LM optimization ---");
+  logger->debug("--- LM optimization ---");
   gtsam_points::LevenbergMarquardtExtParams lm_params;
   lm_params.setlambdaInitial(1e-12);
   lm_params.setMaxIterations(10);
-  lm_params.callback = [](const auto& status, const auto& values) { spdlog::debug(status.to_string()); };
+  lm_params.callback = [this](const auto& status, const auto& values) { logger->debug(status.to_string()); };
 
   gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
   values = optimizer.optimize();
@@ -415,7 +417,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     }
 #endif
     else {
-      spdlog::warn("unknown registration error type ({})", params.registration_error_factor_type);
+      logger->warn("unknown registration error type ({})", params.registration_error_factor_type);
     }
   }
 
@@ -454,7 +456,7 @@ void GlobalMapping::save(const std::string& path) {
     }
   }
 
-  spdlog::info("serializing factor graph to {}/graph.bin", path);
+  logger->info("serializing factor graph to {}/graph.bin", path);
   serializeToBinaryFile(serializable_factors, path + "/graph.bin");
   serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
 
@@ -537,7 +539,7 @@ std::vector<Eigen::Vector4d> GlobalMapping::export_points() {
 bool GlobalMapping::load(const std::string& path) {
   std::ifstream ifs(path + "/graph.txt");
   if (!ifs) {
-    spdlog::error("failed to open {}/graph.txt", path);
+    logger->error("failed to open {}/graph.txt", path);
     return false;
   }
 
@@ -554,7 +556,7 @@ bool GlobalMapping::load(const std::string& path) {
     ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
   }
 
-  spdlog::info("Load submaps");
+  logger->info("Load submaps");
   submaps.resize(num_submaps);
   subsampled_submaps.resize(num_submaps);
   for (int i = 0; i < num_submaps; i++) {
@@ -580,7 +582,7 @@ bool GlobalMapping::load(const std::string& path) {
         submaps[i]->voxelmaps.push_back(voxelmap);
       }
 #else
-      spdlog::warn("GPU is enabled for global_mapping but gtsam_points was built without CUDA!!");
+      logger->warn("GPU is enabled for global_mapping but gtsam_points was built without CUDA!!");
 #endif
     } else {
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
@@ -598,21 +600,21 @@ bool GlobalMapping::load(const std::string& path) {
   gtsam::NonlinearFactorGraph graph;
 
   try {
-    spdlog::info("deserializing factor graph");
+    logger->info("deserializing factor graph");
     gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
   } catch (boost::archive::archive_exception e) {
-    spdlog::error("failed to deserialize factor graph!!");
-    spdlog::error(e.what());
+    logger->error("failed to deserialize factor graph!!");
+    logger->error(e.what());
   }
   try {
-    spdlog::info("deserializing values");
+    logger->info("deserializing values");
     gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
   } catch (boost::archive::archive_exception e) {
-    spdlog::error("failed to deserialize factor graph!!");
-    spdlog::error(e.what());
+    logger->error("failed to deserialize factor graph!!");
+    logger->error(e.what());
   }
 
-  spdlog::info("creating matching cost factors");
+  logger->info("creating matching cost factors");
   for (const auto& factor : matching_cost_factors) {
     const auto type = std::get<0>(factor);
     const auto first = std::get<1>(factor);
@@ -629,7 +631,7 @@ bool GlobalMapping::load(const std::string& path) {
           graph.emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(first), X(second), voxelmap, subsampled_submaps[second], stream, buffer);
         }
 #else
-        spdlog::warn("GPU is enabled but gtsam_points was built without CUDA!!");
+        logger->warn("GPU is enabled but gtsam_points was built without CUDA!!");
 #endif
       } else {
         for (const auto& voxelmap : submaps[first]->voxelmaps) {
@@ -637,11 +639,11 @@ bool GlobalMapping::load(const std::string& path) {
         }
       }
     } else {
-      spdlog::warn("unsupported matching cost factor type ({})", type);
+      logger->warn("unsupported matching cost factor type ({})", type);
     }
   }
 
-  spdlog::info("optimize");
+  logger->info("optimize");
   Callbacks::on_smoother_update(*isam2, graph, values);
   auto result = isam2->update(graph, values);
   Callbacks::on_smoother_update_result(*isam2, result);
@@ -649,7 +651,7 @@ bool GlobalMapping::load(const std::string& path) {
   update_submaps();
   Callbacks::on_update_submaps(submaps);
 
-  spdlog::info("done");
+  logger->info("done");
 
   return true;
 }

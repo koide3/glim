@@ -35,7 +35,7 @@
 namespace glim {
 using gtsam::symbol_shorthand::X;
 
-InteractiveViewer::InteractiveViewer() {
+InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) {
   glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
 
   kill_switch = false;
@@ -132,7 +132,7 @@ void InteractiveViewer::viewer_loop() {
 
   setup_ui();
 
-  spdlog::info("Starting interactive viewer");
+  logger->info("Starting interactive viewer");
 
   while (!kill_switch) {
     if (!viewer->spin_once()) {
@@ -187,12 +187,12 @@ void InteractiveViewer::drawable_selection() {
 
   ImGui::DragFloat("Min overlap", &min_overlap, 0.01f, 0.01f, 1.0f);
   if (ImGui::Button("Find overlapping submaps")) {
-    spdlog::info("finding overlapping submaps...");
+    logger->info("finding overlapping submaps...");
     GlobalMappingCallbacks::request_to_find_overlapping_submaps(min_overlap);
   }
 
   if (ImGui::Button("Optimize")) {
-    spdlog::info("optimizing...");
+    logger->info("optimizing...");
     GlobalMappingCallbacks::request_to_optimize();
   }
 
@@ -263,7 +263,7 @@ void InteractiveViewer::run_modals() {
   factors.erase(std::remove(factors.begin(), factors.end(), nullptr), factors.end());
 
   if (factors.size()) {
-    spdlog::info("optimizing...");
+    logger->info("optimizing...");
     new_factors.insert(factors);
     GlobalMappingCallbacks::request_to_optimize();
   }
@@ -453,7 +453,7 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isa
  */
 void InteractiveViewer::globalmap_on_smoother_update_result(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
   const std::string text = result.to_string();
-  spdlog::info(text);
+  logger->info("--- smoother_updated ---\n{}", text);
 }
 
 bool InteractiveViewer::ok() const {

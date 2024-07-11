@@ -7,6 +7,10 @@
 #include <glim/util/concurrent_vector.hpp>
 #include <glim/odometry/odometry_estimation_base.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace glim {
 
 /**
@@ -85,6 +89,9 @@ private:
   bool enable_imu;
   std::atomic_int internal_frame_queue_size;
   std::shared_ptr<OdometryEstimationBase> odometry_estimation;
+
+  // Logging
+  std::shared_ptr<spdlog::logger> logger;
 };
 
 }  // namespace glim

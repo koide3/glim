@@ -137,8 +137,8 @@ void GlobalMappingPoseGraph::insert_submap(const SubMap::Ptr& submap) {
     auto result = isam2->update(*new_factors, *new_values);
     Callbacks::on_smoother_update_result(*isam2, result);
   } catch (std::exception& e) {
-    spdlog::error("an exception was caught during global map optimization!!");
-    spdlog::error(e.what());
+    logger->error("an exception was caught during global map optimization!!");
+    logger->error(e.what());
   }
   new_values.reset(new gtsam::Values);
   new_factors.reset(new gtsam::NonlinearFactorGraph);
@@ -172,7 +172,7 @@ void GlobalMappingPoseGraph::save(const std::string& path) {
 
   gtsam::NonlinearFactorGraph serializable_factors = isam2->getFactorsUnsafe();
 
-  spdlog::info("serializing factor graph to {}/graph.bin", path);
+  logger->info("serializing factor graph to {}/graph.bin", path);
   serializeToBinaryFile(serializable_factors, path + "/graph.bin");
   serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
 
@@ -221,6 +221,8 @@ std::vector<Eigen::Vector4d> GlobalMappingPoseGraph::export_points() {
 }
 
 void GlobalMappingPoseGraph::insert_submap(int current, const SubMap::Ptr& submap) {
+  logger->debug("insert_submap id={}", submap->id);
+
   submap->voxelmaps.clear();
 
   submaps.push_back(submap);
@@ -246,7 +248,7 @@ void GlobalMappingPoseGraph::insert_submap(int current, const SubMap::Ptr& subma
     target->voxels = std::make_shared<gtsam_points::GaussianVoxelMapCPU>(params.vgicp_voxel_resolution);
     target->voxels->insert(*submap->frame);
   } else {
-    spdlog::warn("unknown registration type: {}", params.registration_type);
+    logger->warn("unknown registration type: {}", params.registration_type);
   }
 
   if (current == 0) {
@@ -318,11 +320,11 @@ void GlobalMappingPoseGraph::loop_detection_task() {
   std::deque<LoopCandidate> candidates_buffer;  // Local loop candidate buffer
 
   while (!kill_switch) {
-    spdlog::debug("wait for loop candidates");
+    logger->debug("wait for loop candidates");
     auto new_candidates = loop_candidates.get_all_and_clear_wait();
     candidates_buffer.insert(candidates_buffer.end(), new_candidates.begin(), new_candidates.end());
 
-    spdlog::debug("|candidates_buffer|={}", candidates_buffer.size());
+    logger->debug("|candidates_buffer|={}", candidates_buffer.size());
 
     // Regulate the size of the candidate buffer.
     while (candidates_buffer.size() > params.loop_candidate_buffer_size) {
@@ -387,11 +389,11 @@ void GlobalMappingPoseGraph::loop_detection_task() {
         error = factor->error(values);
         inlier_fraction = factor->inlier_fraction();
       } else {
-        spdlog::warn("unknown registration type: {}", params.registration_type);
+        logger->warn("unknown registration type: {}", params.registration_type);
         continue;
       }
 
-      spdlog::debug("target={}, source={}, error={}, inlier_fraction={}", target->submap->id, source->submap->id, error, inlier_fraction);
+      logger->debug("target={}, source={}, error={}, inlier_fraction={}", target->submap->id, source->submap->id, error, inlier_fraction);
 
       inlier_fractions[i] = inlier_fraction;
       T_target_source[i] = values.at<gtsam::Pose3>(0);

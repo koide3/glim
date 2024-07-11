@@ -26,7 +26,7 @@
 
 namespace glim {
 
-StandardViewer::StandardViewer() {
+StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
 
   kill_switch = false;
@@ -333,8 +333,8 @@ void StandardViewer::set_callbacks() {
 
   // Submap optimization status callback
   SubMappingCallbacks::on_optimization_status.add([this](const gtsam_points::LevenbergMarquardtOptimizationStatus& status, const gtsam::Values& values) {
-    spdlog::debug("--- submap optimization ---");
-    spdlog::debug(status.to_short_string());
+    logger->debug("--- submap optimization ---");
+    logger->debug(status.to_short_string());
   });
 
   /*** Global mapping callbacks ***/
@@ -428,8 +428,8 @@ void StandardViewer::set_callbacks() {
 
   // Smoother update result callback
   GlobalMappingCallbacks::on_smoother_update_result.add([this](gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
-    spdlog::debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
-    spdlog::debug(result.to_string());
+    logger->debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
+    logger->debug(result.to_string());
   });
 }
 

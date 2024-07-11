@@ -13,6 +13,10 @@
 #include <glim/util/extension_module.hpp>
 #include <glim/util/concurrent_vector.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace gtsam {
 class Values;
 class NonlinearFactor;
@@ -112,5 +116,8 @@ protected:
 
   // Factors to be inserted into the global mapping graph
   ConcurrentVector<boost::shared_ptr<gtsam::NonlinearFactor>> new_factors;
+
+  // Logging
+  std::shared_ptr<spdlog::logger> logger;
 };
 }  // namespace glim

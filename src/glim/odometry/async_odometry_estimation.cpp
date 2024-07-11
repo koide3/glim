@@ -1,10 +1,13 @@
 #include <glim/odometry/async_odometry_estimation.hpp>
 
 #include <spdlog/spdlog.h>
+#include <glim/util/logging.hpp>
 
 namespace glim {
 
-AsyncOdometryEstimation::AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation, bool enable_imu) : odometry_estimation(odometry_estimation) {
+AsyncOdometryEstimation::AsyncOdometryEstimation(const std::shared_ptr<OdometryEstimationBase>& odometry_estimation, bool enable_imu)
+: odometry_estimation(odometry_estimation),
+  logger(create_module_logger("odom")) {
   this->enable_imu = enable_imu;
   kill_switch = false;
   end_of_sequence = false;
@@ -81,7 +84,7 @@ void AsyncOdometryEstimation::run() {
 
     while (!images.empty()) {
       if (!end_of_sequence && images.front().first > last_imu_time) {
-        spdlog::debug("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f})", images.front().first, last_imu_time);
+        logger->debug("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f})", images.front().first, last_imu_time);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         break;
       }
@@ -93,7 +96,7 @@ void AsyncOdometryEstimation::run() {
 
     while (!raw_frames.empty()) {
       if (!end_of_sequence && raw_frames.front()->scan_end_time > last_imu_time) {
-        spdlog::debug("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f})", raw_frames.front()->scan_end_time, last_imu_time);
+        logger->debug("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f})", raw_frames.front()->scan_end_time, last_imu_time);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         break;
       }

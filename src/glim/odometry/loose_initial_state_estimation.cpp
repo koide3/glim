@@ -38,7 +38,7 @@ LooseInitialStateEstimation::~LooseInitialStateEstimation() {}
 
 void LooseInitialStateEstimation::insert_frame(const PreprocessedFrame::ConstPtr& raw_frame) {
   if (raw_frame->size() < 50) {
-    spdlog::warn("skip initial state estimation for a frame with too few points ({} points)", raw_frame->size());
+    logger->warn("skip initial state estimation for a frame with too few points ({} points)", raw_frame->size());
     return;
   }
 
@@ -92,7 +92,7 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
     return nullptr;
   }
 
-  spdlog::info("estimate initial IMU state");
+  logger->info("estimate initial IMU state");
 
   using gtsam::symbol_shorthand::B;
   using gtsam::symbol_shorthand::V;

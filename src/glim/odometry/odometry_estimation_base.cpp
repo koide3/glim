@@ -1,11 +1,14 @@
 #include <glim/odometry/odometry_estimation_base.hpp>
 
+#include <glim/util/logging.hpp>
 #include <glim/util/load_module.hpp>
 #include <glim/odometry/callbacks.hpp>
 
 namespace glim {
 
 using Callbacks = OdometryEstimationCallbacks;
+
+OdometryEstimationBase::OdometryEstimationBase() : logger(create_module_logger("odom")) {}
 
 void OdometryEstimationBase::insert_image(const double stamp, const cv::Mat& image) {
   Callbacks::on_insert_image(stamp, image);
