@@ -6,6 +6,10 @@
 #include <glim/mapping/global_mapping.hpp>
 #include <glim/util/concurrent_vector.hpp>
 
+namespace spdlog {
+class logger;
+}
+
 namespace glim {
 
 /**
@@ -86,6 +90,9 @@ private:
 
   std::mutex global_mapping_mutex;
   std::shared_ptr<glim::GlobalMappingBase> global_mapping;
+
+  // Logging
+  std::shared_ptr<spdlog::logger> logger;
 };
 
 }  // namespace  glim

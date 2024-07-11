@@ -2,13 +2,15 @@
 
 #include <spdlog/spdlog.h>
 
+#include <glim/util/logging.hpp>
 #include <glim/mapping/callbacks.hpp>
 
 namespace glim {
 
 AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMappingBase>& global_mapping, const int optimization_interval)
 : global_mapping(global_mapping),
-  optimization_interval(optimization_interval) {
+  optimization_interval(optimization_interval),
+  logger(create_module_logger("global")) {
   request_to_optimize = false;
   request_to_find_overlapping_submaps.store(-1.0);
 
@@ -55,15 +57,15 @@ int AsyncGlobalMapping::workload() const {
 }
 
 void AsyncGlobalMapping::save(const std::string& path) {
-  spdlog::info("saving to {}...", path);
+  logger->info("saving to {}...", path);
   std::lock_guard<std::mutex> lock(global_mapping_mutex);
   global_mapping->save(path);
-  spdlog::info("saved");
+  logger->info("saved");
 }
 
 std::vector<Eigen::Vector4d> AsyncGlobalMapping::export_points() {
   std::lock_guard<std::mutex> lock(global_mapping_mutex);
-  spdlog::info("exporting points");
+  logger->info("exporting points");
   auto points = global_mapping->export_points();
   return points;
 }

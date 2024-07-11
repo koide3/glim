@@ -140,7 +140,7 @@ std::shared_ptr<GlobalMapping> OfflineViewer::load_map(guik::ProgressInterface& 
   std::cout << "enable_optimization:" << params.enable_optimization << std::endl;
   std::shared_ptr<glim::GlobalMapping> global_mapping(new glim::GlobalMapping(params));
   if (!global_mapping->load(path)) {
-    spdlog::error("failed to load {}", path);
+    logger->error("failed to load {}", path);
     return nullptr;
   }
 

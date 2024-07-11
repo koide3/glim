@@ -92,6 +92,7 @@ void SubMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_ac
 }
 
 void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
+  logger->trace("insert_frame frame_id={} stamp={}", odom_frame_->id, odom_frame_->stamp);
   Callbacks::on_insert_frame(odom_frame_);
 
   delayed_input_queue.emplace_back(odom_frame_);
@@ -104,6 +105,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   EstimationFrame::ConstPtr next_frame = delayed_input_queue.front();
 
   if (params.enable_imu) {
+    logger->debug("smoothing trajectory");
     // Smoothing IMU-based pose estimation
     gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
     gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
@@ -156,15 +158,17 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
   if (params.enable_imu && odom_frame->frame_id != FrameID::IMU) {
-    spdlog::warn("odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation");
+    logger->warn("odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation");
   }
 
   // Fix the first frame
   if (current == 0) {
+    logger->debug("first frame in submap");
     graph->emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), values->at<gtsam::Pose3>(X(0)), gtsam::noiseModel::Isotropic::Precision(6, 1e8));
   }
   // Create a relative pose factor between consecutive frames
   else if (params.create_between_factors) {
+    logger->debug("create between factors");
     const Eigen::Isometry3d delta = odom_frames[last]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
 
     if (params.between_registration_type == "GICP") {
@@ -173,7 +177,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
       gtsam::noiseModel::Base::shared_ptr noise_model;
       if (last_frame->size() < 500 || current_frame->size() < 500) {
-        spdlog::warn("use an identity covariance because either of last or current frames have too few points (last={} current={})", last_frame->size(), current_frame->size());
+        logger->warn("use an identity covariance because either of last or current frames have too few points (last={} current={})", last_frame->size(), current_frame->size());
         noise_model = gtsam::noiseModel::Isotropic::Precision(6, 1e3);
       } else {
         auto factor = gtsam::make_shared<gtsam_points::IntegratedGICPFactor>(X(last), X(current), last_frame, current_frame);
@@ -188,12 +192,13 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     } else if (params.between_registration_type == "NONE") {
       graph->emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(delta.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
     } else {
-      spdlog::warn("unknown between registration type ({})", params.between_registration_type);
+      logger->warn("unknown between registration type ({})", params.between_registration_type);
     }
   }
 
   // Create an IMU preintegration factor
   if (params.enable_imu) {
+    logger->debug("create IMU factor");
     const gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
     values->insert(V(current), odom_frame->v_world_imu);
@@ -212,7 +217,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       if (num_integrated >= 2) {
         graph->emplace_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
       } else {
-        spdlog::warn("insufficient IMU data between LiDAR frames!! (sub_mapping)");
+        logger->warn("insufficient IMU data between LiDAR frames!! (sub_mapping)");
         graph->emplace_shared<gtsam::BetweenFactor<gtsam::Vector3>>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1.0));
       }
     }
@@ -223,7 +228,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     // Overlap-based keyframe update
     if (params.keyframe_update_strategy == "OVERLAP") {
       if (keyframes.back()->voxelmaps.empty() || odom_frame->frame->size() < 10) {
-        spdlog::warn("voxelmap or odom_frame is empty!! (voxelmap={} odom_frame={})", keyframes.back()->voxelmaps.size(), odom_frame->frame->size());
+        logger->warn("voxelmap or odom_frame is empty!! (voxelmap={} odom_frame={})", keyframes.back()->voxelmaps.size(), odom_frame->frame->size());
       } else {
         const double overlap =
           gtsam_points::overlap_auto(keyframes.back()->voxelmaps.back(), odom_frame->frame, keyframes.back()->T_world_sensor().inverse() * odom_frame->T_world_sensor());
@@ -238,19 +243,20 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
       insert_as_keyframe = delta_trans > params.keyframe_update_interval_trans || delta_angle > params.keyframe_update_interval_rot;
     } else {
-      spdlog::warn("unknown keyframe update strategy ({})", params.keyframe_update_strategy);
+      logger->warn("unknown keyframe update strategy ({})", params.keyframe_update_strategy);
     }
   }
 
   // Create a new keyframe
   if (insert_as_keyframe) {
+    logger->debug("insert frame as keyframe");
     insert_keyframe(current, odom_frame);
     Callbacks::on_new_keyframe(current, keyframes.back());
 
     // Create registration error factors (fully connected)
     for (int i = 0; i < keyframes.size() - 1; i++) {
       if (keyframes[i]->frame->size() == 0 || keyframes.back()->frame->size() == 0) {
-        spdlog::warn(
+        logger->warn(
           "skip creation of registration error factors because keyframe has no points (keyframe[i]={}, keyframe[-1]={})",
           keyframes[i]->frame->size(),
           keyframes.back()->frame->size());
@@ -259,7 +265,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       if (params.registration_error_factor_type == "VGICP") {
         for (const auto& voxelmap : keyframes[i]->voxelmaps) {
           if (!voxelmap) {
-            spdlog::warn("voxelmap is empty!");
+            logger->warn("voxelmap is empty!");
             continue;
           }
 
@@ -275,7 +281,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
         for (const auto& voxelmap : keyframes[i]->voxelmaps) {
           if (!voxelmap) {
-            spdlog::warn("voxelmap is empty!");
+            logger->warn("voxelmap is empty!");
             continue;
           }
 
@@ -285,7 +291,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       }
 #endif
       else {
-        spdlog::warn("unknown registration error factor type ({})", params.registration_error_factor_type);
+        logger->warn("unknown registration error factor type ({})", params.registration_error_factor_type);
       }
     }
   }
@@ -317,10 +323,10 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   // Re-perform deskewing with smoothed IMU poses
   if (params.enable_imu && odom_frame->raw_frame && odom_frame->imu_rate_trajectory.cols() >= 2) {
     if (std::abs(odom_frame->stamp - odom_frame->imu_rate_trajectory(0, 0)) > 1e-3) {
-      spdlog::warn("inconsistent frame stamp and imu_rate stamp!! (odom_frame={} imu_rate_trajectory={})", odom_frame->stamp, odom_frame->imu_rate_trajectory(0, 0));
+      logger->warn("inconsistent frame stamp and imu_rate stamp!! (odom_frame={} imu_rate_trajectory={})", odom_frame->stamp, odom_frame->imu_rate_trajectory(0, 0));
     }
     if (odom_frame->raw_frame->scan_end_time > odom_frame->imu_rate_trajectory.rightCols<1>()[0] + 1e-3) {
-      spdlog::warn(
+      logger->warn(
         "imu_rate stamp does not cover the scan duration range!! (imu_rate_end={} scan_end={})",
         odom_frame->imu_rate_trajectory.rightCols<1>()[0],
         odom_frame->raw_frame->scan_end_time);
@@ -368,7 +374,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
       keyframe->voxelmaps.push_back(voxelmap);
     }
 #else
-    spdlog::warn("GPU is enabled for sub_mapping but gtsam_points was built without CUDA!!");
+    logger->warn("GPU is enabled for sub_mapping but gtsam_points was built without CUDA!!");
 #endif
   } else {
     keyframe->voxelmaps.clear();
@@ -387,10 +393,12 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
 }
 
 SubMap::Ptr SubMapping::create_submap(bool force_create) const {
+  logger->debug("|keyframes|={}", keyframes.size());
   if (keyframes.size() < params.max_num_keyframes && !force_create) {
     return nullptr;
   }
 
+  logger->debug("create_submap");
   // Optimization
   Callbacks::on_optimize_submap(*graph, *values);
   gtsam_points::LevenbergMarquardtExtParams lm_params;
@@ -404,8 +412,8 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
       gtsam::Values optimized = optimizer.optimize();
       *values = optimized;
     } catch (std::exception& e) {
-      spdlog::error("an exception was caught during sub map optimization");
-      spdlog::error(e.what());
+      logger->error("an exception was caught during sub map optimization");
+      logger->error(e.what());
     }
   }
 
@@ -435,6 +443,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
     submap->frames[i] = frame;
   }
 
+  logger->debug("merge frames");
   std::vector<gtsam_points::PointCloud::ConstPtr> keyframes_to_merge(keyframes.size());
   std::vector<Eigen::Isometry3d> poses_to_merge(keyframes.size());
   for (int i = 0; i < keyframes.size(); i++) {
@@ -452,6 +461,8 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   if (submap->frame == nullptr) {
     submap->frame = gtsam_points::merge_frames_auto(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution);
   }
+  logger->debug("|merged_submap|={}", submap->frame->size());
+
 
   return submap;
 }

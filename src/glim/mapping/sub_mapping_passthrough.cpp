@@ -1,5 +1,6 @@
 #include <glim/mapping/sub_mapping_passthrough.hpp>
 
+#include <spdlog/spdlog.h>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/util/easy_profiler.hpp>
 
@@ -48,6 +49,7 @@ SubMappingPassthrough::SubMappingPassthrough(const SubMappingPassthroughParams& 
 SubMappingPassthrough::~SubMappingPassthrough() {}
 
 void SubMappingPassthrough::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
+  logger->trace("insert_frame frame_id={} stamp={}", odom_frame->id, odom_frame->stamp);
   Callbacks::on_insert_frame(odom_frame);
 
   const int current = odom_frames.size();
@@ -60,6 +62,7 @@ void SubMappingPassthrough::insert_frame(const EstimationFrame::ConstPtr& odom_f
     const double dt = T_last_current.translation().norm();
     const double dr = Eigen::AngleAxisd(T_last_current.linear()).angle();
     insert_as_keyframe = dt > params.keyframe_update_interval_trans || dr > params.keyframe_update_interval_rot;
+    logger->debug("dt={} dr={} keyframe={}", dt, dr, insert_as_keyframe);
   }
 
   if (insert_as_keyframe) {
@@ -71,6 +74,7 @@ void SubMappingPassthrough::insert_frame(const EstimationFrame::ConstPtr& odom_f
     auto transformed = gtsam_points::transform(odom_frame->frame, odom_frame->T_world_sensor());
     voxelmap->insert(*transformed);
     num_voxels_history.emplace_back(voxelmap->num_voxels());
+    logger->debug("num_voxels={}", voxelmap->num_voxels());
   }
 
   auto new_submap = create_submap();
@@ -123,6 +127,8 @@ SubMap::Ptr SubMappingPassthrough::create_submap(bool force_create) const {
   if (!force_create && keyframes.size() < params.max_num_keyframes && voxelmap->num_voxels() < params.max_num_voxels && check_adaptive_num_voxels()) {
     return nullptr;
   }
+
+  logger->debug("create submap");
 
   // Create a submap
   SubMap::Ptr submap(new SubMap);
