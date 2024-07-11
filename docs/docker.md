@@ -1,49 +1,100 @@
 # Docker images
 
-!!!warning
-    Docker support is suspended now.
-
 ## Prebuilt docker images
 
-We provide the following docker images for ROS1 and ROS2 environments on docker hub ([koide3/glim_ros](https://hub.docker.com/repository/docker/koide3/glim_ros)).
+We provide the following docker images for ROS1 and ROS2 environments on docker hub.
 
-- koide3/glim_ros:noetic
-- koide3/glim_ros:noetic_cuda12.2
-- koide3/glim_ros:humble
-- koide3/glim_ros:humble_cuda12.2
-- koide3/glim_ros:jazzy
+- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros1/noetic) koide3/glim_ros1:noetic](https://hub.docker.com/repository/docker/koide3/glim_ros1/tags)
+- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros1/noetic_cuda12.2) koide3/glim_ros1:noetic_cuda12.2](https://hub.docker.com/repository/docker/koide3/glim_ros1/tags)
+- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/jazzy) koide3/glim_ros2:jazzy](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
+- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/humble) koide3/glim_ros2:humble](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
+- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/humble_cuda12.2) koide3/glim_ros2:humble_cuda12.2](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
 
-### Example use
-
-```bash
-# Pull image from docker hub
-docker pull koide3/glim_ros:humble_cuda11.2
-
-# Launch glim_ros:noetic image with GPU and X11 support
-docker run \
-  --net host \
-  --gpus all \
-  -e DISPLAY=$DISPLAY \
-  -v $HOME/.Xauthority:/root/.Xauthority \
-  koide3/glim_ros:humble_cuda11.2 \
-  ros2 run glim_ros glim_rosnode
-```
+!!! note
+    ROS2 sometimes requires additional configurations for communication on docker. See [https://github.com/eProsima/Fast-DDS/issues/2956](https://github.com/eProsima/Fast-DDS/issues/2956). Do not ask us about how to use ROS2 with docker.
 
 !!! note
     Currently, we provide only AMD64 images. ARM64 support is planned in the future.
 
-## Build docker image from source
+### Example use
 
-It is also possible to build docker images on your system as follows:
+#### With GPU
+
+```bash
+# Copy config and edit as you want
+git clone git@github.com:koide3/glim /tmp/glim
+cp -R /tmp/glim/config ./config
+
+# Pull image from docker hub
+docker pull koide3/glim_ros2:humble_cuda12.2
+
+# Launch glim_ros:noetic image with GPU and DISPLAY support
+docker run \
+  -it \
+  --rm \
+  --net=host \
+  --ipc=host \
+  --pid=host \
+  --gpus all \
+  -e=DISPLAY \
+  -e=ROS_DOMAIN_ID \
+  -v $(realpath config):/glim/config \
+  koide3/glim_ros2:humble_cuda12.2 \
+  ros2 run glim_ros glim_rosnode --ros-args -p config_path:=/glim/config
+```
+
+#### Without GPU
+
+```bash
+# Copy config and edit it
+git clone git@github.com:koide3/glim /tmp/glim
+cp -R /tmp/glim/config ./config
+
+# Change as follows:
+# "config_odometry" : "config_odometry_cpu.json"
+# "config_sub_mapping" : "config_sub_mapping_cpu.json"
+# "config_global_mapping" : "config_global_mapping_cpu.json"
+nano config/config.json
+
+# Pull image from docker hub
+docker pull koide3/glim_ros2:humble
+
+# Launch glim_ros:noetic image with DISPLAY support
+docker run \
+  -it \
+  --rm \
+  --net=host \
+  --ipc=host \
+  --pid=host \
+  --gpus all \
+  -e=DISPLAY \
+  -e=ROS_DOMAIN_ID \
+  -v $(realpath config):/glim/config \
+  koide3/glim_ros2:humble \
+  ros2 run glim_ros glim_rosnode --ros-args -p config_path:=/glim/config
+```
+
+
+## Build docker images from source
 
 ```
 mkdir /tmp/glim_docker && cd /tmp/glim_docker
-git clone https://github.com/koide3/glim --recursive
-git clone https://github.com/koide3/glim_ros1
+git clone git@github.com:koide3/glim
+git clone git@github.com:koide3/glim_ros2
 
 # Without GPU
-docker build -f glim_ros1/docker/noetic/Dockerfile --tag glim_ros1 .
+docker build \
+  -f glim_ros2/docker/Dockerfile.gcc \
+  --build-arg="BASE_IMAGE=koide3/gtsam_points:jammy" \
+  --build-arg="ROS_DISTRO=humble" \
+  --tag glim_ros2:humble \
+  .
 
 # With GPU
-docker build -f glim_ros1/docker/noetic_cuda11.2/Dockerfile --tag glim_ros1 .
+docker build \
+  -f glim_ros2/docker/Dockerfile.gcc.cuda \
+  --build-arg="BASE_IMAGE=koide3/gtsam_points:jammy_cuda12.2" \
+  --build-arg="ROS_DISTRO=humble" \
+  --tag glim_ros2:humble_cuda12.2 \
+  .
 ```

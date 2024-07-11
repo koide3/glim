@@ -44,5 +44,5 @@ See more in [Extension modules](extensions.md) and [Demo](demo.md) pages.
 
 ## Contact
 
-Kenji Koide [:material-home:](https://staff.aist.go.jp/k.koide/) [:material-mail:](mailto:k.koide@aist.go.jp) [:material-twitter:](https://twitter.com/k_koide3) <br>
+Kenji Koide [:material-home:](https://staff.aist.go.jp/k.koide/) [:material-mail:](mailto:k.koide@aist.go.jp) [:material-twitter:](https://twitter.com/k_koide3)  
 National Institute of Advanced Industrial Science and Technology (AIST), Japan

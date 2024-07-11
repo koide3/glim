@@ -29,6 +29,20 @@ ros2 run glim_ros glim_rosbag --ros-args -p config_path:=$(realpath config/kinec
 </div>
 
 
+## Outdoor driving test with Livox MID360
+
+<div class="youtube">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/CIfRqeV0irE?si=r0BNpCfOh-Aaoek5" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+
+## Indoor mapping with Azure Kinect
+
+<div class="youtube">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/_SI0KR5D8wE?si=W95jKn8vhF28gzyL" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+
 ## Real-time mapping on Jetson Nano
 
 - [os1_128_01_downsampled.bag (515MB)](https://zenodo.org/record/6859242)
