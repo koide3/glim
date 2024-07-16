@@ -36,7 +36,7 @@ std::shared_ptr<spdlog::logger> create_module_logger(const std::string& module_n
   if (get_default_logger()->level() < spdlog::level::info) {
     auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("/tmp/glim_" + module_name + ".log", true);
     logger->sinks().push_back(file_sink);
-    logger->set_level(spdlog::level::trace);
+    logger->set_level(get_default_logger()->level());
   }
 
   return logger;
