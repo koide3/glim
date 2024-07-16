@@ -46,7 +46,7 @@ colcon build
 
 ### Global optimization modules
 
-#### [GNSS constraints](https://github.com/koide3/glim_ext/tree/master/modules/mapping/gnss_backend) [ROS1 only]
+#### [GNSS constraints](https://github.com/koide3/glim_ext/tree/master/modules/mapping/gnss_global) [ROS2 only]
 
 - Naive implementation of GNSS global optimization constraints
 
