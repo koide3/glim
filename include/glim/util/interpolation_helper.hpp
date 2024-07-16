@@ -29,8 +29,17 @@ public:
   InterpolationHelper(InterpolationHelperSearchMode search_mode = InterpolationHelperSearchMode::LINEAR) : search_mode(search_mode) {}
   ~InterpolationHelper() {}
 
+  /// @brief Check if it's emptry.
+  bool empty() const { return values.empty(); }
+
   /// @brief Number of queued values.
   int size() const { return values.size(); }
+
+  /// @brief Oldest timestamp in the queue
+  double leftmost_time() const { return values.empty() ? 0.0 : values.front().first; }
+
+  /// @brief Newest timestamp in the queue
+  double rightmost_time() const { return values.empty() ? 0.0 : values.back().first; }
 
   /// @brief Add a new value.
   /// @param stamp  Timestamp
