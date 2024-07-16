@@ -57,6 +57,11 @@ This package is released under the MIT license. For commercial support, please c
 
 Koide et al., "GLIM: 3D Range-Inertial Localization and Mapping with GPU-Accelerated Scan Matching Factors", Robotics and Autonomous Systems, 2024, [[DOI]](https://doi.org/10.1016/j.robot.2024.104750) [[Arxiv]](https://arxiv.org/abs/2407.10344)
 
+The GLIM framework involves ideas expanded from the following papers:  
+- (LiDAR-IMU odometry and mapping) "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", ICRA2022 [[DOI]](https://doi.org/10.1109/ICRA46639.2022.9812385)
+- (Global registration error minimization) "Globally Consistent 3D LiDAR Mapping with GPU-accelerated GICP Matching Cost Factors", IEEE RA-L (RA-L), 2021, [[DOI]](https://doi.org/10.1109/LRA.2021.3113043)
+- (GPU-accelerated scan matching) "Voxelized GICP for Fast and Accurate 3D Point Cloud Registration", ICRA2021, [[DOI]](https://doi.org/10.1109/ICRA48506.2021.9560835)
+
 ## Contact
 [Kenji Koide](https://staff.aist.go.jp/k.koide/), k.koide@aist.go.jp<br>
 National Institute of Advanced Industrial Science and Technology (AIST), Japan
