@@ -151,7 +151,15 @@ if(BUILD_WITH_VIEWER)
     glim
   )
 
-  list(APPEND glim_LIBRARIES standard_viewer interactive_viewer)
+  # Memory monitor
+  add_library(memory_monitor SHARED
+    src/glim/viewer/memory_monitor.cpp
+  )
+  target_link_libraries(memory_monitor
+    glim
+  )
+
+  list(APPEND glim_LIBRARIES standard_viewer interactive_viewer memory_monitor)
 endif()
 
 #############
