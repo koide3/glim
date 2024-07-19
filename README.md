@@ -42,8 +42,10 @@ If you find this package useful for your project, please consider leaving a comm
 
 ## Video
 
-[![glim_ss2](https://github.com/user-attachments/assets/95e153cd-1538-4ca6-8dd0-691e920dccd9)](https://www.youtube.com/watch?v=_fwK4awbW18)
-[![glim_ss](https://github.com/user-attachments/assets/6b337369-a32c-4b07-b0e0-b63f6747cdab)](https://www.youtube.com/watch?v=CIfRqeV0irE)
+See more at [Video Gallery](https://github.com/koide3/glim/wiki/Video-Gallery).
+
+[<img width="450" src="https://github.com/user-attachments/assets/95e153cd-1538-4ca6-8dd0-691e920dccd9">](https://www.youtube.com/watch?v=_fwK4awbW18)
+[<img width="450" src="https://github.com/user-attachments/assets/6b337369-a32c-4b07-b0e0-b63f6747cdab">](https://www.youtube.com/watch?v=CIfRqeV0irE)
 
 Left: Mapping with various range sensors, Right: Outdoor driving test with Livox MID360
 
