@@ -1,6 +1,6 @@
-#include <unistd.h>
 #include <thread>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <glim/util/logging.hpp>
 #include <glim/util/extension_module.hpp>
@@ -44,29 +44,43 @@ public:
       }
 #endif
 
-      double vm_usage, resident_set;
-      mem_usage(vm_usage, resident_set);
-      logger->info("Memory usage: {:.2f} / {:.2f} MB", vm_usage / 1024.0, resident_set / 1024.0);
+      size_t mem_free_kb, mem_total_kb;
+      mem_usage(mem_free_kb, mem_total_kb);
+
+      const double cpu_used = static_cast<double>(mem_total_kb - mem_free_kb) / mem_total_kb;
+
+      if (cpu_used > 0.8) {
+        const double used_mb = static_cast<double>(mem_total_kb - mem_free_kb) / 1024.0;
+        const double total_mb = static_cast<double>(mem_total_kb) / 1024.0;
+        logger->warn("CPU memory usage: {:.2f} / {:.2f} MB {:.2f}%", used_mb, total_mb, cpu_used * 100);
+      }
     }
   }
 
-  void mem_usage(double& vm_usage, double& resident_set) {
-    vm_usage = 0.0;
-    resident_set = 0.0;
-    std::ifstream stat_stream("/proc/self/stat", std::ios_base::in);  // get info from proc directory
-    // create some variables to get info
-    std::string pid, comm, state, ppid, pgrp, session, tty_nr;
-    std::string tpgid, flags, minflt, cminflt, majflt, cmajflt;
-    std::string utime, stime, cutime, cstime, priority, nice;
-    std::string O, itrealvalue, starttime;
-    unsigned long vsize;
-    long rss;
-    stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt >> utime >> stime >> cutime >> cstime >>
-      priority >> nice >> O >> itrealvalue >> starttime >> vsize >> rss;
-    stat_stream.close();
-    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024;
-    vm_usage = vsize / 1024.0;
-    resident_set = rss * page_size_kb;
+  void mem_usage(size_t& mem_free_kb, size_t& mem_total_kb) {
+    mem_free_kb = 0;
+    mem_total_kb = 0;
+
+    std::ifstream ifs("/proc/meminfo");
+    if (!ifs) {
+      logger->warn("Failed to open /proc/meminfo");
+      return;
+    }
+
+    std::string line;
+    while (!ifs.eof() && std::getline(ifs, line) && !line.empty()) {
+      std::istringstream sst(line);
+      std::string name;
+      if (line.find("MemTotal:") != std::string::npos) {
+        sst >> name >> mem_total_kb;
+      } else if (line.find("MemAvailable:") != std::string::npos) {
+        sst >> name >> mem_free_kb;
+      }
+
+      if (mem_free_kb > 0 && mem_total_kb > 0) {
+        break;
+      }
+    }
   }
 
 private:
