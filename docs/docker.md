@@ -26,7 +26,7 @@ git clone git@github.com:koide3/glim /tmp/glim
 cp -R /tmp/glim/config ./config
 
 # Pull image from docker hub
-docker pull koide3/glim_ros2:humble_cuda12.2
+docker pull koide3/glim_ros1:noetic_cuda12.2
 
 # Launch glim_ros:noetic image with GPU and DISPLAY support
 docker run \
@@ -39,7 +39,7 @@ docker run \
   -e=DISPLAY \
   -e=ROS_DOMAIN_ID \
   -v $(realpath config):/glim/config \
-  koide3/glim_ros2:humble_cuda12.2 \
+  koide3/glim_ros1:noetic_cuda12.2 \
   ros2 run glim_ros glim_rosnode --ros-args -p config_path:=/glim/config
 ```
 
@@ -57,7 +57,7 @@ cp -R /tmp/glim/config ./config
 nano config/config.json
 
 # Pull image from docker hub
-docker pull koide3/glim_ros2:humble
+docker pull koide3/glim_ros1:noetic
 
 # Launch glim_ros:noetic image with DISPLAY support
 docker run \
@@ -70,7 +70,7 @@ docker run \
   -e=DISPLAY \
   -e=ROS_DOMAIN_ID \
   -v $(realpath config):/glim/config \
-  koide3/glim_ros2:humble \
+  koide3/glim_ros1:noetic \
   ros2 run glim_ros glim_rosnode --ros-args -p config_path:=/glim/config
 ```
 
