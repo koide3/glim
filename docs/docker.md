@@ -28,7 +28,7 @@ cp -R /tmp/glim/config ./config
 # Pull image from docker hub
 docker pull koide3/glim_ros2:humble_cuda12.2
 
-# Launch glim_ros:noetic image with GPU and DISPLAY support
+# Launch glim_ros2:humble_cuda12.2 image with GPU and DISPLAY support
 docker run \
   -it \
   --rm \
@@ -59,7 +59,7 @@ nano config/config.json
 # Pull image from docker hub
 docker pull koide3/glim_ros2:humble
 
-# Launch glim_ros:noetic image with DISPLAY support
+# Launch glim_ros2:humble image with DISPLAY support
 docker run \
   -it \
   --rm \

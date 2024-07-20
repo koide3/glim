@@ -8,6 +8,7 @@
     "acc_scale": 1.0,
     // Extension modules
     "extension_modules": [
+      "libmemory_monitor.so",
       "libstandard_viewer.so",
       "librviz_viewer.so"
       // "libimu_validator.so"
