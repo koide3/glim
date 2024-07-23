@@ -46,7 +46,7 @@ sudo make install
 sudo ldconfig
 ```
 
-#### From [PPA](https://github.com/koide3/gtsam_points) [Ubuntu 24.04 , 22.04, 20.04 / AMD64, ARM64]
+#### From [PPA](https://koide3.github.io/ppa/) [Ubuntu 24.04 , 22.04, 20.04 / AMD64, ARM64]
 
 ##### Setup PPA for Ubuntu 24.04
 
