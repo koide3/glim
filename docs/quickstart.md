@@ -170,7 +170,7 @@ ros2 run glim_ros glim_rosnode --ros-args -p config_path:=$(realpath ./config)
 
 The mapping result data (dump data) is saved in ```/tmp/dump``` when closing glim_rosnode or glim_rosbag. The dump data can be visualized and edited using the offline viewer (```rosrun glim_ros offline_viewer```).
 
-**Example dump data**: [dump_os1_128.tar.gz](https://drive.google.com/file/d/1lOGGYpIicmBYZeaxKzwXc5NaK6d-krMn/view?usp=sharing)
+**Example dump data**: [dump_rosbag2_2024_04_16-14_17_01.tar.gz](https://drive.google.com/file/d/1bZDhCTrhPftnU2d4UwRy3rhkbf2NI_eQ/view?usp=sharing) (trajectory errors injected for manual loop closure test)
 
 ### Offline viewer (manual map editing and point cloud export)
 

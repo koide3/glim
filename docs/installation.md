@@ -37,6 +37,10 @@ mkdir gtsam_points/build && cd gtsam_points/build
 cmake .. -DBUILD_WITH_CUDA=ON
 make -j$(nproc)
 sudo make install
+
+
+# Make shared libraries visible to the system
+sudo ldconfig
 ```
 
 ### Installation for ROS1
