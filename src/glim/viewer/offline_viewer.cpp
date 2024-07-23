@@ -119,9 +119,14 @@ void OfflineViewer::main_menu() {
 
   // close map
   if (start_close_map) {
-    async_global_mapping->join();
-    async_global_mapping.reset();
-    clear();
+    if (async_global_mapping) {
+      logger->info("Closing map");
+      async_global_mapping->join();
+      async_global_mapping.reset();
+      clear();
+    } else {
+      logger->warn("No map to close");
+    }
   }
 }
 
