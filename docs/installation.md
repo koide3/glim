@@ -4,6 +4,9 @@ GLIM is tested on Ubuntu 22.04 / 24.04 with CUDA 12.2, and NVIDIA Jetson Orin (J
 ## Install from source
 
 ### Common dependencies
+
+#### From source
+
 ```bash
 # Install dependencies
 sudo apt install libomp-dev libboost-all-dev libmetis-dev \
@@ -39,7 +42,43 @@ make -j$(nproc)
 sudo make install
 ```
 
-### Installation for ROS1
+#### From [PPA](https://github.com/koide3/gtsam_points) [Ubuntu 24.04 , 22.04, 20.04 / AMD64, ARM64]
+
+##### Setup PPA for Ubuntu 24.04
+
+```
+curl -s --compressed "https://koide3.github.io/ppa/ubuntu2404/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2404 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
+```
+
+##### Setup PPA for Ubuntu 22.04
+
+```
+curl -s --compressed "https://koide3.github.io/ppa/ubuntu2204/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2204 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
+```
+
+##### Setup PPA for Ubuntu 20.04
+
+```
+curl -s --compressed "https://koide3.github.io/ppa/ubuntu2004/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2004 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
+```
+
+##### Install dependencies
+
+```bash
+sudo apt update
+sudo apt install -y libiridescence-dev
+
+# Choose one of the follows
+sudo apt install -y libgtsam-points-dev            # without CUDA
+sudo apt install -y libgtsam-points-cuda-12.2-dev  # with CUDA 12.2
+sudo apt install -y libgtsam-points-cuda-12.5-dev  # with CUDA 12.5
+```
+
+
+### Install GLIM for ROS1
 
 ```bash
 cd ~/catkin_ws/src
@@ -56,7 +95,7 @@ catkin_make
 #   -DBUILD_WITH_MARCH_NATIVE=OFF
 ```
 
-### Installation for ROS2
+### Install GLIM for ROS2
 ```bash
 cd ~/ros2_ws/src
 git clone https://github.com/koide3/glim
