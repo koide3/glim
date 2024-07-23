@@ -40,6 +40,10 @@ mkdir gtsam_points/build && cd gtsam_points/build
 cmake .. -DBUILD_WITH_CUDA=ON
 make -j$(nproc)
 sudo make install
+
+
+# Make shared libraries visible to the system
+sudo ldconfig
 ```
 
 #### From [PPA](https://github.com/koide3/gtsam_points) [Ubuntu 24.04 , 22.04, 20.04 / AMD64, ARM64]
