@@ -79,7 +79,7 @@ echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.githu
 
 ```bash
 sudo apt update
-sudo apt install -y libiridescence-dev
+sudo apt install -y libiridescence-dev libboost-all-dev libglfw3-dev libmetis-dev
 
 # Choose one of the follows
 sudo apt install -y libgtsam-points-dev            # without CUDA
