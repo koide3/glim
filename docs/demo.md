@@ -1,5 +1,7 @@
 # Demo data
 
+See more videos at [Video Gallery](https://github.com/koide3/glim/wiki/Video-Gallery).
+
 ## Mapping with various range sensors
 
 - [Download dataset](https://zenodo.org/record/6864654)

@@ -199,3 +199,7 @@ ros2 run glim_ros offline_viewer
 
 #### Export map point cloud (PLY format)
 - ```File``` -> ```Save``` -> ```Export Points```
+
+## Setup your own sensor
+
+See [Sensor setup guide](https://github.com/koide3/glim/wiki/Sensor-setup-guide).
