@@ -86,7 +86,7 @@ add_library(glim SHARED
 target_include_directories(glim PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include>
-  $<INSTALL_INTERFACE:include>
+  $<INSTALL_INTERFACE:include/glim>
   ${OpenCV_INCLUDE_DIRS}
 )
 target_link_libraries(glim
@@ -166,17 +166,33 @@ endif()
 ## Install ##
 #############
 
-include(GNUInstallDirs)
+if($ENV{ROS_VERSION} EQUAL 1)
+  # No idea
+  set(CMAKE_INSTALL_INCLUDEDIR "include/glim")
+  set(CMAKE_INSTALL_BINDIR "bin/glim")
+  set(CMAKE_INSTALL_LIBDIR "lib/glim")
+  set(CMAKE_INSTALL_DATADIR "share/glim")
+  set(CMAKE_CONFIG_INSTALL_DIR "share/glim")
+elseif($ENV{ROS_VERSION} EQUAL 2)
+  set(CMAKE_INSTALL_INCLUDEDIR "include/glim")
+  set(CMAKE_INSTALL_BINDIR "bin/glim")
+  set(CMAKE_INSTALL_LIBDIR "lib/glim")
+  set(CMAKE_INSTALL_DATADIR "share/glim")
+  set(CMAKE_CONFIG_INSTALL_DIR "share/glim")
+else()
+  include(GNUInstallDirs)
+  set(CMAKE_CONFIG_INSTALL_DIR
+    "${CMAKE_INSTALL_LIBDIR}/cmake/glim"
+    CACHE PATH "Install directory for CMake config files"
+  )
+endif()
+
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(TARGETS ${glim_LIBRARIES}
   EXPORT glim-targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-set(CMAKE_CONFIG_INSTALL_DIR
-  "${CMAKE_INSTALL_LIBDIR}/cmake/glim"
-  CACHE PATH "Install directory for CMake config files"
 )
 include(CMakePackageConfigHelpers)
 install(EXPORT glim-targets
@@ -210,7 +226,8 @@ if(DEFINED ENV{ROS_VERSION})
     install(DIRECTORY config DESTINATION share/glim)
     ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
     ament_export_libraries(${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog)
-    ament_package()
+    ament_export_interfaces(glim-targets HAS_LIBRARY_TARGET)
+    ament_package(CONFIG_EXTRAS "cmake/glim-config.cmake.in")
   elseif($ENV{ROS_VERSION} EQUAL 1)
     # ROS1
     find_package(catkin REQUIRED)

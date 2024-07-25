@@ -234,11 +234,13 @@ T Config::param_cast_nested(const std::vector<std::string>& nested_module_names,
   return *found;
 }
 
-#define DEFINE_CONFIG_IO_SPECIALIZATION(TYPE)                                                                 \
-  template TYPE Config::param(const std::string&, const std::string&, const TYPE&) const;                     \
-  template TYPE Config::param_cast(const std::string&, const std::string&) const;                             \
-  template TYPE Config::param_nested(const std::vector<std::string>&, const std::string&, const TYPE&) const; \
-  template TYPE Config::param_cast_nested(const std::vector<std::string>&, const std::string&) const;         \
+#define DEFINE_CONFIG_IO_SPECIALIZATION(TYPE)                                                                                                  \
+  template std::optional<TYPE> Config::param(const std::string& module_name, const std::string& param_name) const;                             \
+  template TYPE Config::param(const std::string&, const std::string&, const TYPE&) const;                                                      \
+  template TYPE Config::param_cast(const std::string&, const std::string&) const;                                                              \
+  template std::optional<TYPE> Config::param_nested(const std::vector<std::string>& nested_module_names, const std::string& param_name) const; \
+  template TYPE Config::param_nested(const std::vector<std::string>&, const std::string&, const TYPE&) const;                                  \
+  template TYPE Config::param_cast_nested(const std::vector<std::string>&, const std::string&) const;                                          \
   template bool Config::override_param(const std::string&, const std::string&, const TYPE&);
 
 }  // namespace glim
