@@ -239,5 +239,6 @@ if(DEFINED ENV{ROS_VERSION})
       INCLUDE_DIRS include
       LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog
     )
+    install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
   endif()
 endif()
