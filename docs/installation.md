@@ -1,7 +1,5 @@
 
-GLIM is tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5, and NVIDIA Jetson Orin (JetPack 6.0).
-
-You can build and install GLIM from source code, or install pre-built binaries from PPA.
+GLIM is tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5, and NVIDIA Jetson Orin (JetPack 6.0). You can build and install GLIM from source code, or install pre-built binaries from PPA.
 
 ## Install from source
 
@@ -97,7 +95,7 @@ sudo apt install curl gpg
 ```bash
 # Choose one of the follows
 
-# Automatically select ubuntu version via online script
+# Automatically setup PPA via online script
 curl -s https://koide3.github.io/ppa/setup_ppa.sh | sudo bash
 
 # Manually setup PPA for Ubuntu 24.04
@@ -125,12 +123,23 @@ sudo apt install -y libgtsam-points-cuda-12.2-dev  # with CUDA 12.2
 sudo apt install -y libgtsam-points-cuda-12.5-dev  # with CUDA 12.5
 ```
 
-### Install GLIM for ROS2
+### Install GLIM for ROS
 
 ```bash
 # Choose one of the follows
+
+# ROS2 jazzy (Ubuntu 24.04)
+sudo apt install -y ros-jazzy-glim-ros             # Without CUDA
+sudo apt install -y ros-jazzy-glim-ros-cuda12.5    # With CUDA 12.5
+
+# ROS2 humble (Ubuntu 22.04)
 sudo apt install -y ros-humble-glim-ros            # Without CUDA
 sudo apt install -y ros-humble-glim-ros-cuda12.2   # With CUDA 12.2
 sudo apt install -y ros-humble-glim-ros-cuda12.5   # With CUDA 12.5
+
+# ROS1 noetic (Ubuntu 20.04)
+sudo apt install -y ros-noetic-glim-ros            # Without CUDA
+sudo apt install -y ros-noetic-glim-ros-cuda12.2   # With CUDA 12.2
+sudo apt install -y ros-noetic-glim-ros-cuda12.5   # With CUDA 12.5
 ```
 
