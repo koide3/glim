@@ -1,6 +1,9 @@
 # Important parameters
 
 !!! info
+    See the [sensor setup buide](https://github.com/koide3/glim/wiki/Sensor-setup-guide) for configurations of popular sensors (including Livox MID360 and Azure Kinect).
+
+!!! info
     See the Configuration files section in [Getting started](quickstart.md) to change the location of configuration files.
 
 ## ROS-related (config_ros.json)
