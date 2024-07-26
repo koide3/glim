@@ -238,6 +238,8 @@ if(DEFINED ENV{ROS_VERSION})
     catkin_package(
       INCLUDE_DIRS include
       LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog
+      CFG_EXTRAS "glim-config.cmake"
     )
+    install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
   endif()
 endif()
