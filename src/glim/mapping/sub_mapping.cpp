@@ -463,7 +463,6 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   }
   logger->debug("|merged_submap|={}", submap->frame->size());
 
-
   return submap;
 }
 
