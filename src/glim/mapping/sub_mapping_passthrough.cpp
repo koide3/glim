@@ -28,6 +28,7 @@ SubMappingPassthroughParams::SubMappingPassthroughParams() {
   adaptive_max_num_voxels = config.param<double>("sub_mapping", "adaptive_max_num_voxels", 0.5);
   adaptive_max_num_voxels = adaptive_max_num_voxels < 0 ? std::numeric_limits<double>::max() : adaptive_max_num_voxels;
 
+  submap_target_num_points = config.param<int>("sub_mapping", "submap_target_num_points", 40000);
   submap_voxel_resolution = config.param<double>("sub_mapping", "submap_voxel_resolution", 0.5);
   min_dist_in_voxel = config.param<double>("sub_mapping", "min_dist_in_voxel", 0.1);
   max_num_points_in_voxel = config.param<int>("sub_mapping", "max_num_points_in_voxel", 100);
@@ -144,6 +145,12 @@ SubMap::Ptr SubMappingPassthrough::create_submap(bool force_create) const {
 
   auto merged = voxelmap->voxel_data();
   submap->frame = gtsam_points::transform(merged, submap->T_world_origin.inverse());
+
+  if (params.submap_target_num_points > 0 && submap->frame->size() > params.submap_target_num_points) {
+    std::mt19937 mt(submap_count * 643145 + submap->frame->size() * 4312);  // Just a random-like seed
+    submap->frame = gtsam_points::random_sampling(submap->frame, static_cast<double>(params.submap_target_num_points) / submap->frame->size(), mt);
+    logger->debug("|subsampled_submap|={}", submap->frame->size());
+  }
 
   return submap;
 }

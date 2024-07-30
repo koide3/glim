@@ -23,6 +23,7 @@
   // --- Post processing ---
   // submap_downsample_resolution   : Resolution of voxel grid downsampling for created submaps
   // submap_voxel_resolution        : [deprecated] Resolution of VGICP voxels for created submaps (used in global mapping)
+  // submap_target_num_points       : Downsampling target number of points for created submaps (disabled when < 0)
   */
   "sub_mapping": {
     "so_name": "libsub_mapping.so",
@@ -46,6 +47,7 @@
     "keyframe_voxelmap_scaling_factor": 2.0,
     // Post processing
     "submap_downsample_resolution": 0.1,
-    "submap_voxel_resolution": 0.5
+    "submap_voxel_resolution": 0.5,
+    "submap_target_num_points": 50000
   }
 }

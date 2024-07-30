@@ -218,7 +218,12 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   submap->voxelmaps.clear();
 
-  gtsam_points::PointCloud::Ptr subsampled_submap = gtsam_points::random_sampling(submap->frame, params.randomsampling_rate, mt);
+  gtsam_points::PointCloud::ConstPtr subsampled_submap;
+  if (params.randomsampling_rate > 0.99) {
+    subsampled_submap = submap->frame;
+  } else {
+    subsampled_submap = gtsam_points::random_sampling(submap->frame, params.randomsampling_rate, mt);
+  }
 
 #ifdef BUILD_GTSAM_POINTS_GPU
   if (params.enable_gpu && !submap->frame->points_gpu) {
@@ -226,12 +231,16 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   }
 
   if (params.enable_gpu) {
-    subsampled_submap = gtsam_points::PointCloudGPU::clone(*subsampled_submap);
+    if (params.randomsampling_rate > 0.99) {
+      subsampled_submap = submap->frame;
+    } else {
+      subsampled_submap = gtsam_points::PointCloudGPU::clone(*subsampled_submap);
+    }
 
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
       const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution);
-      voxelmap->insert(*subsampled_submap);
+      voxelmap->insert(*submap->frame);
       submap->voxelmaps.push_back(voxelmap);
     }
   }
