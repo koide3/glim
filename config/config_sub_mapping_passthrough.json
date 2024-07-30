@@ -14,6 +14,7 @@
   // submap_voxel_resolution      : Resolution of submap voxels for downsampling
   // min_dist_in_voxel            : Minimum distance between points in a voxel
   // max_num_points_in_voxel      : Maximum number of points in a voxel
+  // submap_target_num_points     : Final target number of points for a submap (disabled when < 0)
   */
   "sub_mapping": {
     "so_name": "libsub_mapping_passthrough.so",
@@ -27,6 +28,7 @@
     // Submap creation params
     "submap_voxel_resolution": 0.5,
     "min_dist_in_voxel": 0.2,
-    "max_num_points_in_voxel": 100
+    "max_num_points_in_voxel": 100,
+    "submap_target_num_points": 50000
   }
 }

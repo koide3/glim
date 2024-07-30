@@ -240,7 +240,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
       const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution);
-      voxelmap->insert(*subsampled_submap);
+      voxelmap->insert(*submap->frame);
       submap->voxelmaps.push_back(voxelmap);
     }
   }

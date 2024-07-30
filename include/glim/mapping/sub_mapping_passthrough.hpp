@@ -29,6 +29,7 @@ public:
   int max_num_voxels;
   double adaptive_max_num_voxels;
 
+  int submap_target_num_points;
   double submap_voxel_resolution;
   double min_dist_in_voxel;
   int max_num_points_in_voxel;
