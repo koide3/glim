@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <thread>
 #include <fstream>
 #include <sstream>
@@ -54,6 +55,13 @@ public:
         const double total_mb = static_cast<double>(mem_total_kb) / 1024.0;
         logger->warn("CPU memory usage: {:.2f} / {:.2f} MB {:.2f}%", used_mb, total_mb, cpu_used * 100);
       }
+
+      size_t rss_kb, shared_kb;
+      rss_mem_usage(rss_kb, shared_kb);
+
+      const double rss_mb = static_cast<double>(rss_kb) / 1024.0;
+      const double shared_mb = static_cast<double>(shared_kb) / 1024.0;
+      logger->debug("RSS: {:.2f} MB, Shared: {:.2f} MB", rss_mb, shared_mb);
     }
   }
 
@@ -81,6 +89,24 @@ public:
         break;
       }
     }
+  }
+
+  void rss_mem_usage(size_t& rss_kb, size_t& shared_kb) {
+    rss_kb = 0;
+    shared_kb = 0;
+
+    std::ifstream ifs("/proc/self/statm");
+    if (!ifs) {
+      logger->warn("Failed to open /proc/self/statm");
+      return;
+    }
+
+    size_t size, resident, share;
+    ifs >> size >> resident >> share;
+
+    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024;
+    rss_kb = resident * page_size_kb;
+    shared_kb = share * page_size_kb;
   }
 
 private:

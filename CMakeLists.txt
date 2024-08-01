@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(glim VERSION 1.0.1 LANGUAGES CXX)
+project(glim VERSION 1.0.2 LANGUAGES CXX)
 
 add_compile_options(-std=c++17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -238,7 +238,6 @@ if(DEFINED ENV{ROS_VERSION})
     catkin_package(
       INCLUDE_DIRS include
       LIBRARIES ${glim_LIBRARIES} ${GTSAM_LIBRARIES} fmt spdlog::spdlog
-      CFG_EXTRAS "glim-config.cmake"
     )
     install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
   endif()

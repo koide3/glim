@@ -58,6 +58,7 @@ SubMappingParams::SubMappingParams() {
 
   submap_downsample_resolution = config.param<double>("sub_mapping", "submap_downsample_resolution", 0.25);
   submap_voxel_resolution = config.param<double>("sub_mapping", "submap_voxel_resolution", 0.5);
+  submap_target_num_points = config.param<int>("sub_mapping", "submap_target_num_points", -1);
 
   enable_gpu = false;
   if (registration_error_factor_type.find("GPU") != std::string::npos) {
@@ -463,6 +464,11 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   }
   logger->debug("|merged_submap|={}", submap->frame->size());
 
+  if (params.submap_target_num_points > 0 && submap->frame->size() > params.submap_target_num_points) {
+    std::mt19937 mt(submap_count * 643145 + submap->frame->size() * 4312);  // Just a random-like seed
+    submap->frame = gtsam_points::random_sampling(submap->frame, static_cast<double>(params.submap_target_num_points) / submap->frame->size(), mt);
+    logger->debug("|subsampled_submap|={}", submap->frame->size());
+  }
 
   return submap;
 }
