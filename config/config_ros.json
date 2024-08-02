@@ -1,4 +1,34 @@
 {
+  /*** ROS-related config ***/
+  // --- Backend modules ---
+  // If both local and global mapping are disabled, odometry estimation runs.
+  // enable_local_mapping   : Enable local mapping module
+  // enable_global_mapping  : Enable global mapping module
+  //
+  // --- Points config ---
+  // keep_raw_points        : Keep raw points in the map (required for only extension modules)
+  //
+  // --- IMU config ---
+  // imu_time_offset        : Time offset for IMU data (in seconds)
+  // acc_scale              : Accelerometer scale factor (Set to 9.80665 for Livox sensors)
+  //
+  // --- TF config ---
+  // GLIM publishes TF subtrees "map -> odom -> base_frame" and "imu -> lidar".
+  // imu_frame_id           : IMU frame ID
+  // lidar_frame_id         : LiDAR frame ID
+  // base_frame_id          : Base frame ID. If blank, IMU frame ID is used.
+  // odom_frame_id          : Odometry frame ID
+  // map_frame_id           : Map frame ID
+  // public_imu2lidar       : If false, do not publish "imu -> lidar" TF
+  // tf_time_offset         : Time offset for TF data (in seconds)
+  // 
+  // --- Extension modules ---
+  // extension_modules      : List of extension modules to load
+  // 
+  // --- Topics ---
+  // imu_topic              : IMU topic
+  // points_topic           : Points topic
+  // image_topic            : Image topic (required for only extension modules)
   "glim_ros": {
     // Backend modules
     "enable_local_mapping": true,
@@ -8,6 +38,14 @@
     // IMU config
     "imu_time_offset": 0.0,
     "acc_scale": 1.0,
+    // TF config
+    "imu_frame_id": "imu",
+    "lidar_frame_id": "lidar",
+    "base_frame_id": "",
+    "odom_frame_id": "odom",
+    "map_frame_id": "map",
+    "public_imu2lidar": true,
+    "tf_time_offset": 1e-6,
     // Extension modules
     "extension_modules": [
       "libmemory_monitor.so",

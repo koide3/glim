@@ -1,6 +1,29 @@
 {
   /*** Sensor configurations ***
+  // --- IMU config ---
+  // imu_acc_noise               : Accelerometer noise
+  // imu_gyro_noise              : Gyroscope noise
+  // imu_int_noise               : Integration noise
+  // imu_bias_noise              : Bias randomwalk noise
+  //
+  // --- LiDAR config ---
+  // global_shutter_lidar        : If true, fill per-point timestamps with zero and disable points deskewing
+  // T_lidar_imu                 : LiDAR-IMU transformation (See below for the format)
+  //
+  // --- Camera config (only used in extension modules) ---
+  // global_shutter_camera       : If true, assume global shutter camera
+  // image_size                  : Image size [width, height]
+  // T_lidar_camera              : LiDAR-camera transformation
+  // intrinsics                  : Camera intrinsics
+  // distortion_model            : Distortion model
+  // distortion_coeffs           : Lens distortion coefficients
+  //  
+  // --- Transformation format ---
   // SE3 poses are written in the TUM format [x, y, z, qx, qy, qz, qw]
+  // "T_lidar_imu" transforms points in the "imu" frame into the "lidar" frame
+  // e.g., p_lidar = T_lidar_imu * p_imu, T_world_imu = T_world_lidar * T_lidar_imu
+  // 
+  // LiDAR-IMU transformations for typical sensors (Do not trust these values blindly!):
   // Ouster OS0: [0.006, -0.012, 0.008, 0.0, 0.0, 0.0, 1.0]
   // Livox Avia: [0, 0, 0, 0, 0, 0, 1]
   // Realsense L515: [-0.012, 0.016, 0.001, 0, 0, 0, 1]
@@ -10,9 +33,6 @@
   // Newer college multi-cam: [-0.014, 0.012, 0.015, 0.0, 0.0, 0.0, 1.0]
   // Newer college multi-cam-imu: [0.02300, 0.00400, -0.01100, 1.00000, 0.00000, 0.00000, 0.00000]
   // rooftop: [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
-  //
-  // "T_lidar_imu" transforms points in the "imu" frame into the "lidar" frame
-  // e.g., p_lidar = T_lidar_imu * p_imu, T_world_imu = T_world_lidar * T_lidar_imu
   */
   "sensors": {
     // IMU config

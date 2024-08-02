@@ -352,7 +352,7 @@ void StandardViewer::set_callbacks() {
       auto viewer = guik::LightViewer::instance();
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
       auto shader_setting = guik::Rainbow(T_world_origin->matrix().cast<float>());
-      shader_setting.add("point_scale", 0.001f);
+      shader_setting.add("point_scale", 0.1f);
 
       if (enable_partial_rendering) {
         cloud_buffer->enable_partial_rendering(partial_rendering_budget);

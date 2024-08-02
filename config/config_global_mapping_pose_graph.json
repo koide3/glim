@@ -1,17 +1,36 @@
 {
-  /*** GlobalMapping ***
-  // --- Registration error factors ---
-  // max_implicit_loop_distance     : Maximum distance between submaps for factor creation
-  // min_implicit_loop_overlap      : Overlap threshold for factor creation (smaller = more factors)
-
+  /*** GlobalMappingPoseGraph ***
+  // --- General settings ---
+  // enable_optimization            : If false, disable optimization
+  // init_pose_damping_scale        : Damping scale for initial pose (to fix the gauge freedom)
+  //
+  // --- Loop detection settings ---
+  // registration_type              : Registration type for loop detection (GICP or VGICP)
+  // min_travel_dist                : Minimum travel distance between submaps for loop candidate selection
+  // max_neighbor_dist              : Maximum distance between submaps for loop candidate selection
+  // min_inliear_fraction           : Minimum inlier fraction to validte loop candidate
+  // subsample_target               : Subsampling target number of points for loop candidate validation (Disable subsampling if < 0)
+  // subsample_rate                 : Subsampling rate for loop detection (Only used when subsample_target < 0)
+  // gicp_max_correspondence_dist   : Maximum correspondence distance for GICP
+  // vgicp_voxel_resolution         : Voxel resolution for VGICP
+  // 
+  // --- Factor settings ---
+  // odom_factor_stddev             : Standard deviation for odometry factor
+  // loop_factor_stddev             : Standard deviation for loop factor
+  // loop_factor_robust_width       : Robust kernel width for loop factor
+  // loop_candidate_buffer_size     : Buffer size for loop candidates
+  // loop_candidate_eval_per_thread : Number of loop candidate evaluation per thread and per cycle
+  // 
   // --- Optimizer settings (see https://gtsam.org/doxygen/4.0.0/a03679.html) ---
   // use_isam2_dogleg               : If true, use dogleg optimizer (robust but slow)
   // isam2_relinearize_skip         : Relinearization is performed every $isam2_relinearize_skip optimization calls
   // isam2_relinearize_thresh       : Relinearization is performed only when linear delta gets larger than this
+  //
+  // num_threads                    : Number of threads for loop detection
   */
   "global_mapping": {
     "so_name": "libglobal_mapping_pose_graph.so",
-    "enable_imu": true,
+    // General settings
     "enable_optimization": true,
     "init_pose_damping_scale": 1e6,
     // Loop detection settings

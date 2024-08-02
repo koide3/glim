@@ -1,4 +1,10 @@
 {
+  // Standard viewer settings
+  // viewer_(width|height)    : Default viewer window size
+  // default_z_range          : Default z-range for the viewer
+  // enable_partial_rendering : If true, enable partial rendering. In the partial render mode, only a part of the submaps is rendered every frame, and accumulated through multiple frames
+  //                          : This can be useful for real-time visualization on low-end GPUs but introduces some glitches
+  // partial_rendering_budget : Number of points to render per frame
   "standard_viewer": {
     "viewer_width": 2560,
     "viewer_height": 1440,

@@ -15,7 +15,6 @@
   */
   "odometry_estimation": {
     "so_name": "libodometry_estimation_ct.so",
-    "num_threads": 4,
     // ivox params
     "ivox_resolution": 1.0,
     "ivox_min_points_dist": 0.1,
@@ -29,6 +28,8 @@
     "smoother_lag": 1.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
-    "isam2_relinearize_thresh": 0.1
+    "isam2_relinearize_thresh": 0.1,
+    // Misc
+    "num_threads": 4
   }
 }
