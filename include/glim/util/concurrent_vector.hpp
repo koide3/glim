@@ -38,7 +38,7 @@ public:
 
 /**
  * @brief Simple thread-safe vector with mutex-lock.
- * @note  This class is performant when the single-thread-input single-thread-output situation.
+ * @note  This class is performant in the single-thread-input single-thread-output situation.
  *        In the multi-thread-input multi-thread-output situation, consider using concurrent containers in TBB.
  *
  * @tparam T      Data type

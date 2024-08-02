@@ -1,24 +1,36 @@
 {
   /*** Keyframe-based VGICP odometry estimation ***
+  // --- Initialization ---
   // initialization_mode         : "LOOSE" performs loose coupling-based IMU state initialization that takes a few seconds
   //                             : "NAIVE" simply uses the linear acceleration direction as the gravity direction
   // initialization_window_size  : Initialization window size for the "LOOSE" initialization mode
+  // init_pose_damping_scale     : Damping scale for the initial pose (to fix the gauge freedom)
+  // 
+  // --- Optimization params ---
   // smoother_lag                : Fixed-lag smoothing window size [sec]
   // use_isam2_dogleg            : Use the dogleg optimizer as the backend of ISAM2 that is slow but more robust
   // isam2_relinearize_skip      :
   // isam2_relinearize_thresh    :
   // fix_imu_bias                : If true, disable IMU bias estimation and use the initial IMU bias
+  // 
+  // --- Voxel params ---
   // voxel_resolution            : Resolution for VGICP voxels (0.25 ~ 0.5 for indoor, 0.5 ~ 2.0 for outdoor)
   // voxelmap_levels             : Multi-resolution voxelmap levels
   // voxelmap_scaling_factor     : Multi-resolution voxelmap scaling factor
   // full_connection_window_size : Latest sensor pose variable is connected with all of the past $full_connection_window_size poses
   //                             : Must be >1. Increase this param for aggressive motion data (3~5)
+  // 
+  // --- Keyframe params ---
   // keyframe_update_strategy    : "OVERLAP" / "DISPLACEMENT" / "ENTROPY"
   // max_num_keyframes           : Maximum number of keyframes
   // keyframe_min_overlap        : Keyframes that overlap to the latest keyframe with a rate smaller than this will be eliminated
   // keyframe_max_overlap        : If the overlap between the latest frame and keyframes is smaller than this,
   //                             : it is inserted into the keyframe list (lager = more frequent keyframe insertion)
   // keyframe_delta_(trans|rot)  : Keyframe displacement threshold [m / rad]
+  // 
+  // --- MISC ---
+  // save_imu_rate_trajectory     : If true, save the IMU rate trajectory
+  // num_threads                  : Number of threads for odometry estimation
   */
   "odometry_estimation": {
     "so_name": "libodometry_estimation_gpu.so",
@@ -45,6 +57,7 @@
     "keyframe_delta_trans": 2.0,
     "keyframe_delta_rot": 0.5,
     "keyframe_entropy_thresh": 0.99,
+    // MISC
     "save_imu_rate_trajectory": true,
     "num_threads": 2
   }

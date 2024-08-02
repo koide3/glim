@@ -2,11 +2,15 @@
   /*** Preprocessing parameters ***
   // distance_(near|far)_thresh  : Points out of this range will be filtered out
   // use_random_grid_downsampling: If false, use the conventional voxelgrid downsampling
-  //                             : Otherwise, use voxel-based random sampling (recommended for Livox)
+  //                             : Otherwise, use voxel-based random sampling (recommended)
   // downsample_resolution       : Voxel grid resolution for downsampling
   // random_downsample_target    : Target number of points for voxel-based random sampling (Enabled when > 0)
   // random_downsample_rate      : Sampling rate for voxel-based random sampling (Enabled when target <= 0)
+  // enable_outlier_removal      : If true, enable statistical outlier removal
+  // outlier_removal_k           : Number of neighbors for outlier removal
+  // outlier_std_mul_factor      : Standard deviation multiplier for outlier removal
   // k_correspondences           : Number of neighbors for covariance estimation
+  // num_threads                 : Number of threads for preprocessing
   */
   "preprocess": {
     "distance_near_thresh": 0.5,

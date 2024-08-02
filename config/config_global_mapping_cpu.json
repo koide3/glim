@@ -1,13 +1,6 @@
 {
   /*** GlobalMapping ***
-  // --- Registration error factors ---
-  // max_implicit_loop_distance     : Maximum distance between submaps for factor creation
-  // min_implicit_loop_overlap      : Overlap threshold for factor creation (smaller = more factors)
-
-  // --- Optimizer settings (see https://gtsam.org/doxygen/4.0.0/a03679.html) ---
-  // use_isam2_dogleg               : If true, use dogleg optimizer (robust but slow)
-  // isam2_relinearize_skip         : Relinearization is performed every $isam2_relinearize_skip optimization calls
-  // isam2_relinearize_thresh       : Relinearization is performed only when linear delta gets larger than this
+  // See config_global_mapping_gpu.json for the full description of the parameters.
   */
   "global_mapping": {
     "so_name": "libglobal_mapping.so",
