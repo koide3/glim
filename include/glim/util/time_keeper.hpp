@@ -1,22 +1,24 @@
 #pragma once
 
-#include <deque>
+#include <optional>
 #include <glim/util/raw_points.hpp>
 
 namespace glim {
 
-/**
- * @brief Parameter to control the absolute point time handling behavior
- */
-struct AbsPointTimeParams {
+/// @brief Parameters for per-point timestamp management
+struct PerPointTimeSettings {
 public:
-  AbsPointTimeParams() {
-    replace_frame_timestamp = true;
-    wrt_first_frame_timestamp = true;
-  }
+  PerPointTimeSettings();
+  ~PerPointTimeSettings();
 
-  bool replace_frame_timestamp;    ///< If true, replace the frame timestamp with point timestamp
-  bool wrt_first_frame_timestamp;  ///< If true, use the timestamp with respect to the very first points msg
+  bool autoconf;       ///< If true, load parameters from config file
+  bool relative_time;  ///< If true, per-point timestamps are relative to the first point. Otherwise, absolute.
+  /// @brief If true, frame timestamp will never be overwritten by antyhing.
+  ///        If false,
+  ///          when per-point timestamps are absolute, overwrite the frame timestamp with the first point timestamp.
+  ///          when per-point timestamps are relative and negative, add an offset to the frame timestamp to make per-point ones positive.
+  bool prefer_frame_time;
+  double point_time_scale;  ///< Scale factor to convert per-point timestamps to seconds.
 };
 
 /**
@@ -24,7 +26,7 @@ public:
  */
 class TimeKeeper {
 public:
-  TimeKeeper(const AbsPointTimeParams& abs_params = AbsPointTimeParams());
+  TimeKeeper();
   ~TimeKeeper();
 
   /**
@@ -45,15 +47,14 @@ private:
   double estimate_scan_duration(const double stamp);
 
 private:
-  const AbsPointTimeParams abs_params;
+  PerPointTimeSettings settings;
 
-  bool first_warning;        ///< Flag to show warning messages only once
   double last_points_stamp;  ///< Timestamp of the last LiDAR frame
   double last_imu_stamp;     ///< Timestamp of the last IMU data
 
-  int num_scans;                   ///< Number of frames for scan duration estimation
-  double first_points_stamp;       ///< Timestamp of the first frame for scan duration estimation
-  double estimated_scan_duration;  ///< Estimated scan duration
+  // Scan duration estimation
+  double estimated_scan_duration;             ///< Estimated scan duration
+  std::vector<double> scan_duration_history;  ///< History of scan durations
 
   double point_time_offset;  ///< Offset to correct time shift of point times
 };

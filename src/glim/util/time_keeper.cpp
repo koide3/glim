@@ -1,17 +1,33 @@
 #include <glim/util/time_keeper.hpp>
 
+#include <optional>
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>
+#include <glim/util/config.hpp>
 
 namespace glim {
 
-TimeKeeper::TimeKeeper(const AbsPointTimeParams& abs_params) : abs_params(abs_params) {
-  first_warning = true;
+PerPointTimeSettings::PerPointTimeSettings() {
+  const Config config(GlobalConfig::get_config_path("config_sensors"));
+  autoconf = config.param<bool>("sensors", "autoconf_perpoint_times", true);
+
+  if (autoconf) {
+    relative_time = true;
+    prefer_frame_time = false;
+    point_time_scale = 1.0;
+  } else {
+    relative_time = config.param<bool>("sensors", "perpoint_relative_time", true);
+    prefer_frame_time = config.param<bool>("sensors", "perpoint_prefer_frame_time", false);
+    point_time_scale = config.param<double>("sensors", "perpoint_time_scale", 1.0);
+  }
+}
+
+PerPointTimeSettings::~PerPointTimeSettings() {}
+
+TimeKeeper::TimeKeeper() {
   last_points_stamp = -1.0;
   last_imu_stamp = -1.0;
 
-  num_scans = 0;
-  first_points_stamp = 0.0;
   estimated_scan_duration = -1.0;
   point_time_offset = 0.0;
 }
@@ -44,6 +60,25 @@ bool TimeKeeper::validate_imu_stamp(const double imu_stamp) {
 void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
   replace_points_stamp(points);
 
+  if (points->points.size() != points->times.size()) {
+    // Here must not be reached
+    spdlog::error("inconsistent # of points and # of timestamps found after time conversion!! |points|={} |times|={}", points->points.size(), points->times.size());
+  }
+  if (points->times.front() < 0.0 || points->times.back() < 0.0) {
+    // Here must not be reached
+    spdlog::error("negative per-point timestamp is found after time conversion!! front={:.6f} back={:.6f}", points->times.front(), points->times.back());
+  }
+  if (points->times.front() > 1.0 || points->times.back() > 1.0) {
+    // Here must not be reached
+    spdlog::error("large per-point timestamp is found after time conversion!! front={:.6f} back={:.6f}", points->times.front(), points->times.back());
+  }
+  if (points->stamp < 0.0) {
+    spdlog::warn("frame timestamp is negative!! frame={:.6f}", points->stamp);
+  }
+  if (points->stamp > 3000000000) {
+    spdlog::warn("frame timestamp is wrong (or GLIM has been used for over 40 years)!! frame={:.6f}", points->stamp);
+  }
+
   const double time_diff = points->stamp - last_points_stamp;
   if (last_points_stamp < 0.0) {
     // First LiDAR frame
@@ -60,8 +95,9 @@ void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
 
 void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
   // No per-point timestamps
-  // Assign timestamps based on scan duration
+  // Assign timestamps based on the estimated scan duration
   if (points->times.empty()) {
+    static bool first_warning = true;
     if (first_warning) {
       spdlog::warn("per-point timestamps are not given!!");
       spdlog::warn("use pseudo per-point timestamps based on the order of points");
@@ -86,65 +122,79 @@ void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
     return;
   }
 
-  // Check if the per-point timestamps are positive
-  if (points->times.front() < 0.0 || points->times.back() < 0.0) {
-    spdlog::warn("negative per-point timestamp is found!!");
-    spdlog::warn("front={:.6f} back={:.6f}", points->times.front(), points->times.back());
+  const auto minmax_times = std::minmax_element(points->times.begin(), points->times.end());
+  const double min_time = *minmax_times.first;
+  const double max_time = *minmax_times.second;
+
+  if (settings.autoconf) {
+    settings.autoconf = false;
+
+    if (min_time < 0.0) {
+      spdlog::warn("negative per-point timestamp is found!! min={:.6f} max={:.6f}", min_time, max_time);
+
+      if (settings.prefer_frame_time) {
+        spdlog::warn("use frame timestamp as is!!");
+      } else {
+        spdlog::warn("add an offset to the frame timestamp to make per-point ones positive!!");
+      }
+    }
+
+    if (max_time < 1.0) {
+      settings.relative_time = true;
+    } else {
+      settings.relative_time = false;
+      spdlog::warn("large point timestamp (min={:.6f} max={:.6f} > 1.0) found!!", min_time, max_time);
+      spdlog::warn("assume that point times are absolute and convert them to relative");
+
+      if (min_time > 1e16) {
+        spdlog::warn("too large point timestamp (min={:.6f} max={:.6f} > 1e16) found!!", min_time, max_time);
+        spdlog::warn("maybe using a Livox LiDAR that use FLOAT64 nanosec per-point timestamps");
+        settings.point_time_scale = 1e-9;
+      }
+
+      if (settings.prefer_frame_time) {
+        spdlog::warn("frame timestamp will be prioritized over the first point timestamp!!");
+      } else {
+        spdlog::warn("frame timestamp will be overwritten by the first point timestamp!!");
+      }
+    }
   }
 
-  // Point timestamps are already relative to the first one
-  if (points->times.front() < 1.0) {
-    first_warning = false;
+  // Per-point timestamps are relative to the first one
+  if (settings.relative_time) {
+    // Make per-point timestamps positive
+    if (min_time < 0.0) {
+      if (!settings.prefer_frame_time) {
+        // Shift the frame timestamp to keep the consistency
+        points->stamp += min_time * settings.point_time_scale;
+      }
+
+      for (auto& time : points->times) {
+        time -= min_time;
+      }
+    }
+
+    if (std::abs(settings.point_time_scale - 1.0) > 1e-6) {
+      // Convert timestamps to seconds
+      for (auto& time : points->times) {
+        time *= settings.point_time_scale;
+      }
+    }
+
     return;
   }
 
-  if (first_warning) {
-    spdlog::warn("large point timestamp ({:.6f} > 1.0) found!!", points->times.back());
-    spdlog::warn("assume that point times are absolute and convert them to relative");
-    spdlog::warn("replace_frame_stamp={} wrt_first_frame_timestamp={}", abs_params.replace_frame_timestamp, abs_params.wrt_first_frame_timestamp);
+  // Per-point timestamps are absolute
+
+  if (!settings.prefer_frame_time) {
+    // Overwrite the frame timestamp with the first point timestamp
+    points->stamp = min_time * settings.point_time_scale;
   }
 
-  if (points->times.front() > 1e16) {
-    if (first_warning) {
-      spdlog::warn("too large point timestamp ({:.6f} > 1e16) found!!", points->times.front());
-      spdlog::warn("maybe using a Livox LiDAR that use FLOAT64 nanosec per-point timestamps");
-      spdlog::warn("convert per-point timestamps from nanosec to sec");
-    }
-
-    for (auto& time : points->times) {
-      time *= 1e-9;
-    }
+  // Make per-point timestamps relative to the frame timestamp
+  for (auto& time : points->times) {
+    time = (time - min_time) * settings.point_time_scale;
   }
-
-  // Convert absolute times to relative times
-  if (abs_params.replace_frame_timestamp) {
-    if (!abs_params.wrt_first_frame_timestamp || std::abs(points->stamp - points->times.front()) < 1.0) {
-      if (first_warning) {
-        spdlog::warn("use first point timestamp as frame timestamp");
-        spdlog::warn("frame={:.6f} point={:.6f}", points->stamp, points->times.front());
-      }
-
-      point_time_offset = 0.0;
-      points->stamp = points->times.front();
-    } else {
-      if (first_warning) {
-        spdlog::warn("point timestamp is too apart from frame timestamp!!");
-        spdlog::warn("use time offset w.r.t. the first frame timestamp");
-        spdlog::warn("frame={:.6f} point={:.6f} diff={:.6f}", points->stamp, points->times.front(), points->stamp - points->times.front());
-
-        point_time_offset = points->stamp - points->times.front();
-      }
-
-      points->stamp = points->times.front() + point_time_offset;
-    }
-
-    const double first_stamp = points->times.front();
-    for (auto& t : points->times) {
-      t -= first_stamp;
-    }
-  }
-
-  first_warning = false;
 }
 
 double TimeKeeper::estimate_scan_duration(const double stamp) {
@@ -152,16 +202,24 @@ double TimeKeeper::estimate_scan_duration(const double stamp) {
     return estimated_scan_duration;
   }
 
-  if ((num_scans++) == 0) {
-    first_points_stamp = stamp;
+  if (last_points_stamp < 0) {
     return -1.0;
   }
 
-  const double scan_duration = (stamp - first_points_stamp) / (num_scans - 1);
+  scan_duration_history.emplace_back(stamp - last_points_stamp);
+  std::nth_element(scan_duration_history.begin(), scan_duration_history.begin() + scan_duration_history.size() / 2, scan_duration_history.end());
+  double scan_duration = scan_duration_history[scan_duration_history.size() / 2];
 
-  if (num_scans == 1000) {
+  if (scan_duration_history.size() == 1000) {
     spdlog::info("estimated scan duration: {}", scan_duration);
     estimated_scan_duration = scan_duration;
+    scan_duration_history.clear();
+    scan_duration_history.shrink_to_fit();
+  }
+
+  if (scan_duration < 0.01 || scan_duration > 1.0) {
+    spdlog::warn("invalid scan duration estimate: {}", scan_duration);
+    scan_duration = -1.0;
   }
 
   return scan_duration;
