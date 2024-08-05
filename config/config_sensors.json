@@ -10,6 +10,12 @@
   // global_shutter_lidar        : If true, fill per-point timestamps with zero and disable points deskewing
   // T_lidar_imu                 : LiDAR-IMU transformation (See below for the format)
   //
+  // --- LiDAR per-point time settings ---
+  // autoconf_perpoint_times     : If true, automatically configure per-point timestamps. If false, use the following settings.
+  // perpoint_relative_time      : If true, recognize per-point timestamps as relative to the frame timestamp. If false, recognize as absolute timestamps.
+  // perpoint_prefer_frame_time  : If true, frame timestamp will never be overridden by anything. Otherwise, absolute per-point timestamps will be used if available.
+  // perpoint_time_scale         : Scale factor for per-point timestamps. If 1.0, timestamps are in seconds. If 1e-9, timestamps are in nanoseconds.
+  //
   // --- Camera config (only used in extension modules) ---
   // global_shutter_camera       : If true, assume global shutter camera
   // image_size                  : Image size [width, height]
@@ -17,12 +23,12 @@
   // intrinsics                  : Camera intrinsics
   // distortion_model            : Distortion model
   // distortion_coeffs           : Lens distortion coefficients
-  //  
+  //
   // --- Transformation format ---
   // SE3 poses are written in the TUM format [x, y, z, qx, qy, qz, qw]
   // "T_lidar_imu" transforms points in the "imu" frame into the "lidar" frame
   // e.g., p_lidar = T_lidar_imu * p_imu, T_world_imu = T_world_lidar * T_lidar_imu
-  // 
+  //
   // LiDAR-IMU transformations for typical sensors (Do not trust these values blindly!):
   // Ouster OS0: [0.006, -0.012, 0.008, 0.0, 0.0, 0.0, 1.0]
   // Livox Avia: [0, 0, 0, 0, 0, 0, 1]
@@ -51,6 +57,11 @@
       0.0,
       1.0
     ],
+    // LiDAR per-point time settings
+    "autoconf_perpoint_times": true,
+    "perpoint_relative_time": true,
+    "perpoint_prefer_frame_time": false,
+    "perpoint_time_scale": 1.0,
     // Camera config (required for only extension modules)
     "global_shutter_camera": true,
     "image_size": [

@@ -19,12 +19,12 @@
   // base_frame_id          : Base frame ID. If blank, IMU frame ID is used.
   // odom_frame_id          : Odometry frame ID
   // map_frame_id           : Map frame ID
-  // public_imu2lidar       : If false, do not publish "imu -> lidar" TF
+  // publish_imu2lidar      : If false, do not publish "imu -> lidar" TF
   // tf_time_offset         : Time offset for TF data (in seconds)
-  // 
+  //
   // --- Extension modules ---
   // extension_modules      : List of extension modules to load
-  // 
+  //
   // --- Topics ---
   // imu_topic              : IMU topic
   // points_topic           : Points topic
@@ -44,7 +44,7 @@
     "base_frame_id": "",
     "odom_frame_id": "odom",
     "map_frame_id": "map",
-    "public_imu2lidar": true,
+    "publish_imu2lidar": true,
     "tf_time_offset": 1e-6,
     // Extension modules
     "extension_modules": [
