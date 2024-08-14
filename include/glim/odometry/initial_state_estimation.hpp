@@ -63,6 +63,10 @@ public:
   void set_init_state(const Eigen::Isometry3d& init_T_world_imu, const Eigen::Vector3d& init_v_world_imu);
 
 private:
+  double window_size;
+
+  bool ready;
+  double init_stamp;
   double stamp;
   Eigen::Vector3d sum_acc;
 

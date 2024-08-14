@@ -203,7 +203,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     // Prior for initial IMU states
     new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(X(0), 6, params->init_pose_damping_scale);
     new_factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(0), init_state->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1.0));
-    new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(B(0), 6, 1e2);
+    new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(B(0), 6, 1e6);
     new_factors.add(create_factors(current, nullptr, new_values));
 
     update_smoother(new_factors, new_values, new_stamps);
