@@ -19,6 +19,10 @@
 #include <glim/odometry/loose_initial_state_estimation.hpp>
 #include <glim/odometry/callbacks.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 using Callbacks = OdometryEstimationCallbacks;
@@ -60,6 +64,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
   save_imu_rate_trajectory = config.param<bool>("odometry_estimation", "save_imu_rate_trajectory", false);
 
   num_threads = config.param<int>("odometry_estimation", "num_threads", 4);
+  num_smoother_update_threads = 1;
 }
 
 OdometryEstimationIMUParams::~OdometryEstimationIMUParams() {}
@@ -93,6 +98,10 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
   isam2_params.relinearizeSkip = params->isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params->isam2_relinearize_thresh);
   smoother.reset(new FixedLagSmootherExt(params->smoother_lag, isam2_params));
+
+#ifdef GTSAM_USE_TBB
+  tbb_task_arena = std::make_shared<tbb::task_arena>(params->num_smoother_update_threads);
+#endif
 }
 
 OdometryEstimationIMU::~OdometryEstimationIMU() {}
@@ -119,8 +128,18 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   // The very first frame
   if (frames.empty()) {
-    init_estimation->insert_frame(raw_frame);
-    auto init_state = init_estimation->initial_pose();
+    EstimationFrame::ConstPtr init_state;
+
+#ifdef GTSAM_USE_TBB
+    auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+    arena->execute([&] {
+#endif
+      init_estimation->insert_frame(raw_frame);
+      init_state = init_estimation->initial_pose();
+#ifdef GTSAM_USE_TBB
+    });
+#endif
+
     if (init_state == nullptr) {
       logger->debug("waiting for initial IMU state estimation to be finished");
       return nullptr;
@@ -187,7 +206,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(B(0), 6, 1e2);
     new_factors.add(create_factors(current, nullptr, new_values));
 
-    smoother->update(new_factors, new_values, new_stamps);
+    update_smoother(new_factors, new_values, new_stamps);
     update_frames(current, new_factors);
 
     return frames.back();
@@ -291,8 +310,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   // Update smoother
   Callbacks::on_smoother_update(*smoother, new_factors, new_values, new_stamps);
-  smoother->update(new_factors, new_values, new_stamps);
-  smoother->update();
+  update_smoother(new_factors, new_values, new_stamps, 1);
   Callbacks::on_smoother_update_finish(*smoother);
 
   // Find out marginalized frames
@@ -361,6 +379,32 @@ void OdometryEstimationIMU::update_frames(int current, const gtsam::NonlinearFac
       break;
     }
   }
+}
+
+void OdometryEstimationIMU::update_smoother(
+  const gtsam::NonlinearFactorGraph& new_factors,
+  const gtsam::Values& new_values,
+  const std::map<std::uint64_t, double>& new_stamp,
+  int update_count) {
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    smoother->update(new_factors, new_values, new_stamp);
+    for (int i = 0; i < update_count; i++) {
+      smoother->update();
+    }
+#ifdef GTSAM_USE_TBB
+  });
+#endif
+}
+
+void OdometryEstimationIMU::update_smoother(int count) {
+  if (count <= 0) {
+    return;
+  }
+
+  update_smoother(gtsam::NonlinearFactorGraph(), gtsam::Values(), std::map<std::uint64_t, double>(), count - 1);
 }
 
 }  // namespace glim

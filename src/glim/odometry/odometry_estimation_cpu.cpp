@@ -21,6 +21,10 @@
 
 #include <glim/odometry/callbacks.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 using Callbacks = OdometryEstimationCallbacks;
@@ -134,7 +138,15 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   // Optimize
   // lm_params.setDiagonalDamping(true);
   gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
-  values = optimizer.optimize();
+
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(this->tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    values = optimizer.optimize();
+#ifdef GTSAM_USE_TBB
+  });
+#endif
 
   const Eigen::Isometry3d T_target_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
   Eigen::Isometry3d T_last_current = last_T_target_imu.inverse() * T_target_imu;

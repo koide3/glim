@@ -82,6 +82,8 @@ private:
   // Optimizer
   using FixedLagSmootherExt = gtsam_points::IncrementalFixedLagSmootherExtWithFallback;
   std::unique_ptr<FixedLagSmootherExt> smoother;
+
+  std::shared_ptr<void> tbb_task_arena;
 };
 
 }  // namespace glim

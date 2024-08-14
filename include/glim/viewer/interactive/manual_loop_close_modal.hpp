@@ -53,6 +53,8 @@ private:
 
   glk::Drawable::ConstPtr target_drawable;
   glk::Drawable::ConstPtr source_drawable;
+
+  std::shared_ptr<void> tbb_task_arena;
 };
 
 }  // namespace glim

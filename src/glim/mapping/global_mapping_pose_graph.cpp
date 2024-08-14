@@ -21,6 +21,10 @@
 #include <glim/util/serialization.hpp>
 #include <glim/mapping/callbacks.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 using gtsam::symbol_shorthand::B;
@@ -81,6 +85,10 @@ GlobalMappingPoseGraph::GlobalMappingPoseGraph(const GlobalMappingPoseGraphParam
     isam2.reset(new gtsam_points::ISAM2ExtDummy(isam2_params));
   }
 
+#ifdef GTSAM_USE_TBB
+  tbb_task_arena.reset(new tbb::task_arena(params.num_threads));
+#endif
+
   kill_switch = false;
   loop_detection_thread = std::thread([this] { loop_detection_task(); });
 }
@@ -134,8 +142,18 @@ void GlobalMappingPoseGraph::insert_submap(const SubMap::Ptr& submap) {
 
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
   try {
-    auto result = isam2->update(*new_factors, *new_values);
+    gtsam_points::ISAM2ResultExt result;
+#ifdef GTSAM_USE_TBB
+    auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+    arena->execute([&] {
+#endif
+      result = isam2->update(*new_factors, *new_values);
+#ifdef GTSAM_USE_TBB
+    });
+#endif
+
     Callbacks::on_smoother_update_result(*isam2, result);
+
   } catch (std::exception& e) {
     logger->error("an exception was caught during global map optimization!!");
     logger->error(e.what());
@@ -157,7 +175,16 @@ void GlobalMappingPoseGraph::optimize() {
   new_factors.add(*collect_detected_loops());
 
   Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = isam2->update(new_factors, new_values);
+
+  gtsam_points::ISAM2ResultExt result;
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    result = isam2->update(new_factors, new_values);
+#ifdef GTSAM_USE_TBB
+  });
+#endif
 
   Callbacks::on_smoother_update_result(*isam2, result);
 
@@ -372,7 +399,16 @@ void GlobalMappingPoseGraph::loop_detection_task() {
 
         gtsam_points::LevenbergMarquardtExtParams lm_params;
         lm_params.setMaxIterations(10);
-        values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+
+#ifdef GTSAM_USE_TBB
+        auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+        arena->execute([&] {
+#endif
+          values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+
+#ifdef GTSAM_USE_TBB
+        });
+#endif
 
         error = factor->error(values);
         inlier_fraction = factor->inlier_fraction();
@@ -384,7 +420,16 @@ void GlobalMappingPoseGraph::loop_detection_task() {
 
         gtsam_points::LevenbergMarquardtExtParams lm_params;
         lm_params.setMaxIterations(10);
-        values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+
+#ifdef GTSAM_USE_TBB
+        auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+        arena->execute([&] {
+#endif
+          values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+
+#ifdef GTSAM_USE_TBB
+        });
+#endif
 
         error = factor->error(values);
         inlier_fraction = factor->inlier_fraction();

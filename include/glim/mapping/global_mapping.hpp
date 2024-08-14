@@ -14,6 +14,7 @@ class NonlinearFactorGraph;
 namespace gtsam_points {
 class ISAM2Ext;
 class StreamTempBufferRoundRobin;
+struct ISAM2ResultExt;
 }  // namespace gtsam_points
 
 namespace glim {
@@ -81,6 +82,7 @@ private:
   boost::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
 
   void update_submaps();
+  gtsam_points::ISAM2ResultExt update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values);
 
 private:
   using Params = GlobalMappingParams;
@@ -98,5 +100,7 @@ private:
   std::unique_ptr<gtsam::NonlinearFactorGraph> new_factors;
 
   std::unique_ptr<gtsam_points::ISAM2Ext> isam2;
+
+  std::shared_ptr<void> tbb_task_arena;
 };
 }  // namespace glim
