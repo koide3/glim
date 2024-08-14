@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -64,5 +65,7 @@ public:
   FrameID frame_id;                                            ///< Coordinate frame of $frame
   gtsam_points::PointCloud::ConstPtr frame;                    ///< Deskewed points for state estimation
   std::vector<gtsam_points::GaussianVoxelMap::Ptr> voxelmaps;  ///< Multi-resolution voxelmaps
+
+  std::unordered_map<std::string, std::shared_ptr<void>> custom_data;  ///< User-defined custom data
 };
 }  // namespace glim
