@@ -48,6 +48,36 @@ struct EstimationFrame {
    */
   void set_T_world_sensor(FrameID frame_id, const Eigen::Isometry3d& T);
 
+  /**
+   * @brief Get the custom data and cast it to the specified type.
+   * @note  This method does not check the type of the custom data.
+   * @param key  Key of the custom data
+   * @return T*  Pointer to the custom data. nullptr if not found.
+   */
+  template <typename T>
+  T* get_custom_data(const std::string& key) {
+    const auto found = custom_data.find(key);
+    if (found == custom_data.end()) {
+      return nullptr;
+    }
+    return reinterpret_cast<T*>(found->second.get());
+  }
+
+  /**
+   * @brief Get the custom data and cast it to the specified type.
+   * @note  This method does not check the type of the custom data.
+   * @param key  Key of the custom data
+   * @return T*  Pointer to the custom data. nullptr if not found.
+   */
+  template <typename T>
+  const T* get_custom_data(const std::string& key) const {
+    const auto found = custom_data.find(key);
+    if (found == custom_data.end()) {
+      return nullptr;
+    }
+    return reinterpret_cast<const T*>(found->second.get());
+  }
+
 public:
   long id;       ///< Frame ID
   double stamp;  ///< Timestamp
