@@ -139,7 +139,7 @@ void StandardViewer::set_callbacks() {
       last_imu_vel = new_frame->v_world_imu;
       last_imu_bias = new_frame->imu_bias;
 
-      trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor());
+      trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor(), 1);
       const Eigen::Isometry3f pose = resolve_pose(new_frame);
 
       if (track) {
@@ -226,7 +226,13 @@ void StandardViewer::set_callbacks() {
     std::vector<int> marginalized_ids(frames.size());
     std::transform(frames.begin(), frames.end(), marginalized_ids.begin(), [](const EstimationFrame::ConstPtr& frame) { return frame->id; });
 
-    invoke([this, marginalized_ids] {
+    const EstimationFrame::ConstPtr last_frame = frames.empty() ? nullptr : frames.back();
+
+    invoke([this, marginalized_ids, last_frame] {
+      if (last_frame) {
+        trajectory->add_odom(last_frame->stamp, last_frame->T_world_sensor(), 2);
+      }
+
       auto viewer = guik::LightViewer::instance();
       for (const int id : marginalized_ids) {
         viewer->remove_drawable("frame_" + std::to_string(id));

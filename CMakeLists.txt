@@ -49,6 +49,7 @@ add_library(glim SHARED
   src/glim/util/logging.cpp
   src/glim/util/export_factors.cpp
   src/glim/util/time_keeper.cpp
+  src/glim/util/trajectory_manager.cpp
   src/glim/util/extension_module.cpp
   src/glim/util/load_module.cpp
   src/glim/util/data_validator.cpp
