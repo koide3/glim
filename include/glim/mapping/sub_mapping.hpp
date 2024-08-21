@@ -96,6 +96,8 @@ private:
   std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
 
   std::vector<SubMap::Ptr> submap_queue;
+
+  std::shared_ptr<void> tbb_task_arena;
 };
 
 }  // namespace glim

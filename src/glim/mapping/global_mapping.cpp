@@ -30,6 +30,10 @@
 #include <glim/common/imu_integration.hpp>
 #include <glim/mapping/callbacks.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 using gtsam::symbol_shorthand::B;
@@ -95,6 +99,10 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 
 #ifdef BUILD_GTSAM_POINTS_GPU
   stream_buffer_roundrobin = std::make_shared<gtsam_points::StreamTempBufferRoundRobin>(64);
+#endif
+
+#ifdef GTSAM_USE_TBB
+  tbb_task_arena = std::make_shared<tbb::task_arena>(1);
 #endif
 }
 
@@ -202,7 +210,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
   try {
-    auto result = isam2->update(*new_factors, *new_values);
+    auto result = update_isam2(*new_factors, *new_values);
     Callbacks::on_smoother_update_result(*isam2, result);
   } catch (std::exception& e) {
     logger->error("an exception was caught during global map optimization!!");
@@ -323,7 +331,7 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
 
   gtsam::Values new_values;
   Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = isam2->update(new_factors, new_values);
+  auto result = update_isam2(new_factors, new_values);
   Callbacks::on_smoother_update_result(*isam2, result);
 
   update_submaps();
@@ -338,7 +346,7 @@ void GlobalMapping::optimize() {
   gtsam::NonlinearFactorGraph new_factors;
   gtsam::Values new_values;
   Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = isam2->update(new_factors, new_values);
+  auto result = update_isam2(new_factors, new_values);
 
   Callbacks::on_smoother_update_result(*isam2, result);
 
@@ -378,8 +386,16 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   lm_params.setMaxIterations(10);
   lm_params.callback = [this](const auto& status, const auto& values) { logger->debug(status.to_string()); };
 
-  gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
-  values = optimizer.optimize();
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
+    values = optimizer.optimize();
+
+#ifdef GTSAM_USE_TBB
+  });
+#endif
 
   const gtsam::Pose3 estimated_delta = values.at<gtsam::Pose3>(X(1));
   const auto linearized = factor->linearize(values);
@@ -437,6 +453,21 @@ void GlobalMapping::update_submaps() {
   for (int i = 0; i < submaps.size(); i++) {
     submaps[i]->T_world_origin = Eigen::Isometry3d(isam2->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
   }
+}
+
+gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values) {
+  gtsam_points::ISAM2ResultExt result;
+
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    result = isam2->update(new_factors, new_values);
+#ifdef GTSAM_USE_TBB
+  });
+#endif
+
+  return result;
 }
 
 void GlobalMapping::save(const std::string& path) {
@@ -654,7 +685,7 @@ bool GlobalMapping::load(const std::string& path) {
 
   logger->info("optimize");
   Callbacks::on_smoother_update(*isam2, graph, values);
-  auto result = isam2->update(graph, values);
+  auto result = update_isam2(graph, values);
   Callbacks::on_smoother_update_result(*isam2, result);
 
   update_submaps();

@@ -10,13 +10,18 @@ namespace glim {
 InitialStateEstimation::InitialStateEstimation() : logger(create_module_logger("odom")) {}
 
 NaiveInitialStateEstimation::NaiveInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias)
-: stamp(0.0),
+: ready(false),
+  init_stamp(0.0),
+  stamp(0.0),
   sum_acc(Eigen::Vector3d::Zero()),
   imu_bias(imu_bias),
   T_lidar_imu(T_lidar_imu),
   force_init(false),
   init_T_world_imu(Eigen::Isometry3d::Identity()),
-  init_v_world_imu(Eigen::Vector3d::Zero()) {}
+  init_v_world_imu(Eigen::Vector3d::Zero()) {
+  glim::Config config(glim::GlobalConfig::get_config_path("config_odometry"));
+  window_size = config.param("odometry_estimation", "initialization_window_size", 1.0);
+}
 
 NaiveInitialStateEstimation::~NaiveInitialStateEstimation() {}
 
@@ -31,12 +36,22 @@ void NaiveInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d
     logger->warn("too large or small acc found ({}[m/s^2])", linear_acc.norm());
   }
 
+  if (init_stamp < 1e-6) {
+    init_stamp = stamp;
+  }
+
+  if (ready) {
+    return;
+  }
+
   stamp = stamp;
   sum_acc += linear_acc;
+
+  ready = stamp - init_stamp > window_size && sum_acc.squaredNorm() > 10.0;
 }
 
 EstimationFrame::ConstPtr NaiveInitialStateEstimation::initial_pose() {
-  if (!force_init && sum_acc.squaredNorm() < 10.0) {
+  if (!force_init && !ready) {
     return nullptr;
   }
 

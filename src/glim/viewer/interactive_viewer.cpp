@@ -384,7 +384,7 @@ void InteractiveViewer::odometry_on_new_frame(const EstimationFrame::ConstPtr& n
     auto viewer = guik::viewer();
     auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(new_frame->frame->points, new_frame->frame->size());
 
-    trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor());
+    trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor(), 1);
     const Eigen::Isometry3d pose = trajectory->odom2world(new_frame->T_world_sensor());
     viewer->update_drawable("current", cloud_buffer, guik::FlatOrange(pose).set_point_scale(2.0f));
   });

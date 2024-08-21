@@ -5,6 +5,9 @@
 #include <thread>
 #include <memory>
 #include <vector>
+#include <unordered_map>
+#include <optional>
+#include <boost/weak_ptr.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -13,6 +16,10 @@
 
 namespace spdlog {
 class logger;
+}
+
+namespace gtsam {
+class NonlinearFactor;
 }
 
 namespace glim {
@@ -55,6 +62,8 @@ private:
 
   bool show_odometry_scans;
   bool show_odometry_keyframes;
+  bool show_odometry_factors;
+
   bool show_submaps;
   bool show_factors;
 
@@ -64,6 +73,11 @@ private:
   std::pair<double, double> last_point_stamps;
   Eigen::Vector3d last_imu_vel;
   Eigen::Matrix<double, 6, 1> last_imu_bias;
+
+  using FactorLine = std::tuple<Eigen::Vector3f, Eigen::Vector3f, Eigen::Vector4f, Eigen::Vector4f>;
+  using FactorLineGetter = std::function<std::optional<FactorLine>(const gtsam::NonlinearFactor*)>;
+  std::vector<std::pair<boost::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> odometry_factor_lines;
+  std::unordered_map<std::uint64_t, Eigen::Isometry3f> odometry_poses;
 
   Eigen::Vector2f z_range;
   Eigen::Vector2f auto_z_range;
@@ -75,8 +89,8 @@ private:
 
   std::mutex invoke_queue_mutex;
   std::vector<std::function<void()>> invoke_queue;
-  
+
   // Logging
   std::shared_ptr<spdlog::logger> logger;
 };
-}
+}  // namespace glim

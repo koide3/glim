@@ -16,6 +16,10 @@
 #include <guik/progress_modal.hpp>
 #include <guik/viewer/light_viewer.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 ManualLoopCloseModal::ManualLoopCloseModal() : request_to_open(false) {
@@ -28,6 +32,10 @@ ManualLoopCloseModal::ManualLoopCloseModal() : request_to_open(false) {
   canvas.reset(new guik::GLCanvas(Eigen::Vector2i(512, 512)));
   progress_modal.reset(new guik::ProgressModal("manual_loop_close_progress"));
   model_control.reset(new guik::ModelControl("model_control"));
+
+#ifdef GTSAM_USE_TBB
+  tbb_task_arena = std::make_shared<tbb::task_arena>(1);
+#endif
 }
 
 ManualLoopCloseModal::~ManualLoopCloseModal() {}
@@ -147,7 +155,15 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align(guik::ProgressInt
   };
 
   gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
-  values = optimizer.optimize();
+
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    values = optimizer.optimize();
+#ifdef GTSAM_USE_TBB
+  });
+#endif
 
   const gtsam::Pose3 estimated = values.at<gtsam::Pose3>(0).inverse() * values.at<gtsam::Pose3>(1);
 

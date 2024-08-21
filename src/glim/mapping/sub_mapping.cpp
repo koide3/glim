@@ -25,6 +25,10 @@
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/mapping/callbacks.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 using gtsam::symbol_shorthand::B;
@@ -81,6 +85,10 @@ SubMapping::SubMapping(const SubMappingParams& params) : params(params) {
   stream = std::make_shared<gtsam_points::CUDAStream>();
   stream_buffer_roundrobin = std::make_shared<gtsam_points::StreamTempBufferRoundRobin>(8);
 #endif
+
+#ifdef GTSAM_USE_TBB
+  tbb_task_arena = std::make_shared<tbb::task_arena>(1);
+#endif
 }
 
 SubMapping::~SubMapping() {}
@@ -133,7 +141,15 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     lm_params.setAbsoluteErrorTol(1e-6);
     lm_params.setRelativeErrorTol(1e-6);
     lm_params.setMaxIterations(5);
-    values = gtsam::LevenbergMarquardtOptimizer(graph, values, lm_params).optimize();
+
+#ifdef GTSAM_USE_TBB
+    auto arena = static_cast<tbb::task_arena*>(this->tbb_task_arena.get());
+    arena->execute([&] {
+#endif
+      values = gtsam::LevenbergMarquardtOptimizer(graph, values, lm_params).optimize();
+#ifdef GTSAM_USE_TBB
+    });
+#endif
 
     odom_frame->imu_rate_trajectory.resize(8, imu_stamps.size());
     for (int i = 0; i < imu_stamps.size(); i++) {
@@ -410,8 +426,16 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   gtsam_points::LevenbergMarquardtOptimizerExt optimizer(*graph, *values, lm_params);
   if (params.enable_optimization) {
     try {
-      gtsam::Values optimized = optimizer.optimize();
-      *values = optimized;
+#ifdef GTSAM_USE_TBB
+      auto arena = static_cast<tbb::task_arena*>(this->tbb_task_arena.get());
+      arena->execute([&] {
+#endif
+        gtsam::Values optimized = optimizer.optimize();
+        *values = optimized;
+
+#ifdef GTSAM_USE_TBB
+      });
+#endif
     } catch (std::exception& e) {
       logger->error("an exception was caught during sub map optimization");
       logger->error(e.what());

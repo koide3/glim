@@ -1,11 +1,11 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <random>
 
 #include <boost/shared_ptr.hpp>
 #include <glim/odometry/odometry_estimation_base.hpp>
-
 
 namespace gtsam {
 class Pose3;
@@ -59,7 +59,8 @@ public:
   // Logging params
   bool save_imu_rate_trajectory;
 
-  int num_threads;
+  int num_threads;                  // Number of threads for preprocessing and per-factor parallelism
+  int num_smoother_update_threads;  // Number of threads for TBB parallelism in smoother update (should be kept 1)
 };
 
 /**
@@ -83,6 +84,10 @@ protected:
   virtual void fallback_smoother() {}
   virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors);
 
+  virtual void
+  update_smoother(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values, const std::map<std::uint64_t, double>& new_stamp, int update_count = 0);
+  virtual void update_smoother(int update_count = 1);
+
 protected:
   std::unique_ptr<OdometryEstimationIMUParams> params;
 
@@ -103,6 +108,8 @@ protected:
   // Optimizer
   using FixedLagSmootherExt = gtsam_points::IncrementalFixedLagSmootherExtWithFallback;
   std::unique_ptr<FixedLagSmootherExt> smoother;
+
+  std::shared_ptr<void> tbb_task_arena;
 };
 
 }  // namespace glim

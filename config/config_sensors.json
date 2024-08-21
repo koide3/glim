@@ -12,8 +12,8 @@
   //
   // --- LiDAR per-point time settings ---
   // autoconf_perpoint_times     : If true, automatically configure per-point timestamps. If false, use the following settings.
+  // autoconf_prefer_frame_time  : If true, frame timestamp will never be overridden by anything. Otherwise, absolute per-point timestamps will be used if available.
   // perpoint_relative_time      : If true, recognize per-point timestamps as relative to the frame timestamp. If false, recognize as absolute timestamps.
-  // perpoint_prefer_frame_time  : If true, frame timestamp will never be overridden by anything. Otherwise, absolute per-point timestamps will be used if available.
   // perpoint_time_scale         : Scale factor for per-point timestamps. If 1.0, timestamps are in seconds. If 1e-9, timestamps are in nanoseconds.
   //
   // --- Camera config (only used in extension modules) ---
@@ -59,8 +59,8 @@
     ],
     // LiDAR per-point time settings
     "autoconf_perpoint_times": true,
+    "autoconf_prefer_frame_time": false,
     "perpoint_relative_time": true,
-    "perpoint_prefer_frame_time": false,
     "perpoint_time_scale": 1.0,
     // Camera config (required for only extension modules)
     "global_shutter_camera": true,

@@ -20,6 +20,10 @@
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/odometry/callbacks.hpp>
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/task_arena.h>
+#endif
+
 namespace glim {
 
 using gtsam::symbol_shorthand::X;
@@ -64,6 +68,10 @@ OdometryEstimationCT::OdometryEstimationCT(const OdometryEstimationCTParams& par
   isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
   smoother.reset(new FixedLagSmootherExt(params.smoother_lag, isam2_params));
+
+#ifdef GTSAM_USE_TBB
+  tbb_task_arena = std::make_shared<tbb::task_arena>(1);
+#endif
 }
 
 OdometryEstimationCT::~OdometryEstimationCT() {}
@@ -159,7 +167,15 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     // lm_params.set_verbose();
 
     try {
-      values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+#ifdef GTSAM_USE_TBB
+      auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+      arena->execute([&] {
+#endif
+        values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
+#ifdef GTSAM_USE_TBB
+      });
+#endif
+
     } catch (std::exception& e) {
       logger->error("an exception was caught during odometry estimation");
       logger->error("{}", e.what());
@@ -212,7 +228,15 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   // Update smoother
   Callbacks::on_smoother_update(*smoother, new_factors, new_values, new_stamps);
-  smoother->update(new_factors, new_values, new_stamps);
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    smoother->update(new_factors, new_values, new_stamps);
+#ifdef GTSAM_USE_TBB
+  });
+#endif
+
   Callbacks::on_smoother_update_finish(*smoother);
 
   // Find out marginalized frames

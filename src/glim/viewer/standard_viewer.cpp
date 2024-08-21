@@ -4,8 +4,14 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam_points/factors/integrated_matching_cost_factor.hpp>
 #include <gtsam_points/optimizers/isam2_result_ext.hpp>
+#include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 #include <gtsam_points/optimizers/levenberg_marquardt_optimization_status.hpp>
+
+#ifdef BUILD_GTSAM_POINTS_GPU
+#include <gtsam_points/factors/integrated_vgicp_factor_gpu.hpp>
+#endif
 
 #include <glim/odometry/callbacks.hpp>
 #include <glim/odometry/estimation_frame.hpp>
@@ -39,6 +45,7 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
 
   show_odometry_scans = true;
   show_odometry_keyframes = true;
+  show_odometry_factors = false;
   show_submaps = true;
   show_factors = true;
 
@@ -139,7 +146,7 @@ void StandardViewer::set_callbacks() {
       last_imu_vel = new_frame->v_world_imu;
       last_imu_bias = new_frame->imu_bias;
 
-      trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor());
+      trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor(), 1);
       const Eigen::Isometry3f pose = resolve_pose(new_frame);
 
       if (track) {
@@ -190,9 +197,15 @@ void StandardViewer::set_callbacks() {
     invoke([this, frames] {
       auto viewer = guik::LightViewer::instance();
       for (const auto& frame : frames) {
+        const Eigen::Isometry3f pose = resolve_pose(frame);
+        odometry_poses[frame->id] = pose;
+
+        viewer->update_drawable(
+          "frame_coord_" + std::to_string(frame->id),
+          glk::Primitives::coordinate_system(),
+          guik::VertexColor(resolve_pose(frame) * Eigen::UniformScaling<float>(0.5f)));
         auto drawable = viewer->find_drawable("frame_" + std::to_string(frame->id));
         if (drawable.first) {
-          const Eigen::Isometry3f pose = resolve_pose(frame);
           drawable.first->add<Eigen::Matrix4f>("model_matrix", pose.matrix());
         }
       }
@@ -206,6 +219,7 @@ void StandardViewer::set_callbacks() {
 
       for (const auto& keyframe : keyframes) {
         const Eigen::Isometry3f pose = resolve_pose(keyframe);
+        odometry_poses[keyframe->id] = pose;
 
         const std::string name = "odometry_keyframe_" + std::to_string(keyframe->id);
         auto drawable = viewer->find_drawable(name);
@@ -221,15 +235,134 @@ void StandardViewer::set_callbacks() {
     });
   });
 
+  OdometryEstimationCallbacks::on_smoother_update.add([this](
+                                                        gtsam_points::IncrementalFixedLagSmootherExtWithFallback& smoother,
+                                                        gtsam::NonlinearFactorGraph& new_factors,
+                                                        gtsam::Values& new_values,
+                                                        std::map<std::uint64_t, double>& new_stamps) {
+    //
+    std::vector<std::pair<boost::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> new_factor_lines;
+    new_factor_lines.reserve(new_factors.size());
+
+    for (const auto& factor : new_factors) {
+      if (!factor) {
+        continue;
+      }
+
+      if (factor->keys().size() == 1) {
+        const gtsam::Symbol symbol0(factor->keys()[0]);
+        if (symbol0.chr() != 'x') {
+          continue;
+        }
+        const int idx0 = symbol0.index();
+
+        const auto matching_factor = boost::dynamic_pointer_cast<gtsam_points::IntegratedMatchingCostFactor>(factor);
+        if (matching_factor) {
+          const auto l = [this, idx0](const gtsam::NonlinearFactor* factor) -> std::optional<FactorLine> {
+            const auto found0 = odometry_poses.find(idx0);
+            if (found0 == odometry_poses.end()) {
+              return std::nullopt;
+            }
+
+            const Eigen::Vector3d pt1 = static_cast<const gtsam_points::IntegratedMatchingCostFactor*>(factor)->get_fixed_target_pose().translation();
+            return std::make_tuple(found0->second.translation(), pt1.cast<float>(), Eigen::Vector4f(0.0f, 1.0f, 0.0f, 0.5f), Eigen::Vector4f(1.0f, 0.0f, 0.0f, 0.5f));
+          };
+
+          new_factor_lines.emplace_back(factor, l);
+          continue;
+        }
+
+#ifdef BUILD_GTSAM_POINTS_GPU
+        const auto gpu_factor = boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor);
+        if (gpu_factor) {
+          const auto l = [this, idx0](const gtsam::NonlinearFactor* factor) -> std::optional<FactorLine> {
+            const auto found0 = odometry_poses.find(idx0);
+            if (found0 == odometry_poses.end()) {
+              return std::nullopt;
+            }
+
+            const Eigen::Vector3f pt1 = static_cast<const gtsam_points::IntegratedVGICPFactorGPU*>(factor)->get_fixed_target_pose().translation();
+            return std::make_tuple(found0->second.translation(), pt1, Eigen::Vector4f(0.0f, 1.0f, 0.0f, 0.5f), Eigen::Vector4f(1.0f, 0.0f, 0.0f, 0.5f));
+          };
+
+          new_factor_lines.emplace_back(factor, l);
+          continue;
+        }
+#endif
+      } else if (factor->keys().size() == 2) {
+        const gtsam::Symbol symbol0(factor->keys()[0]);
+        const gtsam::Symbol symbol1(factor->keys()[1]);
+        if (symbol0.chr() != 'x' || symbol1.chr() != 'x') {
+          continue;
+        }
+
+        const int idx0 = symbol0.index();
+        const int idx1 = symbol1.index();
+
+        const auto l = [this, idx0, idx1](const gtsam::NonlinearFactor*) -> std::optional<FactorLine> {
+          const auto found0 = odometry_poses.find(idx0);
+          const auto found1 = odometry_poses.find(idx1);
+          if (found0 == odometry_poses.end() || found1 == odometry_poses.end()) {
+            return std::nullopt;
+          }
+
+          return std::make_tuple(found0->second.translation(), found1->second.translation(), Eigen::Vector4f(0.0f, 1.0f, 0.0f, 1.0f), Eigen::Vector4f(0.0f, 1.0f, 0.0f, 1.0f));
+        };
+
+        new_factor_lines.emplace_back(factor, l);
+      }
+    }
+
+    invoke([this, new_factor_lines] {
+      auto remove_loc = std::remove_if(odometry_factor_lines.begin(), odometry_factor_lines.end(), [](const auto& factor) { return factor.first.expired(); });
+      odometry_factor_lines.erase(remove_loc, odometry_factor_lines.end());
+      odometry_factor_lines.insert(odometry_factor_lines.end(), new_factor_lines.begin(), new_factor_lines.end());
+
+      if (!show_odometry_factors) {
+        return;
+      }
+
+      std::vector<Eigen::Vector3f> line_vertices;
+      std::vector<Eigen::Vector4f> line_colors;
+
+      for (const auto& factor_line : odometry_factor_lines) {
+        const auto factor = factor_line.first.lock();
+        if (!factor) {
+          continue;
+        }
+
+        const auto line = factor_line.second(factor.get());
+        if (!line) {
+          continue;
+        }
+        line_vertices.push_back(std::get<0>(*line));
+        line_vertices.push_back(std::get<1>(*line));
+        line_colors.push_back(std::get<2>(*line));
+        line_colors.push_back(std::get<3>(*line));
+      }
+
+      auto viewer = guik::viewer();
+      viewer->update_drawable("odometry_factors", std::make_shared<glk::ThinLines>(line_vertices, line_colors), guik::VertexColor().make_transparent());
+    });
+  });
+
   // Marginalized frames callback
   OdometryEstimationCallbacks::on_marginalized_frames.add([this](const std::vector<EstimationFrame::ConstPtr>& frames) {
     std::vector<int> marginalized_ids(frames.size());
     std::transform(frames.begin(), frames.end(), marginalized_ids.begin(), [](const EstimationFrame::ConstPtr& frame) { return frame->id; });
 
-    invoke([this, marginalized_ids] {
+    const EstimationFrame::ConstPtr last_frame = frames.empty() ? nullptr : frames.back();
+
+    invoke([this, marginalized_ids, last_frame] {
+      if (last_frame) {
+        trajectory->add_odom(last_frame->stamp, last_frame->T_world_sensor(), 2);
+      }
+
       auto viewer = guik::LightViewer::instance();
       for (const int id : marginalized_ids) {
         viewer->remove_drawable("frame_" + std::to_string(id));
+        viewer->remove_drawable("frame_coord_" + std::to_string(id));
+        odometry_poses.erase(id);
       }
     });
   });
@@ -241,6 +374,7 @@ void StandardViewer::set_callbacks() {
       for (const auto& keyframe : keyframes) {
         viewer->remove_drawable("odometry_keyframe_" + std::to_string(keyframe->id));
         viewer->remove_drawable("odometry_keyframe_coord_" + std::to_string(keyframe->id));
+        odometry_poses.erase(keyframe->id);
       }
     });
   });
@@ -459,11 +593,15 @@ void StandardViewer::viewer_loop() {
       request_to_terminate = true;
     }
 
-    std::lock_guard<std::mutex> lock(invoke_queue_mutex);
-    for (const auto& task : invoke_queue) {
+    std::vector<std::function<void()>> tasks;
+    {
+      std::lock_guard<std::mutex> lock(invoke_queue_mutex);
+      tasks.swap(invoke_queue);
+    }
+
+    for (const auto& task : tasks) {
       task();
     }
-    invoke_queue.clear();
   }
 
   guik::LightViewer::destroy();
@@ -491,6 +629,10 @@ bool StandardViewer::drawable_filter(const std::string& name) {
   }
 
   if (!show_odometry_keyframes && starts_with(name, "odometry_keyframe_")) {
+    return false;
+  }
+
+  if (!show_odometry_factors && starts_with(name, "odometry_factors")) {
     return false;
   }
 
@@ -540,9 +682,10 @@ void StandardViewer::drawable_selection() {
   }
 
   ImGui::Separator();
-  bool show_odometry = show_odometry_scans || show_odometry_keyframes;
+  bool show_odometry = show_odometry_scans || show_odometry_keyframes || show_odometry_factors;
   if (ImGui::Checkbox("odometry", &show_odometry)) {
     show_odometry_scans = show_odometry_keyframes = show_odometry;
+    show_odometry_factors &= show_odometry;
   }
 
   ImGui::SameLine();
@@ -550,9 +693,11 @@ void StandardViewer::drawable_selection() {
     show_odometry_status = true;
   }
 
-  ImGui::Checkbox("scans", &show_odometry_scans);
+  ImGui::Checkbox("scans##odom", &show_odometry_scans);
   ImGui::SameLine();
-  ImGui::Checkbox("keyframes", &show_odometry_keyframes);
+  ImGui::Checkbox("keyframes##odom", &show_odometry_keyframes);
+  ImGui::SameLine();
+  ImGui::Checkbox("factors##odom", &show_odometry_factors);
 
   ImGui::Separator();
   bool show_mapping = show_submaps || show_factors;
