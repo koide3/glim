@@ -17,7 +17,7 @@ PerPointTimeSettings::PerPointTimeSettings() {
     point_time_scale = 1.0;
   } else {
     relative_time = config.param<bool>("sensors", "perpoint_relative_time", true);
-    prefer_frame_time = config.param<bool>("sensors", "perpoint_prefer_frame_time", false);
+    prefer_frame_time = config.param<bool>("sensors", "autoconf_prefer_frame_time", false);
     point_time_scale = config.param<double>("sensors", "perpoint_time_scale", 1.0);
   }
 }
