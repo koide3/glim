@@ -57,6 +57,13 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
   enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
   partial_rendering_budget = config.param("interactive_viewer", "partial_rendering_budget", 1024);
 
+  points_alpha = config.param("interactive_viewer", "points_alpha", 1.0);
+  factors_alpha = config.param("interactive_viewer", "factors_alpha", 1.0);
+
+  point_size = config.param("interactive_viewer", "point_size", 1.0);
+  point_size_metric = config.param("interactive_viewer", "point_size_metric", false);
+  point_shape_circle = config.param("interactive_viewer", "point_shape_circle", true);
+
   z_range = config.param("interactive_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
 
   trajectory.reset(new TrajectoryManager);
@@ -89,6 +96,16 @@ void InteractiveViewer::viewer_loop() {
   viewer->enable_info_buffer();
   viewer->enable_vsync();
   viewer->shader_setting().add("z_range", z_range);
+
+  viewer->shader_setting().set_point_size(point_size);
+
+  if (point_size_metric) {
+    viewer->shader_setting().set_point_scale_metric();
+  }
+
+  if (point_shape_circle) {
+    viewer->shader_setting().set_point_shape_circle();
+  }
 
   if (enable_partial_rendering) {
     viewer->enable_partial_rendering(0.1);
@@ -289,7 +306,7 @@ void InteractiveViewer::update_viewer() {
     } else {
       const Eigen::Vector4i info(static_cast<int>(PickType::POINTS), 0, 0, submap->id);
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
-      auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info);
+      auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info).set_alpha(points_alpha);
 
       if (enable_partial_rendering) {
         cloud_buffer->enable_partial_rendering(partial_rendering_budget);
@@ -348,13 +365,13 @@ void InteractiveViewer::update_viewer() {
     Eigen::Vector4f color;
     switch (type) {
       case FactorType::MATCHING_COST:
-        color = Eigen::Vector4f(0.0f, 1.0f, 0.0f, 1.0f);
+        color = Eigen::Vector4f(0.0f, 1.0f, 0.0f, factors_alpha);
         break;
       case FactorType::BETWEEN:
-        color = Eigen::Vector4f(0.0f, 0.0f, 1.0f, 1.0f);
+        color = Eigen::Vector4f(0.0f, 0.0f, 1.0f, factors_alpha);
         break;
       case FactorType::IMU:
-        color = Eigen::Vector4f(1.0f, 0.0f, 0.0f, 1.0f);
+        color = Eigen::Vector4f(1.0f, 0.0f, 0.0f, factors_alpha);
         break;
     }
 
@@ -362,7 +379,7 @@ void InteractiveViewer::update_viewer() {
     factor_colors.push_back(color);
   }
 
-  viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(factor_lines, factor_colors), guik::VertexColor());
+  viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(factor_lines, factor_colors), guik::VertexColor().set_alpha(factors_alpha));
 
   std::vector<Eigen::Vector3f> traj;
   for (const auto& submap : submaps) {

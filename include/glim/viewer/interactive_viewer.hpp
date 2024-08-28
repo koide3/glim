@@ -94,7 +94,14 @@ protected:
   bool enable_partial_rendering;
   int partial_rendering_budget;
 
+  double point_size;
+  bool point_size_metric;
+  bool point_shape_circle;
+
   Eigen::Vector2f z_range;
+
+  double points_alpha;
+  double factors_alpha;
 
   // Click information
   Eigen::Vector4i right_clicked_info;
