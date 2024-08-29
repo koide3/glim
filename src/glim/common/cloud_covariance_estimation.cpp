@@ -10,7 +10,10 @@
 
 namespace glim {
 
-CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads) : regularization_method(RegularizationMethod::PLANE), num_threads(num_threads) {}
+CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads, const double plane_eps)
+: regularization_method(RegularizationMethod::PLANE),
+  num_threads(num_threads),
+  plane_eps(plane_eps) {}
 
 CloudCovarianceEstimation::~CloudCovarianceEstimation() {}
 
@@ -151,7 +154,7 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
         *eigenvectors = eig.eigenvectors();
       }
 
-      Eigen::Vector3d values(1e-3, 1.0, 1.0);
+      Eigen::Vector3d values(plane_eps, 1.0, 1.0);
       Eigen::Matrix4d c = Eigen::Matrix4d::Zero();
       c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().transpose();
       return c;
@@ -169,7 +172,7 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
       }
 
       Eigen::Vector3d values = eig.eigenvalues() / eig.eigenvalues()[2];
-      values = values.array().max(1e-3);
+      values = values.array().max(plane_eps);
 
       Eigen::Matrix4d c = Eigen::Matrix4d::Zero();
       c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().transpose();
@@ -177,7 +180,7 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
     }
 
     case RegularizationMethod::FROBENIUS: {
-      const double lambda = 1e-3;
+      const double lambda = plane_eps;
       Eigen::Matrix3d C = cov.block<3, 3>(0, 0) + lambda * Eigen::Matrix3d::Identity();
       Eigen::Matrix3d C_inv = C.inverse();
       Eigen::Matrix4d C_ = Eigen::Matrix4d::Zero();

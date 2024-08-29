@@ -37,6 +37,9 @@ public:
   virtual ~OdometryEstimationIMUParams();
 
 public:
+  // Preprocessing params
+  double plane_eps;
+
   // Sensor params;
   bool fix_imu_bias;
   double imu_bias_noise;

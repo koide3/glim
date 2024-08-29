@@ -32,6 +32,9 @@ using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
 
 OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
+  Config preprocess_config(GlobalConfig::get_config_path("config_preprocess"));
+  plane_eps = preprocess_config.param<double>("preprocess", "plane_eps", 1e-3);
+
   // sensor config
   Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
   T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
@@ -89,7 +92,7 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
 
   imu_integration.reset(new IMUIntegration);
   deskewing.reset(new CloudDeskewing);
-  covariance_estimation.reset(new CloudCovarianceEstimation(params->num_threads));
+  covariance_estimation.reset(new CloudCovarianceEstimation(params->num_threads, params->plane_eps));
 
   gtsam::ISAM2Params isam2_params;
   if (params->use_isam2_dogleg) {

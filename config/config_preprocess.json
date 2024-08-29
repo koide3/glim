@@ -10,6 +10,7 @@
   // outlier_removal_k           : Number of neighbors for outlier removal
   // outlier_std_mul_factor      : Standard deviation multiplier for outlier removal
   // k_correspondences           : Number of neighbors for covariance estimation
+  // plane_eps                   : Epsilon for covariance regularization (plane thickness)
   // num_threads                 : Number of threads for preprocessing
   */
   "preprocess": {
@@ -23,6 +24,7 @@
     "outlier_removal_k": 10,
     "outlier_std_mul_factor": 1.0,
     "k_correspondences": 10,
+    "plane_eps": 1e-3,
     "num_threads": 2
   }
 }

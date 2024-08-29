@@ -15,7 +15,7 @@ enum class RegularizationMethod { NONE, PLANE, NORMALIZED_MIN_EIG, FROBENIUS };
  */
 class CloudCovarianceEstimation {
 public:
-  CloudCovarianceEstimation(const int num_threads = 1);
+  CloudCovarianceEstimation(const int num_threads = 1, const double plane_eps = 1e-3);
   ~CloudCovarianceEstimation();
 
   /**
@@ -60,6 +60,7 @@ public:
 private:
   const RegularizationMethod regularization_method;
   const int num_threads;
+  const double plane_eps;
 };
 
 }  // namespace glim
