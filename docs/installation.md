@@ -84,7 +84,7 @@ colcon build
 
 ## Install from [PPA](https://koide3.github.io/ppa/) [Ubuntu 24.04 , 22.04, 20.04 / AMD64, ARM64]
 
-### Prequiresite
+### Prerequisite
 
 ```bash
 sudo apt install curl gpg
@@ -118,9 +118,9 @@ sudo apt update
 sudo apt install -y libiridescence-dev libboost-all-dev libglfw3-dev libmetis-dev
 
 # Choose one of the follows
-sudo apt install -y libgtsam-points-dev            # without CUDA
-sudo apt install -y libgtsam-points-cuda-12.2-dev  # with CUDA 12.2
-sudo apt install -y libgtsam-points-cuda-12.5-dev  # with CUDA 12.5
+sudo apt install -y libgtsam-points-dev           # without CUDA
+sudo apt install -y libgtsam-points-cuda12.2-dev  # with CUDA 12.2
+sudo apt install -y libgtsam-points-cuda12.5-dev  # with CUDA 12.5
 ```
 
 ### Install GLIM for ROS
