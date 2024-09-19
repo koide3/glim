@@ -35,7 +35,7 @@ void TrajectoryManager::update_anchor(double stamp, const Eigen::Isometry3d& T_w
     const double t0 = odom_stamps[idx - 1];
     const double t1 = odom_stamps[idx];
     if (t0 > stamp || t1 < stamp) {
-      T_world_odom = T_world_sensor * T_odom_sensor[idx].inverse();
+      // T_world_odom = T_world_sensor * T_odom_sensor[idx].inverse();
       return;
     }
 
