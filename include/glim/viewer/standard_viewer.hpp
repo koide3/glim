@@ -79,8 +79,14 @@ private:
   std::vector<std::pair<boost::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> odometry_factor_lines;
   std::unordered_map<std::uint64_t, Eigen::Isometry3f> odometry_poses;
 
+  double point_size;
+  bool point_size_metric;
+  bool point_shape_circle;
+
   Eigen::Vector2f z_range;
   Eigen::Vector2f auto_z_range;
+  double points_alpha;
+  double factors_alpha;
 
   std::unique_ptr<TrajectoryManager> trajectory;
   std::vector<Eigen::Isometry3f> submap_keyframes;
