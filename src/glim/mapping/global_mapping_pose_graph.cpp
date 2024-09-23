@@ -15,7 +15,7 @@
 #include <gtsam_points/optimizers/isam2_ext.hpp>
 #include <gtsam_points/optimizers/isam2_ext_dummy.hpp>
 #include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
-#include <gtsam_points/util/easy_profiler.hpp>
+#include <gtsam_points/util/parallelism.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/serialization.hpp>
@@ -370,14 +370,12 @@ void GlobalMappingPoseGraph::loop_detection_task() {
       candidates_buffer.erase(candidates_buffer.begin(), candidates_buffer.begin() + eval_count);
     }
 
-    std::vector<double> inlier_fractions(candidates.size());
+    std::vector<double> inlier_fractions(candidates.size(), 0.0);
     std::vector<gtsam::Pose3> T_target_source(candidates.size());
 
-    // Evaluate loop candidates in parallel.
-#pragma omp parallel for num_threads(params.num_threads) schedule(dynamic)
-    for (int i = 0; i < candidates.size(); i++) {
+    const auto evaluate_candidate = [&](int i) {
       if (kill_switch) {
-        continue;
+        return;
       }
 
       const auto candidate = candidates[i];
@@ -399,16 +397,7 @@ void GlobalMappingPoseGraph::loop_detection_task() {
 
         gtsam_points::LevenbergMarquardtExtParams lm_params;
         lm_params.setMaxIterations(10);
-
-#ifdef GTSAM_USE_TBB
-        auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
-        arena->execute([&] {
-#endif
-          values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
-
-#ifdef GTSAM_USE_TBB
-        });
-#endif
+        values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
         error = factor->error(values);
         inlier_fraction = factor->inlier_fraction();
@@ -421,28 +410,47 @@ void GlobalMappingPoseGraph::loop_detection_task() {
         gtsam_points::LevenbergMarquardtExtParams lm_params;
         lm_params.setMaxIterations(10);
 
-#ifdef GTSAM_USE_TBB
-        auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
-        arena->execute([&] {
-#endif
-          values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
-
-#ifdef GTSAM_USE_TBB
-        });
-#endif
+        values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
         error = factor->error(values);
         inlier_fraction = factor->inlier_fraction();
       } else {
         logger->warn("unknown registration type: {}", params.registration_type);
-        continue;
+        return;
       }
 
       logger->debug("target={}, source={}, error={}, inlier_fraction={}", target->submap->id, source->submap->id, error, inlier_fraction);
 
       inlier_fractions[i] = inlier_fraction;
       T_target_source[i] = values.at<gtsam::Pose3>(0);
-    }
+    };
+
+    // Evaluate loop candidates in parallel.
+#ifdef GTSAM_USE_TBB
+    auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+    arena->execute([&] {
+#endif
+      if (gtsam_points::is_omp_default()) {
+#pragma omp parallel for num_threads(params.num_threads) schedule(dynamic)
+        for (int i = 0; i < candidates.size(); i++) {
+          evaluate_candidate(i);
+        }
+      } else {
+#ifdef GTSAM_POINTS_USE_TBB
+        tbb::parallel_for(tbb::blocked_range<int>(0, candidates.size(), 2), [&](const tbb::blocked_range<int>& range) {
+          for (int i = range.begin(); i < range.end(); i++) {
+            evaluate_candidate(i);
+          }
+        });
+#else
+      std::cerr << "error : TBB is not enabled" << std::endl;
+      abort();
+#endif
+      }
+
+#ifdef GTSAM_USE_TBB
+    });
+#endif
 
     // Check the matching results.
     std::vector<gtsam::NonlinearFactor::shared_ptr> factors;
