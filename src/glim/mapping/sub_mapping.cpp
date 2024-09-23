@@ -7,6 +7,7 @@
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
+#include <gtsam_points/config.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/types/point_cloud_gpu.hpp>
 #include <gtsam_points/types/gaussian_voxelmap_cpu.hpp>
@@ -81,7 +82,7 @@ SubMapping::SubMapping(const SubMappingParams& params) : params(params) {
   values.reset(new gtsam::Values);
   graph.reset(new gtsam::NonlinearFactorGraph);
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
   stream = std::make_shared<gtsam_points::CUDAStream>();
   stream_buffer_roundrobin = std::make_shared<gtsam_points::StreamTempBufferRoundRobin>(8);
 #endif
@@ -159,7 +160,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     }
   }
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
   if (params.enable_gpu && !odom_frame->frame->points_gpu) {
     if (params.enable_gpu) {
       auto stream = std::static_pointer_cast<gtsam_points::CUDAStream>(this->stream);
@@ -289,7 +290,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
           graph->emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(keyframe_indices[i]), X(current), voxelmap, keyframes.back()->frame);
         }
       }
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
       else if (params.registration_error_factor_type == "VGICP_GPU") {
         auto roundrobin = std::static_pointer_cast<gtsam_points::StreamTempBufferRoundRobin>(stream_buffer_roundrobin);
         auto stream_buffer = roundrobin->get_stream_buffer();
@@ -379,7 +380,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
   *keyframe = *odom_frame;
 
   if (params.enable_gpu) {
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
     auto stream = std::static_pointer_cast<gtsam_points::CUDAStream>(this->stream);
     keyframe->frame = gtsam_points::PointCloudGPU::clone(*subsampled_frame, *stream);
     keyframe->voxelmaps.clear();
@@ -477,7 +478,7 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
   }
 
   // TODO: improve merging process
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
   if (params.enable_gpu) {
     // submap->frame = gtsam_points::merge_frames_gpu(poses_to_merge, keyframes_to_merge, submap_downsample_resolution);
   }

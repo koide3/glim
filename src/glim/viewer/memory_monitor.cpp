@@ -5,6 +5,7 @@
 #include <iostream>
 #include <glim/util/logging.hpp>
 #include <glim/util/extension_module.hpp>
+#include <gtsam_points/config.hpp>
 #include <gtsam_points/cuda/cuda_memory.hpp>
 
 namespace glim {
@@ -32,7 +33,7 @@ public:
       }
       last_update_time = now;
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
       size_t gpu_free = 0;
       size_t gpu_total = 0;
       gtsam_points::cuda_mem_get_info(&gpu_free, &gpu_total);

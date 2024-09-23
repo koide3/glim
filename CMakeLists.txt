@@ -39,7 +39,9 @@ endif()
 
 # GPU-related
 if(BUILD_WITH_CUDA)
-  add_definitions(-DBUILD_GTSAM_POINTS_GPU)
+  if(NOT GTSAM_POINTS_USE_CUDA)
+    message(FATAL_ERROR "gtsam_points is not built with CUDA!!")
+  endif()
   set(GPU_SRCS src/glim/odometry/odometry_estimation_gpu.cpp)
 endif()
 
