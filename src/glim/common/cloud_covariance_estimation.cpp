@@ -8,6 +8,13 @@
 
 #include <spdlog/spdlog.h>
 
+#include <gtsam_points/config.hpp>
+#include <gtsam_points/util/parallelism.hpp>
+
+#ifdef GTSAM_POINTS_USE_TBB
+#include <tbb/parallel_for.h>
+#endif
+
 namespace glim {
 
 CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads) : regularization_method(RegularizationMethod::PLANE), num_threads(num_threads) {}
@@ -47,18 +54,30 @@ void CloudCovarianceEstimation::estimate(
   assert(k_correspondences * points.size() == neighbors.size());
   assert(k_neighbors <= k_correspondences);
 
+  // Precompute pt * pt.transpose()
   std::vector<Eigen::Matrix4d> pt_cross(points.size());
-#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
-  for (int i = 0; i < points.size(); i++) {
-    pt_cross[i] = points[i] * points[i].transpose();
+  if (gtsam_points::is_omp_default()) {
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 64)
+    for (int i = 0; i < points.size(); i++) {
+      pt_cross[i] = points[i] * points[i].transpose();
+    }
+  } else {
+#ifdef GTSAM_POINTS_USE_TBB
+    tbb::parallel_for(tbb::blocked_range<int>(0, points.size(), 64), [&](const tbb::blocked_range<int>& range) {
+      for (int i = range.begin(); i < range.end(); i++) {
+        pt_cross[i] = points[i] * points[i].transpose();
+      }
+    });
+#else
+    std::cerr << "error : TBB is not enabled" << std::endl;
+    abort();
+#endif
   }
 
   normals.resize(points.size());
   covs.resize(points.size());
 
-  // Calculate covariances
-#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
-  for (int i = 0; i < points.size(); i++) {
+  const auto calc_cov = [&](int i) {
     Eigen::Vector4d sum_points = Eigen::Vector4d::Zero();
     Eigen::Matrix4d sum_cross = Eigen::Matrix4d::Zero();
 
@@ -80,6 +99,25 @@ void CloudCovarianceEstimation::estimate(
     if (points[i].dot(normals[i]) > 0.0) {
       normals[i] = -normals[i];
     }
+  };
+
+  // Calculate covariances
+  if (gtsam_points::is_omp_default()) {
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
+    for (int i = 0; i < points.size(); i++) {
+      calc_cov(i);
+    }
+  } else {
+#ifdef GTSAM_POINTS_USE_TBB
+    tbb::parallel_for(tbb::blocked_range<int>(0, points.size(), 8), [&](const tbb::blocked_range<int>& range) {
+      for (int i = range.begin(); i < range.end(); i++) {
+        calc_cov(i);
+      }
+    });
+#else
+    std::cerr << "error : TBB is not enabled" << std::endl;
+    abort();
+#endif
   }
 }
 

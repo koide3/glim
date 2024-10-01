@@ -4,12 +4,13 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam_points/config.hpp>
 #include <gtsam_points/factors/integrated_matching_cost_factor.hpp>
 #include <gtsam_points/optimizers/isam2_result_ext.hpp>
 #include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 #include <gtsam_points/optimizers/levenberg_marquardt_optimization_status.hpp>
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
 #include <gtsam_points/factors/integrated_vgicp_factor_gpu.hpp>
 #endif
 
@@ -283,7 +284,7 @@ void StandardViewer::set_callbacks() {
           continue;
         }
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
         const auto gpu_factor = boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor);
         if (gpu_factor) {
           const auto l = [this, idx0](const gtsam::NonlinearFactor* factor) -> std::optional<FactorLine> {

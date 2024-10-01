@@ -11,6 +11,7 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
+#include <gtsam_points/config.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/types/point_cloud_gpu.hpp>
 #include <gtsam_points/types/gaussian_voxelmap_cpu.hpp>
@@ -72,7 +73,7 @@ GlobalMappingParams::GlobalMappingParams() {
 GlobalMappingParams::~GlobalMappingParams() {}
 
 GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params) {
-#ifndef BUILD_GTSAM_POINTS_GPU
+#ifndef GTSAM_POINTS_USE_CUDA
   if (params.enable_gpu) {
     logger->error("GPU-based factors cannot be used because GLIM is built without GPU option!!");
   }
@@ -97,7 +98,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
     isam2.reset(new gtsam_points::ISAM2ExtDummy(isam2_params));
   }
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
   stream_buffer_roundrobin = std::make_shared<gtsam_points::StreamTempBufferRoundRobin>(64);
 #endif
 
@@ -233,7 +234,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
     subsampled_submap = gtsam_points::random_sampling(submap->frame, params.randomsampling_rate, mt);
   }
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
   if (params.enable_gpu && !submap->frame->points_gpu) {
     submap->frame = gtsam_points::PointCloudGPU::clone(*submap->frame);
   }
@@ -309,7 +310,7 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
 
       if (false) {
       }
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
       else if (std::dynamic_pointer_cast<gtsam_points::GaussianVoxelMapGPU>(submaps[i]->voxelmaps.back()) && subsampled_submaps[j]->points_gpu) {
         const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_points::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
         const auto& stream = stream_buffer.first;
@@ -431,7 +432,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
         factors->emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(i), X(current), voxelmap, subsampled_submaps[current]);
       }
     }
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
     else if (params.registration_error_factor_type == "VGICP_GPU") {
       const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_points::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
       const auto& stream = stream_buffer.first;
@@ -480,7 +481,7 @@ void GlobalMapping::save(const std::string& path) {
 
   for (const auto& factor : isam2->getFactorsUnsafe()) {
     bool serializable = !boost::dynamic_pointer_cast<gtsam_points::IntegratedMatchingCostFactor>(factor)
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
                         && !boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor)
 #endif
       ;
@@ -513,7 +514,7 @@ void GlobalMapping::save(const std::string& path) {
     } else if (boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactor>(factor.second)) {
       type = "vgicp";
     }
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
     else if (boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor.second)) {
       type = "vgicp_gpu";
     }
@@ -612,7 +613,7 @@ bool GlobalMapping::load(const std::string& path) {
     subsampled_submaps[i] = subsampled_submap;
 
     if (params.enable_gpu) {
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
       subsampled_submaps[i] = gtsam_points::PointCloudGPU::clone(*subsampled_submaps[i]);
 
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
@@ -662,7 +663,7 @@ bool GlobalMapping::load(const std::string& path) {
 
     if (type == "vgicp" || type == "vgicp_gpu") {
       if (params.enable_gpu) {
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
         const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_points::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;

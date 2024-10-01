@@ -3,10 +3,17 @@
 #include <fstream>
 #include <iostream>
 #include <spdlog/spdlog.h>
+#include <gtsam_points/config.hpp>
 #include <gtsam_points/ann/kdtree.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
+#include <gtsam_points/util/parallelism.hpp>
 
 #include <glim/util/config.hpp>
+
+#ifdef GTSAM_POINTS_USE_TBB
+#include <tbb/task_arena.h>
+#include <tbb/parallel_for.h>
+#endif
 
 namespace glim {
 
@@ -28,16 +35,38 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
 
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
 
-  num_threads = config.param<int>("preprocess", "num_threads", 10);
+  num_threads = config.param<int>("preprocess", "num_threads", 2);
 }
 
 CloudPreprocessorParams::~CloudPreprocessorParams() {}
 
-CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : params(params) {}
+CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : params(params) {
+#ifdef GTSAM_POINTS_USE_TBB
+  if (gtsam_points::is_tbb_default()) {
+    tbb_task_arena.reset(new tbb::task_arena(params.num_threads));
+  }
+#endif
+}
 
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
+  if (gtsam_points::is_omp_default() || params.num_threads == 1 || !tbb_task_arena) {
+    return preprocess_impl(raw_points);
+  }
+
+  PreprocessedFrame::Ptr preprocessed;
+#ifdef GTSAM_POINTS_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] { preprocessed = preprocess_impl(raw_points); });
+#else
+  std::cerr << "error : TBB is not enabled" << std::endl;
+  abort();
+#endif
+  return preprocessed;
+}
+
+PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::ConstPtr& raw_points) {
   spdlog::trace("preprocessing input: {} points", raw_points->size());
 
   gtsam_points::PointCloud::Ptr frame(new gtsam_points::PointCloud);
@@ -112,12 +141,29 @@ std::vector<int> CloudPreprocessor::find_neighbors(const Eigen::Vector4d* points
 
   std::vector<int> neighbors(num_points * k);
 
-#pragma omp parallel for num_threads(params.num_threads) schedule(guided, 8)
-  for (int i = 0; i < num_points; i++) {
+  const auto perpoint_task = [&](int i) {
     std::vector<size_t> k_indices(k);
     std::vector<double> k_sq_dists(k);
     tree.knn_search(points[i].data(), k, k_indices.data(), k_sq_dists.data());
     std::copy(k_indices.begin(), k_indices.end(), neighbors.begin() + i * k);
+  };
+
+  if (gtsam_points::is_omp_default()) {
+#pragma omp parallel for num_threads(params.num_threads) schedule(guided, 8)
+    for (int i = 0; i < num_points; i++) {
+      perpoint_task(i);
+    }
+  } else {
+#ifdef GTSAM_POINTS_USE_TBB
+    tbb::parallel_for(tbb::blocked_range<int>(0, num_points, 8), [&](const tbb::blocked_range<int>& range) {
+      for (int i = range.begin(); i < range.end(); i++) {
+        perpoint_task(i);
+      }
+    });
+#else
+    std::cerr << "error : TBB is not enabled" << std::endl;
+    abort();
+#endif
   }
 
   return neighbors;

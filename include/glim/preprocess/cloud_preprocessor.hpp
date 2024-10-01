@@ -57,6 +57,7 @@ public:
   virtual PreprocessedFrame::Ptr preprocess(const RawPoints::ConstPtr& raw_points);
 
 private:
+  PreprocessedFrame::Ptr preprocess_impl(const RawPoints::ConstPtr& raw_points);
   std::vector<int> find_neighbors(const Eigen::Vector4d* points, const int num_points, const int k) const;
 
 private:
@@ -64,6 +65,8 @@ private:
   Params params;
 
   mutable std::mt19937 mt;
+
+  std::shared_ptr<void> tbb_task_arena;
 };
 
 }  // namespace glim

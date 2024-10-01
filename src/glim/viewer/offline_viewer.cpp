@@ -1,5 +1,6 @@
 #include <glim/viewer/offline_viewer.hpp>
 
+#include <gtsam_points/config.hpp>
 #include <gtsam_points/optimizers/linearization_hook.hpp>
 #include <gtsam_points/cuda/nonlinear_factor_set_gpu_create.hpp>
 
@@ -22,7 +23,7 @@ void OfflineViewer::setup_ui() {
 
   progress_modal.reset(new guik::ProgressModal("offline_viewer_progress"));
 
-#ifdef BUILD_GTSAM_POINTS_GPU
+#ifdef GTSAM_POINTS_USE_CUDA
   gtsam_points::LinearizationHook::register_hook([] { return gtsam_points::create_nonlinear_factor_set_gpu(); });
 #endif
 }
