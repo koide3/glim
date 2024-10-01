@@ -1,0 +1,6 @@
+<map id="glim::OdometryEstimationIMU" name="glim::OdometryEstimationIMU">
+<area shape="rect" id="node1" title="Base class for LiDAR&#45;IMU odometry estimation." alt="" coords="129,80,349,107"/>
+<area shape="rect" id="node3" href="$classglim_1_1OdometryEstimationCPU.html" title="CPU&#45;based semi&#45;tightly coupled LiDAR&#45;IMU odometry." alt="" coords="5,155,227,181"/>
+<area shape="rect" id="node4" href="$classglim_1_1OdometryEstimationGPU.html" title="GPU&#45;based tightly coupled LiDAR&#45;IMU odometry." alt="" coords="251,155,474,181"/>
+<area shape="rect" id="node2" href="$classglim_1_1OdometryEstimationBase.html" title="Odometry estimation base class." alt="" coords="125,5,352,32"/>
+</map>

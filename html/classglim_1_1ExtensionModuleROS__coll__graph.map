@@ -1,0 +1,4 @@
+<map id="glim::ExtensionModuleROS" name="glim::ExtensionModuleROS">
+<area shape="rect" id="node1" title="Extension module with ROS1 topic subscription." alt="" coords="5,80,204,107"/>
+<area shape="rect" id="node2" href="$classglim_1_1ExtensionModule.html" title="Extension module to be dynamically loaded via dynamic linking." alt="" coords="19,5,190,32"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="glim::OdometryEstimationIMUParams" name="glim::OdometryEstimationIMUParams">
+<area shape="rect" id="node1" title="Parameters for OdometryEstimationIMU." alt="" coords="115,5,309,47"/>
+<area shape="rect" id="node2" href="$structglim_1_1OdometryEstimationCPUParams.html" title="Parameters for OdometryEstimationCPU." alt="" coords="5,95,200,136"/>
+<area shape="rect" id="node3" href="$structglim_1_1OdometryEstimationGPUParams.html" title="Parameters for OdometryEstimationGPU." alt="" coords="224,95,419,136"/>
+</map>
