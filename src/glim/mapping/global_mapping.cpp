@@ -158,6 +158,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   }
 
   if (params.enable_imu) {
+    logger->debug("create IMU factor");
     if (submap->odom_frames.front()->frame_id != FrameID::IMU) {
       logger->warn("odom frames are not estimated in the IMU frame while global mapping requires IMU estimation");
     }
@@ -210,13 +211,9 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
   }
 
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
-  try {
-    auto result = update_isam2(*new_factors, *new_values);
-    Callbacks::on_smoother_update_result(*isam2, result);
-  } catch (std::exception& e) {
-    logger->error("an exception was caught during global map optimization!!");
-    logger->error(e.what());
-  }
+  auto result = update_isam2(*new_factors, *new_values);
+  Callbacks::on_smoother_update_result(*isam2, result);
+
   new_values.reset(new gtsam::Values);
   new_factors.reset(new gtsam::NonlinearFactorGraph);
 
@@ -459,14 +456,53 @@ void GlobalMapping::update_submaps() {
 gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values) {
   gtsam_points::ISAM2ResultExt result;
 
+  gtsam::Key indeterminant_nearby_key = 0;
+  try {
 #ifdef GTSAM_USE_TBB
-  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
-  arena->execute([&] {
+    auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+    arena->execute([&] {
 #endif
-    result = isam2->update(new_factors, new_values);
+      result = isam2->update(new_factors, new_values);
 #ifdef GTSAM_USE_TBB
-  });
+    });
 #endif
+  } catch (const gtsam::IndeterminantLinearSystemException& e) {
+    logger->error("an indeterminant lienar system exception was caught during global map optimization!!");
+    logger->error(e.what());
+    indeterminant_nearby_key = e.nearbyVariable();
+  } catch (const std::exception& e) {
+    logger->error("an exception was caught during global map optimization!!");
+    logger->error(e.what());
+  }
+
+  if (indeterminant_nearby_key != 0) {
+    const gtsam::Symbol symbol(indeterminant_nearby_key);
+    if (symbol.chr() == 'v' || symbol.chr() == 'b' || symbol.chr() == 'e') {
+      indeterminant_nearby_key = X(symbol.index() / 2);
+    }
+    logger->warn("insert a damping factor at {} to prevent corruption", std::string(gtsam::Symbol(indeterminant_nearby_key)));
+
+    gtsam::Values values = isam2->getLinearizationPoint();
+    gtsam::NonlinearFactorGraph factors = isam2->getFactorsUnsafe();
+    factors.emplace_shared<gtsam_points::LinearDampingFactor>(indeterminant_nearby_key, 6, 1e4);
+
+    gtsam::ISAM2Params isam2_params;
+    if (params.use_isam2_dogleg) {
+      gtsam::ISAM2DoglegParams dogleg_params;
+      isam2_params.setOptimizationParams(dogleg_params);
+    }
+    isam2_params.relinearizeSkip = params.isam2_relinearize_skip;
+    isam2_params.setRelinearizeThreshold(params.isam2_relinearize_thresh);
+
+    if (params.enable_optimization) {
+      isam2.reset(new gtsam_points::ISAM2Ext(isam2_params));
+    } else {
+      isam2.reset(new gtsam_points::ISAM2ExtDummy(isam2_params));
+    }
+
+    isam2->update(factors, values);
+    logger->warn("isam2 was reset");
+  }
 
   return result;
 }
