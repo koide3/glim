@@ -59,6 +59,9 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   z_range = config.param("standard_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
   auto_z_range << 0.0f, 0.0f;
 
+  show_mapping_tools = false;
+  min_overlap = 0.2f;
+
   points_alpha = config.param("standard_viewer", "points_alpha", 1.0);
   factors_alpha = config.param("standard_viewer", "factors_alpha", 1.0);
 
@@ -730,6 +733,11 @@ void StandardViewer::drawable_selection() {
     show_submaps = show_factors = show_mapping;
   }
 
+  ImGui::SameLine();
+  if (ImGui::Button("Tools")) {
+    show_mapping_tools = true;
+  }
+
   ImGui::Checkbox("submaps", &show_submaps);
   ImGui::SameLine();
   ImGui::Checkbox("factors", &show_factors);
@@ -748,6 +756,21 @@ void StandardViewer::drawable_selection() {
     ImGui::Text("stamp:%.3f ~ %.3f", last_point_stamps.first, last_point_stamps.second);
     ImGui::Text("vel:%.3f %.3f %.3f", last_imu_vel[0], last_imu_vel[1], last_imu_vel[2]);
     ImGui::Text("bias:%.3f %.3f %.3f %.3f %.3f %.3f", last_imu_bias[0], last_imu_bias[1], last_imu_bias[2], last_imu_bias[3], last_imu_bias[4], last_imu_bias[5]);
+    ImGui::End();
+  }
+
+  if (show_mapping_tools) {
+    ImGui::Begin("mapping tools", &show_mapping_tools, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::DragFloat("Min overlap", &min_overlap, 0.01f, 0.01f, 1.0f);
+    if (ImGui::Button("Find overlapping submaps")) {
+      logger->info("finding overlapping submaps...");
+      GlobalMappingCallbacks::request_to_find_overlapping_submaps(min_overlap);
+    }
+
+    if (ImGui::Button("Optimize")) {
+      logger->info("optimizing...");
+      GlobalMappingCallbacks::request_to_optimize();
+    }
     ImGui::End();
   }
 }
