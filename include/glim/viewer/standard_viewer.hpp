@@ -79,6 +79,9 @@ private:
   std::vector<std::pair<boost::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> odometry_factor_lines;
   std::unordered_map<std::uint64_t, Eigen::Isometry3f> odometry_poses;
 
+  bool show_mapping_tools;
+  float min_overlap;
+
   double point_size;
   bool point_size_metric;
   bool point_shape_circle;

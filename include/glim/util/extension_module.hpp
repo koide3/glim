@@ -23,6 +23,11 @@ public:
   virtual bool ok() const { return true; }
 
   /**
+   * @brief Called when the system is quitting.
+   */
+  virtual void at_exit(const std::string& dump_path) {}
+
+  /**
    * @brief Load an extension module from a dynamic library
    * @param so_name  Dynamic library name
    * @return         Loaded extension module
