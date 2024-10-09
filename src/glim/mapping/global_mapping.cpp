@@ -411,6 +411,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
 
   const auto& current_submap = submaps.back();
 
+  double previous_overlap = 0.0;
   for (int i = 0; i < current; i++) {
     const double dist = (submaps[i]->T_world_origin.translation() - current_submap->T_world_origin.translation()).norm();
     if (dist > params.max_implicit_loop_distance) {
@@ -420,6 +421,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * current_submap->T_world_origin;
     const double overlap = gtsam_points::overlap_auto(submaps[i]->voxelmaps.back(), current_submap->frame, delta);
 
+    previous_overlap = i == current - 1 ? overlap : previous_overlap;
     if (overlap < params.min_implicit_loop_overlap) {
       continue;
     }
@@ -442,6 +444,14 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
     else {
       logger->warn("unknown registration error type ({})", params.registration_error_factor_type);
     }
+  }
+
+  if (previous_overlap < std::max(0.25, params.min_implicit_loop_overlap)) {
+    logger->warn("previous submap has only a small overlap with the current submap ({})", previous_overlap);
+    logger->warn("create a between factor to prevent the submap from being isolated");
+    const int last = current - 1;
+    const gtsam::Pose3 init_delta = gtsam::Pose3((submaps[last]->T_world_origin.inverse() * submaps[current]->T_world_origin).matrix());
+    factors->add(gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), init_delta, gtsam::noiseModel::Isotropic::Precision(6, 1e6)));
   }
 
   return factors;
