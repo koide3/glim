@@ -1,0 +1,4 @@
+<map id="glim::GlobalConfig" name="glim::GlobalConfig">
+<area shape="rect" id="node1" title="Global configuration class to bootstrap the root path of the configuration files." alt="" coords="5,80,148,107"/>
+<area shape="rect" id="node2" href="$classglim_1_1Config.html" title="Configuration loader from JSON files." alt="" coords="27,5,127,32"/>
+</map>

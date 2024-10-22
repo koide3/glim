@@ -1,0 +1,4 @@
+<map id="glim::OdometryEstimationIMU" name="glim::OdometryEstimationIMU">
+<area shape="rect" id="node1" title="Base class for LiDAR&#45;IMU odometry estimation." alt="" coords="9,80,229,107"/>
+<area shape="rect" id="node2" href="$classglim_1_1OdometryEstimationBase.html" title="Odometry estimation base class." alt="" coords="5,5,232,32"/>
+</map>

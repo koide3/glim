@@ -1,0 +1,8 @@
+<map id="glim::ExtensionModule" name="glim::ExtensionModule">
+<area shape="rect" id="node1" title="Extension module to be dynamically loaded via dynamic linking." alt="" coords="5,81,176,108"/>
+<area shape="rect" id="node2" href="$classglim_1_1ExtensionModuleROS.html" title="Extension module with ROS1 topic subscription." alt="" coords="228,5,427,32"/>
+<area shape="rect" id="node3" href="$classglim_1_1ExtensionModuleROS2.html" title=" " alt="" coords="224,56,431,83"/>
+<area shape="rect" id="node4" href="$classglim_1_1InteractiveViewer.html" title=" " alt="" coords="240,107,415,133"/>
+<area shape="rect" id="node6" href="$classglim_1_1StandardViewer.html" title=" " alt="" coords="246,157,409,184"/>
+<area shape="rect" id="node5" href="$classglim_1_1OfflineViewer.html" title=" " alt="" coords="479,107,625,133"/>
+</map>
