@@ -88,15 +88,8 @@ void OdometryEstimationGPU::create_frame(EstimationFrame::Ptr& new_frame) {
   const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
 
   // Adaptively determine the voxel resolution based on the median distance
-  const int max_scan_count = 512;
-  const int step = new_frame->frame->size() < max_scan_count ? 1 : new_frame->frame->size() / max_scan_count;
-  std::vector<double> dists;
-  dists.reserve(max_scan_count * 2);
-  for (int i = 0; i < new_frame->frame->size(); i += step) {
-    dists.emplace_back(new_frame->frame->points[i].head<3>().norm());
-  }
-  std::nth_element(dists.begin(), dists.begin() + dists.size() / 2, dists.end());
-  const double dist_median = dists[dists.size() / 2];
+  const int max_scan_count = 256;
+  const double dist_median = gtsam_points::median_distance(new_frame->frame, max_scan_count);
   const double p = std::max(0.0, std::min(1.0, (dist_median - params->voxel_resolution_dmin) / (params->voxel_resolution_dmax - params->voxel_resolution_dmin)));
   const double base_resolution = params->voxel_resolution + p * (params->voxel_resolution_max - params->voxel_resolution);
 

@@ -229,15 +229,8 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   submap->voxelmaps.clear();
 
   // Adaptively determine the voxel resolution based on the median distance
-  const int max_scan_count = 512;
-  const int step = submap->frame->size() < max_scan_count ? 1 : submap->frame->size() / max_scan_count;
-  std::vector<double> dists;
-  dists.reserve(max_scan_count * 2);
-  for (int i = 0; i < submap->frame->size(); i += step) {
-    dists.emplace_back(submap->frame->points[i].head<3>().norm());
-  }
-  std::nth_element(dists.begin(), dists.begin() + dists.size() / 2, dists.end());
-  const double dist_median = dists[dists.size() / 2];
+  const int max_scan_count = 256;
+  const double dist_median = gtsam_points::median_distance(submap->frame, max_scan_count);
   const double p = std::max(0.0, std::min(1.0, (dist_median - params.submap_voxel_resolution_dmin) / (params.submap_voxel_resolution_dmax - params.submap_voxel_resolution_dmin)));
   const double base_resolution = params.submap_voxel_resolution + p * (params.submap_voxel_resolution_max - params.submap_voxel_resolution);
 
@@ -670,7 +663,19 @@ bool GlobalMapping::load(const std::string& path) {
       return false;
     }
 
-    gtsam_points::PointCloud::Ptr subsampled_submap = gtsam_points::random_sampling(submap->frame, params.randomsampling_rate, mt);
+    // Adaptively determine the voxel resolution based on the median distance
+    const int max_scan_count = 256;
+    const double dist_median = gtsam_points::median_distance(submap->frame, max_scan_count);
+    const double p =
+      std::max(0.0, std::min(1.0, (dist_median - params.submap_voxel_resolution_dmin) / (params.submap_voxel_resolution_dmax - params.submap_voxel_resolution_dmin)));
+    const double base_resolution = params.submap_voxel_resolution + p * (params.submap_voxel_resolution_max - params.submap_voxel_resolution);
+
+    gtsam_points::PointCloud::Ptr subsampled_submap;
+    if (params.randomsampling_rate > 0.99) {
+      subsampled_submap = submap->frame;
+    } else {
+      subsampled_submap = gtsam_points::random_sampling(submap->frame, params.randomsampling_rate, mt);
+    }
 
     submaps[i] = submap;
     submaps[i]->voxelmaps.clear();
@@ -681,7 +686,7 @@ bool GlobalMapping::load(const std::string& path) {
       subsampled_submaps[i] = gtsam_points::PointCloudGPU::clone(*subsampled_submaps[i]);
 
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
-        const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
+        const double resolution = base_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
         auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution);
         voxelmap->insert(*subsampled_submaps[i]);
         submaps[i]->voxelmaps.push_back(voxelmap);
@@ -691,7 +696,7 @@ bool GlobalMapping::load(const std::string& path) {
 #endif
     } else {
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
-        const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
+        const double resolution = base_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
         auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapCPU>(resolution);
         voxelmap->insert(*subsampled_submaps[i]);
         submaps[i]->voxelmaps.push_back(voxelmap);
