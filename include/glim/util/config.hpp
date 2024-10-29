@@ -94,13 +94,12 @@ public:
    */
   void save(const std::string& path) const;
 
-private:
+protected:
   std::any config;
 };
 
-
 /**
- * @brief Global configuration class to bootstrap the root path of the configuration files 
+ * @brief Global configuration class to bootstrap the root path of the configuration files
  */
 class GlobalConfig : public Config {
 private:
@@ -108,21 +107,17 @@ private:
   virtual ~GlobalConfig() override {}
 
 public:
-  static GlobalConfig* instance(const std::string& config_path = std::string()) {
-    if (inst == nullptr) {
-      inst = new GlobalConfig(config_path + "/config.json");
-      inst->override_param("global", "config_path", config_path);
-    }
-    return inst;
-  }
+  static GlobalConfig* instance(const std::string& config_path = std::string());
 
-  static std::string get_config_path(const std::string& config_name) {
-    auto config = instance();
-    const std::string directory = config->param<std::string>("global", "config_path", ".");
-    const std::string filename = config->param<std::string>("global", config_name, config_name + ".json");
-    return directory + "/" + filename;
-  }
+  static std::string get_config_path(const std::string& config_name);
 
+  /**
+   * @brief Dump all involved config parameters
+   * @param path Destination path
+   */
+  void dump(const std::string& path);
+
+private:
   static GlobalConfig* inst;
 };
 
