@@ -614,6 +614,9 @@ void GlobalMapping::save(const std::string& path) {
 
     submaps[i]->save((boost::format("%s/%06d") % path % i).str());
   }
+
+  logger->info("saving config");
+  GlobalConfig::instance()->dump(path + "/config");
 }
 
 std::vector<Eigen::Vector4d> GlobalMapping::export_points() {
