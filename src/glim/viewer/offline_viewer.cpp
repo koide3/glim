@@ -1,8 +1,10 @@
 #include <glim/viewer/offline_viewer.hpp>
 
+#include <boost/filesystem.hpp>
 #include <gtsam_points/config.hpp>
 #include <gtsam_points/optimizers/linearization_hook.hpp>
 #include <gtsam_points/cuda/nonlinear_factor_set_gpu_create.hpp>
+#include <glim/util/config.hpp>
 
 #include <spdlog/spdlog.h>
 #include <portable-file-dialogs.h>
@@ -84,6 +86,14 @@ void OfflineViewer::main_menu() {
 
     if (!map_path.empty()) {
       recent_files.push(map_path);
+
+      if (boost::filesystem::exists(map_path + "/config")) {
+        logger->info("Use config from {}", map_path + "/config");
+        GlobalConfig::instance(map_path + "/config", true);
+      } else {
+        logger->warn("No config found in {}", map_path);
+      }
+
       progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path](guik::ProgressInterface& progress) { return load_map(progress, map_path); });
     }
   }
@@ -143,7 +153,7 @@ std::shared_ptr<GlobalMapping> OfflineViewer::load_map(guik::ProgressInterface& 
   const auto result = pfd::message("Confirm", "Do optimization?", pfd::choice::yes_no).result();
   params.enable_optimization = (result == pfd::button::ok) || (result == pfd::button::yes);
 
-  std::cout << "enable_optimization:" << params.enable_optimization << std::endl;
+  logger->info("enable_optimization={}", params.enable_optimization);
   std::shared_ptr<glim::GlobalMapping> global_mapping(new glim::GlobalMapping(params));
   if (!global_mapping->load(path)) {
     logger->error("failed to load {}", path);

@@ -107,7 +107,7 @@ private:
   virtual ~GlobalConfig() override {}
 
 public:
-  static GlobalConfig* instance(const std::string& config_path = std::string());
+  static GlobalConfig* instance(const std::string& config_path = std::string(), bool override_path = false);
 
   static std::string get_config_path(const std::string& config_name);
 

@@ -51,8 +51,12 @@ DEFINE_CONFIG_IO_SPECIALIZATION(Eigen::Isometry3d)
 
 DEFINE_CONFIG_IO_SPECIALIZATION(std::vector<Eigen::Isometry3d>)
 
-GlobalConfig* GlobalConfig::instance(const std::string& config_path) {
-  if (inst == nullptr) {
+GlobalConfig* GlobalConfig::instance(const std::string& config_path, bool override_path) {
+  if (inst == nullptr || override_path) {
+    if (inst) {
+      delete inst;
+    }
+
     inst = new GlobalConfig(config_path + "/config.json");
     inst->override_param("global", "config_path", config_path);
   }
