@@ -25,6 +25,9 @@ public:
 public:
   // Registration params
   double voxel_resolution;
+  double voxel_resolution_max;
+  double voxel_resolution_dmin;
+  double voxel_resolution_dmax;
   int voxelmap_levels;
   double voxelmap_scaling_factor;
 

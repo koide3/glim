@@ -14,7 +14,10 @@
   // fix_imu_bias                : If true, disable IMU bias estimation and use the initial IMU bias
   // 
   // --- Voxel params ---
-  // voxel_resolution            : Resolution for VGICP voxels (0.25 ~ 0.5 for indoor, 0.5 ~ 2.0 for outdoor)
+  // voxel_resolution            : Base resolution for VGICP voxels
+  // voxel_resolution_max        : Maximum base resolution for VGICP voxels.
+  //                             : When voxel_resolution_max > voxel_resolution, the voxel resolution is adaptively increased
+  //                             : depending on the median of point distances clamped by dmin and dmax.
   // voxelmap_levels             : Multi-resolution voxelmap levels
   // voxelmap_scaling_factor     : Multi-resolution voxelmap scaling factor
   // full_connection_window_size : Latest sensor pose variable is connected with all of the past $full_connection_window_size poses
@@ -46,6 +49,9 @@
     "fix_imu_bias": false,
     // Voxel params
     "voxel_resolution": 0.25,
+    "voxel_resolution_max": 1.0,
+    "voxel_resolution_dmin": 5.0,
+    "voxel_resolution_dmax": 20.0,
     "voxelmap_levels": 2,
     "voxelmap_scaling_factor": 2.0,
     "full_connection_window_size": 2,

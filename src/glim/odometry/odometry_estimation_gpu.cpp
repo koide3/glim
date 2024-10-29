@@ -39,6 +39,10 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() : OdometryEstimationI
   Config config(GlobalConfig::get_config_path("config_odometry"));
 
   voxel_resolution = config.param<double>("odometry_estimation", "voxel_resolution", 0.5);
+  voxel_resolution_max = config.param<double>("odometry_estimation", "voxel_resolution_max", voxel_resolution);
+  voxel_resolution_dmin = config.param<double>("odometry_estimation", "voxel_resolution_dmin", 4.0);
+  voxel_resolution_dmax = config.param<double>("odometry_estimation", "voxel_resolution_dmax", 12.0);
+
   voxelmap_levels = config.param<int>("odometry_estimation", "voxelmap_levels", 2);
   voxelmap_scaling_factor = config.param<double>("odometry_estimation", "voxelmap_scaling_factor", 2.0);
 
@@ -83,13 +87,20 @@ OdometryEstimationGPU::~OdometryEstimationGPU() {
 void OdometryEstimationGPU::create_frame(EstimationFrame::Ptr& new_frame) {
   const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
 
+  // Adaptively determine the voxel resolution based on the median distance
+  const int max_scan_count = 256;
+  const double dist_median = gtsam_points::median_distance(new_frame->frame, max_scan_count);
+  const double p = std::max(0.0, std::min(1.0, (dist_median - params->voxel_resolution_dmin) / (params->voxel_resolution_dmax - params->voxel_resolution_dmin)));
+  const double base_resolution = params->voxel_resolution + p * (params->voxel_resolution_max - params->voxel_resolution);
+
+  // Create frame and voxelmaps
   new_frame->frame = gtsam_points::PointCloudGPU::clone(*new_frame->frame);
   for (int i = 0; i < params->voxelmap_levels; i++) {
     if (!new_frame->frame->size()) {
       break;
     }
 
-    const double resolution = params->voxel_resolution * std::pow(params->voxelmap_scaling_factor, i);
+    const double resolution = base_resolution * std::pow(params->voxelmap_scaling_factor, i);
     auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution, 8192 * 2, 10, 1e-3, *stream);
     voxelmap->insert(*new_frame->frame);
     new_frame->voxelmaps.push_back(voxelmap);
