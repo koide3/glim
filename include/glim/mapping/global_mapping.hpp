@@ -38,6 +38,9 @@ public:
 
   std::string registration_error_factor_type;
   double submap_voxel_resolution;
+  double submap_voxel_resolution_max;
+  double submap_voxel_resolution_dmin;
+  double submap_voxel_resolution_dmax;
   int submap_voxelmap_levels;
   double submap_voxelmap_scaling_factor;
 

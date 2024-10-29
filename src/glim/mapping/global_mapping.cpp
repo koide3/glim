@@ -54,6 +54,10 @@ GlobalMappingParams::GlobalMappingParams() {
   between_registration_type = config.param<std::string>("global_mapping", "between_registration_type", "GICP");
   registration_error_factor_type = config.param<std::string>("global_mapping", "registration_error_factor_type", "VGICP");
   submap_voxel_resolution = config.param<double>("global_mapping", "submap_voxel_resolution", 1.0);
+  submap_voxel_resolution_max = config.param<double>("global_mapping", "submap_voxel_resolution_max", submap_voxel_resolution);
+  submap_voxel_resolution_dmin = config.param<double>("global_mapping", "submap_voxel_resolution_dmin", 5.0);
+  submap_voxel_resolution_dmax = config.param<double>("global_mapping", "submap_voxel_resolution_dmax", 20.0);
+
   submap_voxelmap_levels = config.param<int>("global_mapping", "submap_voxelmap_levels", 2);
   submap_voxelmap_scaling_factor = config.param<double>("global_mapping", "submap_voxelmap_scaling_factor", 2.0);
 
@@ -224,6 +228,20 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   submap->voxelmaps.clear();
 
+  // Adaptively determine the voxel resolution based on the median distance
+  const int max_scan_count = 512;
+  const int step = submap->frame->size() < max_scan_count ? 1 : submap->frame->size() / max_scan_count;
+  std::vector<double> dists;
+  dists.reserve(max_scan_count * 2);
+  for (int i = 0; i < submap->frame->size(); i += step) {
+    dists.emplace_back(submap->frame->points[i].head<3>().norm());
+  }
+  std::nth_element(dists.begin(), dists.begin() + dists.size() / 2, dists.end());
+  const double dist_median = dists[dists.size() / 2];
+  const double p = std::max(0.0, std::min(1.0, (dist_median - params.submap_voxel_resolution_dmin) / (params.submap_voxel_resolution_dmax - params.submap_voxel_resolution_dmin)));
+  const double base_resolution = params.submap_voxel_resolution + p * (params.submap_voxel_resolution_max - params.submap_voxel_resolution);
+
+  // Create frame and voxelmaps
   gtsam_points::PointCloud::ConstPtr subsampled_submap;
   if (params.randomsampling_rate > 0.99) {
     subsampled_submap = submap->frame;
@@ -244,7 +262,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
     }
 
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
-      const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
+      const double resolution = base_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution);
       voxelmap->insert(*submap->frame);
       submap->voxelmaps.push_back(voxelmap);
@@ -254,7 +272,7 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
 
   if (submap->voxelmaps.empty()) {
     for (int i = 0; i < params.submap_voxelmap_levels; i++) {
-      const double resolution = params.submap_voxel_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
+      const double resolution = base_resolution * std::pow(params.submap_voxelmap_scaling_factor, i);
       auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapCPU>(resolution);
       voxelmap->insert(*subsampled_submap);
       submap->voxelmaps.push_back(voxelmap);
