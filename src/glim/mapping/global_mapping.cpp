@@ -711,6 +711,7 @@ bool GlobalMapping::load(const std::string& path) {
 
   gtsam::Values values;
   gtsam::NonlinearFactorGraph graph;
+  bool needs_recover = false;
 
   try {
     logger->info("deserializing factor graph");
@@ -718,13 +719,22 @@ bool GlobalMapping::load(const std::string& path) {
   } catch (boost::archive::archive_exception e) {
     logger->error("failed to deserialize factor graph!!");
     logger->error(e.what());
+  } catch (std::exception& e) {
+    logger->error("failed to deserialize factor graph!!");
+    logger->error(e.what());
+    needs_recover = true;
   }
+
   try {
     logger->info("deserializing values");
     gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
   } catch (boost::archive::archive_exception e) {
-    logger->error("failed to deserialize factor graph!!");
+    logger->error("failed to deserialize values!!");
     logger->error(e.what());
+  } catch (std::exception& e) {
+    logger->error("failed to deserialize values!!");
+    logger->error(e.what());
+    needs_recover = true;
   }
 
   logger->info("creating matching cost factors");
@@ -756,6 +766,21 @@ bool GlobalMapping::load(const std::string& path) {
     }
   }
 
+  const size_t num_factors_before = graph.size();
+  const auto remove_loc = std::remove_if(graph.begin(), graph.end(), [](const auto& factor) { return factor == nullptr; });
+  graph.erase(remove_loc, graph.end());
+  if (graph.size() != num_factors_before) {
+    logger->warn("removed {} invalid factors", num_factors_before - graph.size());
+    needs_recover = true;
+  }
+
+  if (needs_recover) {
+    logger->warn("recovering factor graph");
+    const auto recovered = recover_graph(graph, values);
+    graph.add(recovered.first);
+    values.insert_or_assign(recovered.second);
+  }
+
   logger->info("optimize");
   Callbacks::on_smoother_update(*isam2, graph, values);
   auto result = update_isam2(graph, values);
@@ -767,6 +792,132 @@ bool GlobalMapping::load(const std::string& path) {
   logger->info("done");
 
   return true;
+}
+
+// Recover the graph by adding missing values and factors
+std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_graph(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values) const {
+  logger->info("recovering graph");
+  bool enable_imu = false;
+  for (const auto& value : values) {
+    const char chr = gtsam::Symbol(value.key).chr();
+    enable_imu |= (chr == 'e' || chr == 'v' || chr == 'b');
+  }
+  for (const auto& factor : graph) {
+    enable_imu |= boost::dynamic_pointer_cast<gtsam::ImuFactor>(factor) != nullptr;
+  }
+
+  logger->info("enable_imu={}", enable_imu);
+
+  logger->info("creating connectivity map");
+  std::unordered_map<gtsam::Key, std::set<gtsam::Key>> connectivity_map;
+  for (const auto& factor : graph) {
+    if (!factor) {
+      continue;
+    }
+
+    for (const auto key : factor->keys()) {
+      for (const auto key2 : factor->keys()) {
+        if (key != key2) {
+          connectivity_map[key].insert(key2);
+        }
+      }
+    }
+  }
+
+  logger->info("fixing missing values and factors");
+  const auto prior_noise3 = gtsam::noiseModel::Isotropic::Precision(3, 1e6);
+  const auto prior_noise6 = gtsam::noiseModel::Isotropic::Precision(6, 1e6);
+
+  gtsam::NonlinearFactorGraph new_factors;
+  gtsam::Values new_values;
+  for (int i = 0; i < submaps.size(); i++) {
+    if (!values.exists(X(i))) {
+      logger->warn("X{} is missing", i);
+      new_values.insert(X(i), gtsam::Pose3(submaps[i]->T_world_origin.matrix()));
+    }
+
+    if (connectivity_map[X(i)].count(X(i + 1)) == 0 && i != submaps.size() - 1) {
+      logger->warn("X{} -> X{} is missing", i, i + 1);
+
+      const Eigen::Isometry3d delta = submaps[i]->origin_odom_frame()->T_world_sensor().inverse() * submaps[i + 1]->origin_odom_frame()->T_world_sensor();
+      new_factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i), X(i + 1), gtsam::Pose3(delta.matrix()), prior_noise6);
+    }
+
+    if (!enable_imu) {
+      continue;
+    }
+
+    const auto submap = submaps[i];
+    const gtsam::imuBias::ConstantBias imu_biasL(submap->frames.front()->imu_bias);
+    const gtsam::imuBias::ConstantBias imu_biasR(submap->frames.back()->imu_bias);
+    const Eigen::Vector3d v_origin_imuL = submap->T_world_origin.linear().inverse() * submap->frames.front()->v_world_imu;
+    const Eigen::Vector3d v_origin_imuR = submap->T_world_origin.linear().inverse() * submap->frames.back()->v_world_imu;
+
+    if (i != 0) {
+      if (!values.exists(E(i * 2))) {
+        logger->warn("E{} is missing", i * 2);
+        new_values.insert(E(i * 2), gtsam::Pose3((submap->T_world_origin * submap->T_origin_endpoint_L).matrix()));
+      }
+      if (!values.exists(V(i * 2))) {
+        logger->warn("V{} is missing", i * 2);
+        new_values.insert(V(i * 2), (submap->T_world_origin.linear() * v_origin_imuL).eval());
+      }
+      if (!values.exists(B(i * 2))) {
+        logger->warn("B{} is missing", i * 2);
+        new_values.insert(B(i * 2), imu_biasL);
+      }
+
+      if (connectivity_map[X(i)].count(E(i * 2)) == 0) {
+        logger->warn("X{} -> E{} is missing", i, i * 2);
+        new_factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i), E(i * 2), gtsam::Pose3(submap->T_origin_endpoint_L.matrix()), prior_noise6);
+      }
+      if (connectivity_map[X(i)].count(V(i * 2)) == 0) {
+        logger->warn("X{} -> V{} is missing", i, i * 2);
+        new_factors.emplace_shared<gtsam_points::RotateVector3Factor>(X(i), V(i * 2), v_origin_imuL, prior_noise3);
+      }
+      if (connectivity_map[X(i)].count(B(i * 2)) == 0) {
+        logger->warn("X{} -> B{} is missing", i, i * 2);
+        new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i * 2), imu_biasL, prior_noise6);
+      }
+
+      if (connectivity_map[B(i * 2)].count(B(i * 2 + 1)) == 0) {
+        logger->warn("B{} -> B{} is missing", i * 2, i * 2 + 1);
+        new_factors.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(B(i * 2), B(i * 2 + 1), gtsam::imuBias::ConstantBias(), prior_noise6);
+      }
+    }
+
+    if (!values.exists(E(i * 2 + 1))) {
+      logger->warn("E{} is missing", i * 2 + 1);
+      new_values.insert(E(i * 2 + 1), gtsam::Pose3((submap->T_world_origin * submap->T_origin_endpoint_R).matrix()));
+    }
+    if (!values.exists(V(i * 2 + 1))) {
+      logger->warn("V{} is missing", i * 2 + 1);
+      new_values.insert(V(i * 2 + 1), (submap->T_world_origin.linear() * v_origin_imuR).eval());
+    }
+    if (!values.exists(B(i * 2 + 1))) {
+      logger->warn("B{} is missing", i * 2 + 1);
+      new_values.insert(B(i * 2 + 1), imu_biasR);
+    }
+
+    if (connectivity_map[X(i)].count(E(i * 2 + 1)) == 0) {
+      logger->warn("X{} -> E{} is missing", i, i * 2 + 1);
+      new_factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i), E(i * 2 + 1), gtsam::Pose3(submap->T_origin_endpoint_R.matrix()), prior_noise6);
+    }
+    if (connectivity_map[X(i)].count(V(i * 2 + 1)) == 0) {
+      logger->warn("X{} -> V{} is missing", i, i * 2 + 1);
+      const Eigen::Vector3d v_origin_imuR = submap->T_world_origin.linear().inverse() * submap->frames.back()->v_world_imu;
+      new_factors.emplace_shared<gtsam_points::RotateVector3Factor>(X(i), V(i * 2 + 1), v_origin_imuR, prior_noise3);
+    }
+    if (connectivity_map[X(i)].count(B(i * 2 + 1)) == 0) {
+      logger->warn("X{} -> B{} is missing", i, i * 2 + 1);
+      const gtsam::imuBias::ConstantBias imu_biasR(submap->frames.back()->imu_bias);
+      new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i * 2 + 1), imu_biasR, prior_noise6);
+    }
+  }
+
+  logger->info("recovering done");
+
+  return {new_factors, new_values};
 }
 
 }  // namespace glim
