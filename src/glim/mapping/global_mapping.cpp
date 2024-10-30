@@ -814,6 +814,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
   logger->info("enable_imu={}", enable_imu);
 
   logger->info("creating connectivity map");
+  bool prior_exists = false;
   std::unordered_map<gtsam::Key, std::set<gtsam::Key>> connectivity_map;
   for (const auto& factor : graph) {
     if (!factor) {
@@ -825,6 +826,15 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
         connectivity_map[key].insert(key2);
       }
     }
+
+    if (factor->keys().size() == 1 && factor->keys()[0] == X(0)) {
+      prior_exists |= boost::dynamic_pointer_cast<gtsam_points::LinearDampingFactor>(factor) != nullptr;
+    }
+  }
+
+  if (!prior_exists) {
+    logger->warn("X0 prior is missing");
+    new_factors->emplace_shared<gtsam_points::LinearDampingFactor>(X(0), 6, params.init_pose_damping_scale);
   }
 
   logger->info("fixing missing values and factors");
