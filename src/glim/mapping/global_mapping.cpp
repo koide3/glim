@@ -521,8 +521,8 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
       isam2.reset(new gtsam_points::ISAM2ExtDummy(isam2_params));
     }
 
-    isam2->update(factors, values);
-    logger->warn("isam2 was reset");
+    logger->warn("reset isam2");
+    return update_isam2(factors, values);
   }
 
   return result;
