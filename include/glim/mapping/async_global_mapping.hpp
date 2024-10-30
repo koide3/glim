@@ -86,6 +86,7 @@ private:
 
   int optimization_interval;
   std::atomic_bool request_to_optimize;
+  std::atomic_bool request_to_recover;
   std::atomic<double> request_to_find_overlapping_submaps;
 
   std::mutex global_mapping_mutex;
