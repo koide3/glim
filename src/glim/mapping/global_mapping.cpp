@@ -794,6 +794,11 @@ bool GlobalMapping::load(const std::string& path) {
   return true;
 }
 
+void GlobalMapping::recover_graph() {
+  const auto recovered = recover_graph(isam2->getFactorsUnsafe(), isam2->calculateEstimate());
+  update_isam2(recovered.first, recovered.second);
+}
+
 // Recover the graph by adding missing values and factors
 std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_graph(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values) const {
   logger->info("recovering graph");
@@ -817,9 +822,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
 
     for (const auto key : factor->keys()) {
       for (const auto key2 : factor->keys()) {
-        if (key != key2) {
-          connectivity_map[key].insert(key2);
-        }
+        connectivity_map[key].insert(key2);
       }
     }
   }
@@ -875,8 +878,8 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
         logger->warn("X{} -> V{} is missing", i, i * 2);
         new_factors.emplace_shared<gtsam_points::RotateVector3Factor>(X(i), V(i * 2), v_origin_imuL, prior_noise3);
       }
-      if (connectivity_map[X(i)].count(B(i * 2)) == 0) {
-        logger->warn("X{} -> B{} is missing", i, i * 2);
+      if (connectivity_map[B(i * 2)].count(B(i * 2)) == 0) {
+        logger->warn("B{} -> B{} is missing", i * 2, i * 2);
         new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i * 2), imu_biasL, prior_noise6);
       }
 
@@ -905,12 +908,10 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     }
     if (connectivity_map[X(i)].count(V(i * 2 + 1)) == 0) {
       logger->warn("X{} -> V{} is missing", i, i * 2 + 1);
-      const Eigen::Vector3d v_origin_imuR = submap->T_world_origin.linear().inverse() * submap->frames.back()->v_world_imu;
       new_factors.emplace_shared<gtsam_points::RotateVector3Factor>(X(i), V(i * 2 + 1), v_origin_imuR, prior_noise3);
     }
-    if (connectivity_map[X(i)].count(B(i * 2 + 1)) == 0) {
-      logger->warn("X{} -> B{} is missing", i, i * 2 + 1);
-      const gtsam::imuBias::ConstantBias imu_biasR(submap->frames.back()->imu_bias);
+    if (connectivity_map[B(i * 2 + 1)].count(B(i * 2 + 1)) == 0) {
+      logger->warn("B{} -> B{} is missing", i * 2 + 1, i * 2 + 1);
       new_factors.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(B(i * 2 + 1), imu_biasR, prior_noise6);
     }
   }

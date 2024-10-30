@@ -26,6 +26,8 @@ void GlobalMappingBase::find_overlapping_submaps(double min_overlap) {}
 
 void GlobalMappingBase::optimize() {}
 
+void GlobalMappingBase::recover_graph() {}
+
 std::shared_ptr<GlobalMappingBase> GlobalMappingBase::load_module(const std::string& so_name) {
   return load_module_from_so<GlobalMappingBase>(so_name, "create_global_mapping_module");
 }

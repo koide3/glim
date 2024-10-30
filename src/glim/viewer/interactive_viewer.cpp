@@ -209,6 +209,11 @@ void InteractiveViewer::drawable_selection() {
     GlobalMappingCallbacks::request_to_find_overlapping_submaps(min_overlap);
   }
 
+  if (ImGui::Button("Recover graph")) {
+    logger->info("recovering graph...");
+    GlobalMappingCallbacks::request_to_recover();
+  }
+
   if (ImGui::Button("Optimize")) {
     logger->info("optimizing...");
     GlobalMappingCallbacks::request_to_optimize();

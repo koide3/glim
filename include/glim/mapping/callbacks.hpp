@@ -133,6 +133,12 @@ struct GlobalMappingCallbacks {
   static CallbackSlot<void()> request_to_optimize;
 
   /**
+   * @brief Request the global mapping module to detect and recover from a graph corruption
+   * @note  This is a special inverse-direction callback slot
+   */
+  static CallbackSlot<void()> request_to_recover;
+
+  /**
    * @brief Request the global mapping module to find new overlapping submaps
    * @param min_overlap  Minimum overlap rate between submaps
    * @note  This is a special inverse-direction callback slot

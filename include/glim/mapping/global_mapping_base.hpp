@@ -53,6 +53,11 @@ public:
   virtual void optimize();
 
   /**
+   * @brief Request to detect and recover graph corruption
+   */
+  virtual void recover_graph();
+
+  /**
    * @brief Save the mapping result
    * @param path  Save path
    */

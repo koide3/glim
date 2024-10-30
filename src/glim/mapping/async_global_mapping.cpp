@@ -12,9 +12,11 @@ AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMapping
   optimization_interval(optimization_interval),
   logger(create_module_logger("global")) {
   request_to_optimize = false;
+  request_to_recover = false;
   request_to_find_overlapping_submaps.store(-1.0);
 
   GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
+  GlobalMappingCallbacks::request_to_recover.add([this] { request_to_recover = true; });
   GlobalMappingCallbacks::request_to_find_overlapping_submaps.add([this](double min_overlap) { request_to_find_overlapping_submaps.store(min_overlap); });
 
   kill_switch = false;
@@ -93,6 +95,13 @@ void AsyncGlobalMapping::run() {
         std::lock_guard<std::mutex> lock(global_mapping_mutex);
         request_to_optimize = false;
         global_mapping->optimize();
+        last_optimization_time = std::chrono::high_resolution_clock::now();
+      }
+
+      if (request_to_recover) {
+        std::lock_guard<std::mutex> lock(global_mapping_mutex);
+        request_to_recover = false;
+        global_mapping->recover_graph();
         last_optimization_time = std::chrono::high_resolution_clock::now();
       }
 
