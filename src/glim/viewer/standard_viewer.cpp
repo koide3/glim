@@ -5,6 +5,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam_points/config.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/factors/integrated_matching_cost_factor.hpp>
 #include <gtsam_points/optimizers/isam2_result_ext.hpp>
 #include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
@@ -55,6 +56,7 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   last_point_stamps = std::make_pair(0.0, 0.0);
   last_imu_vel.setZero();
   last_imu_bias.setZero();
+  last_median_distance = 0.0;
 
   z_range = config.param("standard_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
   auto_z_range << 0.0f, 0.0f;
@@ -156,6 +158,13 @@ void StandardViewer::set_callbacks() {
       }
       last_imu_vel = new_frame->v_world_imu;
       last_imu_bias = new_frame->imu_bias;
+      last_median_distance = gtsam_points::median_distance(new_frame->frame, 256);
+      last_voxel_resolutions.clear();
+      for (const auto& voxelmap : new_frame->voxelmaps) {
+        if (voxelmap) {
+          last_voxel_resolutions.emplace_back(voxelmap->voxel_resolution());
+        }
+      }
 
       trajectory->add_odom(new_frame->stamp, new_frame->T_world_sensor(), 1);
       const Eigen::Isometry3f pose = resolve_pose(new_frame);
@@ -753,6 +762,20 @@ void StandardViewer::drawable_selection() {
     ImGui::Begin("odometry status", &show_odometry_status, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("frame ID:%d", last_id);
     ImGui::Text("points:%d", last_num_points);
+    ImGui::Text("median dist:%.3f", last_median_distance);
+
+    std::stringstream sst;
+    if (last_voxel_resolutions.empty()) {
+      sst << "voxel_resolution: N/A";
+    } else {
+      sst << "voxel_resolution: ";
+      for (double r : last_voxel_resolutions) {
+        sst << fmt::format("{:.3f}", r) << " ";
+      }
+    }
+    const std::string text = sst.str();
+    ImGui::Text("%s", text.c_str());
+
     ImGui::Text("stamp:%.3f ~ %.3f", last_point_stamps.first, last_point_stamps.second);
     ImGui::Text("vel:%.3f %.3f %.3f", last_imu_vel[0], last_imu_vel[1], last_imu_vel[2]);
     ImGui::Text("bias:%.3f %.3f %.3f %.3f %.3f %.3f", last_imu_bias[0], last_imu_bias[1], last_imu_bias[2], last_imu_bias[3], last_imu_bias[4], last_imu_bias[5]);

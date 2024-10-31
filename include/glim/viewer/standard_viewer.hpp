@@ -73,6 +73,8 @@ private:
   std::pair<double, double> last_point_stamps;
   Eigen::Vector3d last_imu_vel;
   Eigen::Matrix<double, 6, 1> last_imu_bias;
+  double last_median_distance;
+  std::vector<double> last_voxel_resolutions;
 
   using FactorLine = std::tuple<Eigen::Vector3f, Eigen::Vector3f, Eigen::Vector4f, Eigen::Vector4f>;
   using FactorLineGetter = std::function<std::optional<FactorLine>(const gtsam::NonlinearFactor*)>;
