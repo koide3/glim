@@ -60,6 +60,10 @@ std::vector<Eigen::Vector4d> CloudDeskewing::deskew(
   const std::vector<double>& times,
   const std::vector<Eigen::Vector4d>& points) {
   //
+  if (times.empty()) {
+    return std::vector<Eigen::Vector4d>();
+  }
+
   if (imu_poses.empty()) {
     return deskew(T_imu_lidar, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), times, points);
   }
