@@ -217,7 +217,8 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   gtsam::FixedLagSmootherKeyTimestampMap new_stamps;
 
   const double last_stamp = frames[last]->stamp;
-  const auto last_T_world_imu = smoother->calculateEstimate<gtsam::Pose3>(X(last));
+  const auto last_T_world_imu_ = smoother->calculateEstimate<gtsam::Pose3>(X(last));
+  const auto last_T_world_imu = gtsam::Pose3(last_T_world_imu_.rotation().normalized(), last_T_world_imu_.translation());
   const auto last_v_world_imu = smoother->calculateEstimate<gtsam::Vector3>(V(last));
   const auto last_imu_bias = smoother->calculateEstimate<gtsam::imuBias::ConstantBias>(B(last));
   const gtsam::NavState last_nav_world_imu(last_T_world_imu, last_v_world_imu);

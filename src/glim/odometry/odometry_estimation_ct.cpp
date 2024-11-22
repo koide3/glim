@@ -133,8 +133,10 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     const auto& last_frame = frames[last];
     const double last_time_begin = last_frame->stamp + last_frame->frame->times[0];
     const double last_time_end = last_frame->stamp + last_frame->frame->times[last_frame->frame->size() - 1];
-    const gtsam::Pose3 last_T_world_lidar_begin = smoother->calculateEstimate<gtsam::Pose3>(X(last));
-    const gtsam::Pose3 last_T_world_lidar_end = smoother->calculateEstimate<gtsam::Pose3>(Y(last));
+    const auto last_T_world_lidar_begin_ = smoother->calculateEstimate<gtsam::Pose3>(X(last));
+    const auto last_T_world_lidar_end_ = smoother->calculateEstimate<gtsam::Pose3>(Y(last));
+    const auto last_T_world_lidar_begin = gtsam::Pose3(last_T_world_lidar_begin_.rotation().normalized(), last_T_world_lidar_begin_.translation());
+    const auto last_T_world_lidar_end = gtsam::Pose3(last_T_world_lidar_end_.rotation().normalized(), last_T_world_lidar_end_.translation());
 
     // Initial guess
     const double current_time_begin = new_frame->stamp + new_frame->frame->times[0];

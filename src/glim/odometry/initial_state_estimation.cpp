@@ -29,6 +29,8 @@ void NaiveInitialStateEstimation ::set_init_state(const Eigen::Isometry3d& init_
   force_init = true;
   this->init_T_world_imu = init_T_world_imu;
   this->init_v_world_imu = init_v_world_imu;
+
+  this->init_T_world_imu.linear() = Eigen::Quaterniond(this->init_T_world_imu.linear()).normalized().toRotationMatrix();
 }
 
 void NaiveInitialStateEstimation::insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
