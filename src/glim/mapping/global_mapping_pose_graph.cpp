@@ -314,7 +314,7 @@ void GlobalMappingPoseGraph::find_loop_candidates(int current) {
         const double travel_dist_avg = (submap_targets[i]->travel_dist - submap_targets[left]->travel_dist) / std::max(i - left, 1);
         const int step = 0.8 * direct_dist / std::min(travel_dist_avg, 100.0);
 
-        i += step;
+        i += std::min(10, step);
       }
 
       continue;
