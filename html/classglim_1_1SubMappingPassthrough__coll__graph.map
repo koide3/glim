@@ -1,0 +1,4 @@
+<map id="glim::SubMappingPassthrough" name="glim::SubMappingPassthrough">
+<area shape="rect" id="node1" title="Sub mapping based on voxel&#45;based simple frame merging. No optimization, no re&#45;deskewing." alt="" coords="5,80,224,107"/>
+<area shape="rect" id="node2" href="$classglim_1_1SubMappingBase.html" title="Sub mapping base class." alt="" coords="29,5,200,32"/>
+</map>
