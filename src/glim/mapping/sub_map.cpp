@@ -1,12 +1,13 @@
 #include <glim/mapping/sub_map.hpp>
 
 #include <fstream>
+#include <Eigen/Eigen>
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 
 #include <gtsam_points/types/point_cloud_cpu.hpp>
-
+#include <gtsam_points/util/covariance_estimation.hpp>
 
 namespace glim {
 
@@ -138,7 +139,61 @@ SubMap::Ptr SubMap::load(const std::string& path) {
     submap->odom_frames.push_back(odom_frame);
   }
 
-  submap->frame = gtsam_points::PointCloudCPU::load(path);
+  auto frame = gtsam_points::PointCloudCPU::load(path);
+
+  if (frame->size()) {
+    const auto valid_point = [](const Eigen::Vector4d& p) { return std::abs(p.w() - 1.0) < 1e-3 && p.head<3>().allFinite(); };
+    const auto valid_cov = [](const Eigen::Matrix4d& cov) {
+      if (!cov.allFinite() || !cov.rightCols<1>().isZero(1e-6) || !cov.bottomRows<1>().isZero(1e-6)) {
+        return false;
+      }
+
+      if (!(cov - cov.transpose()).isZero(1e-6)) {
+        return false;
+      }
+
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eig;
+      eig.computeDirect(cov.topLeftCorner<3, 3>());
+      if (eig.eigenvalues()[0] < 1e-6 || eig.eigenvalues()[2] > 1e6) {
+        return false;
+      }
+
+      return true;
+    };
+
+    const bool points_corrupted = !valid_point(frame->points[0]) || !valid_point(frame->points[frame->size() - 1]);
+    bool cov_corrupted = !valid_cov(frame->covs[0]) || !valid_cov(frame->covs[frame->size() - 1]) || !frame->has_covs();
+
+    if (points_corrupted) {
+      spdlog::warn("corrupted points detected in {}", path);
+      size_t nonhomo_count = 0;
+      for (size_t i = 0; i < frame->size(); i++) {
+        nonhomo_count += std::abs(frame->points[i].w() - 1.0) > 1e-3;
+        frame->points[i].w() = 1.0;
+      }
+
+      size_t nonfinite_count = 0;
+      auto remove_loc = std::remove_if(frame->points_storage.begin(), frame->points_storage.end(), [](const Eigen::Vector4d& p) { return !p.allFinite(); });
+      if (remove_loc != frame->points_storage.end()) {
+        nonfinite_count = std::distance(remove_loc, frame->points_storage.end());
+        frame->points_storage.erase(remove_loc, frame->points_storage.end());
+        frame->num_points = frame->points_storage.size();
+        cov_corrupted = true;
+      }
+
+      spdlog::warn("nonhomo_count={} nonfinite_count={}", nonhomo_count, nonfinite_count);
+    }
+
+    if (cov_corrupted) {
+      spdlog::warn("corrupted covariances detected in {}", path);
+      spdlog::warn("recomputing covariances for submap_{}", submap->id);
+      frame->add_covs(gtsam_points::estimate_covariances(frame->points, frame->size()));
+    }
+  } else {
+    spdlog::warn("no points in {}", path);
+  }
+
+  submap->frame = frame;
 
   return submap;
 }
