@@ -113,45 +113,6 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 
 GlobalMapping::~GlobalMapping() {}
 
-// cant be gtsam::Key in function definition because that one is not forward declarable in header
-gtsam::NonlinearFactorGraph GlobalMapping::rekey_graph(const gtsam::NonlinearFactorGraph& graph, const std::map<std::uint64_t,std::uint64_t>& rekey_mapping) const {
-  gtsam::NonlinearFactorGraph result;
-  for (auto it = graph.begin(); it != graph.end(); it++) {
-    if (*it) {
-      try {
-        gtsam::NonlinearFactor::shared_ptr rekeyed_factor = (*it)->rekey(rekey_mapping);
-        result.push_back(rekeyed_factor);
-      }
-      catch(const std::runtime_error& e) {
-        // factor has no clone method implemented, thus cannot use gtsam rekey functionality
-        // implement rekey for selected Factors here.
-        // TODO: per factor class rekeying
-        gtsam_points::RotateVector3Factor* v_factor = dynamic_cast<gtsam_points::RotateVector3Factor*>(it->get());
-        for (size_t i = 0; i < v_factor->size(); ++i) {
-          gtsam::Key& cur_key = v_factor->keys()[i];
-          std::map<gtsam::Key, gtsam::Key>::const_iterator mapping = rekey_mapping.find(cur_key);
-          if (mapping != rekey_mapping.end()) {
-            cur_key = mapping->second;
-          }
-        }
-        // TODO: better method of adding copied factor to shared_ptr graph
-        auto rekeyed_rv3factor = boost::shared_ptr<gtsam_points::RotateVector3Factor>(new gtsam_points::RotateVector3Factor(*v_factor));
-        result.push_back(rekeyed_rv3factor);
-      }
-      catch (const gtsam::ValuesKeyDoesNotExist& e) {
-        // TODO: better handling
-        // Attempting to retrieve the key "x0", which does not exist in the Values.
-        (*it)->print();
-        std::cout<<"values incorrect error "<< e.what() << std::endl;
-        // for now dont add anything
-      }
-    }
-    else {
-      result.push_back(gtsam::NonlinearFactor::shared_ptr());
-    }
-  }
-  return result;
-}
 
 void GlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
@@ -686,8 +647,7 @@ bool GlobalMapping::load(const std::string& path) {
 
   // TODO: get current graph state from existing isam2
   int start_from_submap_id = 0;
-  if (!submaps.empty() && submaps.back())
-  {
+  if (!submaps.empty() && submaps.back()) {
     start_from_submap_id = submaps.back()->id + 1;
   }
 
@@ -764,7 +724,7 @@ bool GlobalMapping::load(const std::string& path) {
   std::map<gtsam::Key, gtsam::Key> rekey_mapping;
   if (start_from_submap_id > 0) {
     int between_factor_offset = start_from_submap_id * 2 - 1;
-    for (int i = 0; i < num_submaps*3; i++) {
+    for (int i = 0; i < num_submaps * 3; i++) {
       rekey_mapping[gtsam::Symbol('x', i)] = gtsam::Symbol('x', i + start_from_submap_id);
       rekey_mapping[gtsam::Symbol('b', i)] = gtsam::Symbol('b', i + between_factor_offset);
       rekey_mapping[gtsam::Symbol('v', i)] = gtsam::Symbol('v', i + between_factor_offset);
@@ -776,10 +736,19 @@ bool GlobalMapping::load(const std::string& path) {
     logger->info("deserializing factor graph");
     gtsam::deserializeFromBinaryFile(path + "/graph.bin", loaded_graph);
     if (start_from_submap_id > 0) {
+      // check if first factor is LinearContainerFactor
+      auto first_factor = loaded_graph.front();
+      if (boost::dynamic_pointer_cast<gtsam::LinearContainerFactor>(first_factor)) {
+        logger->info("First factor is a LinearContainerFactor, removing from graph before loading");
+        graph = gtsam::NonlinearFactorGraph(loaded_graph.begin() + 1, loaded_graph.end());
+      } else {
+        graph = loaded_graph;
+      }
       // rekey graph if dump previously loaded
-      graph = this->rekey_graph(loaded_graph, rekey_mapping);
-    }
-    else {
+      logger->info("rekeying factors");
+      graph.rekey(rekey_mapping);
+      // TODO: rekey performs clone, check if afterwards all values are still there, covariances etc...
+    } else {
       graph = loaded_graph;
     }
   } catch (boost::archive::archive_exception e) {
@@ -797,20 +766,18 @@ bool GlobalMapping::load(const std::string& path) {
     if (start_from_submap_id > 0) {
       // rekey values if dump previously loaded
       for (auto it = loaded_values.begin(); it != loaded_values.end(); ++it) {
-          auto matched_key = rekey_mapping.find(it->key);
-          if (matched_key != rekey_mapping.end()) {
-            values.insert(matched_key->second, it->value);
-          }
-          else {
-            // TODO: better logging
-            logger->error("not found {} ", it->key);
-            gtsam::PrintKey(it->key);
-            std::cout<<std::endl;
-            values.insert(it->key, it->value);
-          }
+        auto matched_key = rekey_mapping.find(it->key);
+        if (matched_key != rekey_mapping.end()) {
+          values.insert(matched_key->second, it->value);
+        } else {
+          // TODO: better logging
+          logger->error("not found {} ", it->key);
+          gtsam::PrintKey(it->key);
+          std::cout << std::endl;
+          values.insert(it->key, it->value);
+        }
       }
-    }
-    else {
+    } else {
       values = loaded_values;
     }
   } catch (boost::archive::archive_exception e) {
