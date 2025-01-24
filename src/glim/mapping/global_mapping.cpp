@@ -822,6 +822,20 @@ bool GlobalMapping::load(const std::string& path) {
       logger->warn("unsupported matching cost factor type ({})", type);
     }
   }
+  if (start_from_submap_id > 0) {
+    // TODO: add factor of same type as other factors
+    // create extra factor between both graphs to avoid indeterminant system exception
+    const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_points::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
+    const auto& stream = stream_buffer.first;
+    const auto& buffer = stream_buffer.second;
+    graph.emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(
+      X(0),
+      X(start_from_submap_id),
+      submaps[0]->voxelmaps.front(),
+      subsampled_submaps[start_from_submap_id],
+      stream,
+      buffer);
+  }
 
   const size_t num_factors_before = graph.size();
   const auto remove_loc = std::remove_if(graph.begin(), graph.end(), [](const auto& factor) { return factor == nullptr; });
