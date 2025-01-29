@@ -7,7 +7,7 @@
     ROS1: [os1_128_01_downsampled.bag (515MB)](https://zenodo.org/record/7233945/files/os1_128_01_downsampled.bag?download=1) or [os1_128_01.bag (7.3GB)](https://zenodo.org/record/7233945/files/os1_128_01.bag?download=1)  
     ROS2: [os1_128_01_downsampled.tar.gz (426MB)](https://zenodo.org/record/7233945/files/os1_128_01_downsampled.tar.gz?download=1) or [os1_128_01.tar.gz (3.2GB)](https://zenodo.org/record/7233945/files/os1_128_01.tar.gz?download=1)
 
-    Alternative links (Google Drive): ROS1 ([downsampled](https://drive.google.com/file/d/1Oc8D0-l5vmEoZMQLqu8Q6JRwBWl3UnLh/view?usp=drive_link), [raw](https://drive.google.com/file/d/1nDTqKDtMvKjmuCCzrdlIoRbRSYYXfv_B/view?usp=drive_link))  ROS2 ([downsampled](https://drive.google.com/file/d/144ksLyfs4-OO2WlhueEespLBkKS1x889/view?usp=drive_link), [raw](https://drive.google.com/file/d/1eQ70dUVmwsBijyLMcBPvGLpS1I3X0XTk/view?usp=drive_link))
+    Alternative links: ROS1 ([downsampled](https://staff.aist.go.jp/k.koide/projects/glim/datasets/os1_128_01_downsampled.bag))  ROS2 ([downsampled](https://staff.aist.go.jp/k.koide/projects/glim/datasets/os1_128_01_downsampled.tar.gz))
 
 3. Confirm the sensor configuration and ROS topic parameters are set as follows:
 ```json
@@ -170,7 +170,7 @@ ros2 run glim_ros glim_rosnode --ros-args -p config_path:=$(realpath ./config)
 
 The mapping result data (dump data) is saved in ```/tmp/dump``` when closing glim_rosnode or glim_rosbag. The dump data can be visualized and edited using the offline viewer (```rosrun glim_ros offline_viewer```).
 
-**Example dump data**: [dump_rosbag2_2024_04_16-14_17_01.tar.gz](https://drive.google.com/file/d/1bZDhCTrhPftnU2d4UwRy3rhkbf2NI_eQ/view?usp=sharing) (trajectory errors injected for manual loop closure test)
+**Example dump data**: [dump_rosbag2_2024_04_16-14_17_01.tar.gz](https://staff.aist.go.jp/k.koide/projects/glim/datasets/dump_rosbag2_2024_04_16-14_17_01.tar.gz) (trajectory errors injected for manual loop closure test)
 
 ### Offline viewer (manual map editing and point cloud export)
 
