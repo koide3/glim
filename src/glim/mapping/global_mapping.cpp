@@ -832,17 +832,18 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     }
   }
 
-  if (!prior_exists) {
-    logger->warn("X0 prior is missing");
-    new_factors->emplace_shared<gtsam_points::LinearDampingFactor>(X(0), 6, params.init_pose_damping_scale);
-  }
-
   logger->info("fixing missing values and factors");
   const auto prior_noise3 = gtsam::noiseModel::Isotropic::Precision(3, 1e6);
   const auto prior_noise6 = gtsam::noiseModel::Isotropic::Precision(6, 1e6);
 
   gtsam::NonlinearFactorGraph new_factors;
   gtsam::Values new_values;
+
+  if (!prior_exists) {
+    logger->warn("X0 prior is missing");
+    new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(X(0), 6, params.init_pose_damping_scale);
+  }
+
   for (int i = 0; i < submaps.size(); i++) {
     if (!values.exists(X(i))) {
       logger->warn("X{} is missing", i);
