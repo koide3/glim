@@ -4,6 +4,8 @@
 
 namespace glim {
 
+void open_so(const std::string& so_name);
+
 void* load_symbol(const std::string& so_name, const std::string& symbol_name);
 
 template <typename Module>

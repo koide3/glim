@@ -33,6 +33,12 @@ public:
    * @return         Loaded extension module
    */
   static std::shared_ptr<ExtensionModule> load_module(const std::string& so_name);
+
+  /**
+   * @brief Export classes (factors) from a dynamic library
+   * @param so_name  Dynamic library name
+   */
+  static void export_classes(const std::string& so_name);
 };
 
 }  // namespace glim

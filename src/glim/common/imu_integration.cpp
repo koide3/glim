@@ -128,18 +128,8 @@ int IMUIntegration::integrate_imu(
   return cursor;
 }
 
-int IMUIntegration::integrate_imu(
-  double start_time,
-  double end_time,
-  const gtsam::NavState& state,
-  const gtsam::imuBias::ConstantBias& bias,
-  std::vector<double>& pred_times,
-  std::vector<Eigen::Isometry3d>& pred_poses,
-  std::vector<Eigen::Vector3d>& pred_vels,
-  std::vector<Eigen::Matrix<double, 7, 1>>& measurements) {
+int IMUIntegration::find_imu_data(double start_time, double end_time, std::vector<double>& delta_times, std::vector<Eigen::Matrix<double, 7, 1>>& imu_data) {
   //
-  imu_measurements->resetIntegrationAndSetBias(bias);
-
   int cursor = 0;
   auto imu_itr = imu_queue.begin();
   double last_stamp = start_time;
@@ -155,16 +145,16 @@ int IMUIntegration::integrate_imu(
       continue;
     }
 
-    const auto& a = imu_frame.block<3, 1>(1, 0);
-    const auto& w = imu_frame.block<3, 1>(4, 0);
-    imu_measurements->integrateMeasurement(a, w, dt);
-
-    auto predicted = imu_measurements->predict(state, bias);
-    pred_times.push_back(imu_stamp);
-    pred_poses.push_back(Eigen::Isometry3d(predicted.pose().matrix()));
-    pred_vels.push_back(predicted.velocity());
-    measurements.push_back(imu_frame);
+    delta_times.emplace_back(dt);
+    imu_data.emplace_back(imu_frame);
     last_stamp = imu_stamp;
+  }
+
+  const double dt = end_time - last_stamp;
+  if (dt > 0.0) {
+    Eigen::Matrix<double, 7, 1> last_imu_frame = imu_itr == imu_queue.end() ? *(imu_itr - 1) : *imu_itr;
+    delta_times.emplace_back(dt);
+    imu_data.emplace_back(last_imu_frame);
   }
 
   return cursor;
