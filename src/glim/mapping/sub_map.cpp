@@ -74,7 +74,7 @@ Eigen::Matrix<double, ROWS, COLS> read_matrix(std::ifstream& ifs) {
 }
 }  // namespace
 
-SubMap::Ptr SubMap::load(const std::string& path) {
+SubMap::Ptr SubMap::load(const std::string& path, const int start_from_submap_id) {
   std::ifstream ifs(path + "/data.txt");
   if (!ifs) {
     spdlog::error("failed to open {}/data.txt", path);
@@ -85,6 +85,7 @@ SubMap::Ptr SubMap::load(const std::string& path) {
 
   std::string token;
   ifs >> token >> submap->id;
+  submap->id += start_from_submap_id;
 
   ifs >> token;
   submap->T_world_origin.matrix() = read_matrix<4, 4>(ifs);
@@ -99,7 +100,7 @@ SubMap::Ptr SubMap::load(const std::string& path) {
   Eigen::Matrix<double, 6, 1> imu_bias = read_matrix<6, 1>(ifs);
 
   int frame_id;
-  ifs >> token >> frame_id;
+  ifs >> token >> frame_id; // what frame id is this? its always 2
 
   int num_frames;
   ifs >> token >> num_frames;
@@ -107,7 +108,7 @@ SubMap::Ptr SubMap::load(const std::string& path) {
   for (int i = 0; i < num_frames; i++) {
     int id;
     double stamp;
-    ifs >> token >> token >> id;
+    ifs >> token >> token >> id; // TODO: need to do remapping here?
     ifs >> token >> stamp;
 
     ifs >> token;

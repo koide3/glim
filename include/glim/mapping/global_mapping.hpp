@@ -6,6 +6,8 @@
 #include <boost/shared_ptr.hpp>
 #include <glim/mapping/global_mapping_base.hpp>
 
+#include <map>
+
 namespace gtsam {
 class Values;
 class NonlinearFactorGraph;
@@ -77,6 +79,8 @@ public:
    * @param path Input dump path
    */
   bool load(const std::string& path);
+
+  gtsam::NonlinearFactorGraph rekey_graph(const gtsam::NonlinearFactorGraph& graph, const std::map<std::uint64_t,std::uint64_t>& rekey_mapping) const;
 
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);

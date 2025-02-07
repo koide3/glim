@@ -72,6 +72,12 @@ public:
 
   std::vector<Eigen::Vector4d> export_points();
 
+  std::shared_ptr<glim::GlobalMappingBase> getGlobalMappingSharedPtr() const
+  {
+    // TODO: mutex necessary? use move or swap?
+    return global_mapping;
+  }
+
 private:
   void run();
 
