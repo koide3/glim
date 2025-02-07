@@ -645,10 +645,23 @@ bool GlobalMapping::load(const std::string& path) {
     return false;
   }
 
-  // TODO: get current graph state from existing isam2
-  int start_from_submap_id = 0;
-  if (!submaps.empty() && submaps.back()) {
-    start_from_submap_id = submaps.back()->id + 1;
+  // get state of existing graph if exists
+  std::map<unsigned char, gtsam::Key> last_key_per_type;
+  auto keys = isam2->getFactorsUnsafe().keys();
+  for (const auto& key : keys) {
+    const gtsam::Symbol symbol(key);
+    if (last_key_per_type.find(symbol.chr()) != last_key_per_type.end()) {
+      last_key_per_type[symbol.chr()] = key;
+    } else {
+      if (key > last_key_per_type[symbol.chr()]) {
+        last_key_per_type[symbol.chr()] = key;
+      }
+    }
+  }
+
+  int start_from_frame_id = 0;
+  if (last_key_per_type.find('x') != last_key_per_type.end()) {
+    start_from_frame_id = static_cast<int>(last_key_per_type['x']) + 1;
   }
 
   std::string token;
@@ -668,7 +681,7 @@ bool GlobalMapping::load(const std::string& path) {
   submaps.reserve(submaps.size() + num_submaps);
   subsampled_submaps.reserve(submaps.size() + num_submaps);
   for (int i = 0; i < num_submaps; i++) {
-    auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str(), start_from_submap_id);
+    auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str(), start_from_frame_id);
     if (!submap) {
       return false;
     }
@@ -720,85 +733,72 @@ bool GlobalMapping::load(const std::string& path) {
   gtsam::NonlinearFactorGraph graph, loaded_graph;
   bool needs_recover = false;
 
-  // TODO: get rekey mapping from existing values
-  std::map<gtsam::Key, gtsam::Key> rekey_mapping;
-  if (start_from_submap_id > 0) {
-    int between_factor_offset = start_from_submap_id * 2 - 1;
-    for (int i = 0; i < num_submaps * 3; i++) {
-      rekey_mapping[gtsam::Symbol('x', i)] = gtsam::Symbol('x', i + start_from_submap_id);
-      rekey_mapping[gtsam::Symbol('b', i)] = gtsam::Symbol('b', i + between_factor_offset);
-      rekey_mapping[gtsam::Symbol('v', i)] = gtsam::Symbol('v', i + between_factor_offset);
-      rekey_mapping[gtsam::Symbol('e', i)] = gtsam::Symbol('e', i + between_factor_offset);
-    }
+  logger->info("deserializing factor graph");
+  try {
+    gtsam::deserializeFromBinaryFile(path + "/graph.bin", loaded_graph);
+  } catch (boost::archive::archive_exception e) {
+    logger->error("failed to deserialize factor graph!!");
+    logger->error(e.what());
+  } catch (std::exception& e) {
+    logger->error("failed to deserialize factor graph!!");
+    logger->error(e.what());
+    needs_recover = true;
   }
 
+  logger->info("deserializing values");
   try {
-    logger->info("deserializing factor graph");
-    gtsam::deserializeFromBinaryFile(path + "/graph.bin", loaded_graph);
-    if (start_from_submap_id > 0) {
-      // check if first factor is LinearContainerFactor
-      auto first_factor = loaded_graph.front();
-      if (boost::dynamic_pointer_cast<gtsam::LinearContainerFactor>(first_factor)) {
-        logger->info("First factor is a LinearContainerFactor, removing from graph before loading");
-        graph = gtsam::NonlinearFactorGraph(loaded_graph.begin() + 1, loaded_graph.end());
-      } else {
-        graph = loaded_graph;
+    gtsam::deserializeFromBinaryFile(path + "/values.bin", loaded_values);
+  } catch (boost::archive::archive_exception e) {
+    logger->error("failed to deserialize values!!");
+    logger->error(e.what());
+  } catch (std::exception& e) {
+    logger->error("failed to deserialize values!!");
+    logger->error(e.what());
+    needs_recover = true;
+  }
+
+  // remap keys in graph and values if dump previously loaded
+  std::map<gtsam::Key, gtsam::Key> rekey_mapping;
+  if (start_from_frame_id > 0) {
+    for (const auto& key : loaded_graph.keys()) {
+      const gtsam::Symbol symbol(key);
+      if (last_key_per_type.find(symbol.chr()) != last_key_per_type.end()) {
+        rekey_mapping[key] = key + gtsam::symbolIndex(last_key_per_type.at(symbol.chr())) + 1;
       }
-      // rekey graph if dump previously loaded
-      logger->info("rekeying factors");
-      graph.rekey(rekey_mapping);
-      // TODO: rekey performs clone, check if afterwards all values are still there, covariances etc...
+    }
+
+    auto first_factor = loaded_graph.front();
+    if (boost::dynamic_pointer_cast<gtsam::LinearContainerFactor>(first_factor)) {
+      logger->info("First factor is a LinearContainerFactor, removing from graph before loading");
+      graph = gtsam::NonlinearFactorGraph(loaded_graph.begin() + 1, loaded_graph.end());
     } else {
       graph = loaded_graph;
     }
-  } catch (boost::archive::archive_exception e) {
-    logger->error("failed to deserialize factor graph!!");
-    logger->error(e.what());
-  } catch (std::exception& e) {
-    logger->error("failed to deserialize factor graph!!");
-    logger->error(e.what());
-    needs_recover = true;
-  }
 
-  try {
-    logger->info("deserializing values");
-    gtsam::deserializeFromBinaryFile(path + "/values.bin", loaded_values);
-    if (start_from_submap_id > 0) {
-      // rekey values if dump previously loaded
-      for (auto it = loaded_values.begin(); it != loaded_values.end(); ++it) {
-        auto matched_key = rekey_mapping.find(it->key);
-        if (matched_key != rekey_mapping.end()) {
-          values.insert(matched_key->second, it->value);
-        } else {
-          // TODO: better logging
-          logger->error("not found {} ", it->key);
-          gtsam::PrintKey(it->key);
-          std::cout << std::endl;
-          values.insert(it->key, it->value);
-        }
+    // rekey graph
+    logger->info("rekeying factors");
+    graph = graph.rekey(rekey_mapping);
+
+    // rekey values
+    for (auto it = loaded_values.begin(); it != loaded_values.end(); ++it) {
+      auto matched_key = rekey_mapping.find(it->key);
+      if (matched_key != rekey_mapping.end()) {
+        values.insert(matched_key->second, it->value);
+      } else {
+        logger->error("No remapping found for Value with key {}, keeping it as is", gtsam::Symbol(it->key).string());
+        values.insert(it->key, it->value);
       }
-    } else {
-      values = loaded_values;
     }
-  } catch (boost::archive::archive_exception e) {
-    logger->error("failed to deserialize values!!");
-    logger->error(e.what());
-  } catch (std::exception& e) {
-    logger->error("failed to deserialize values!!");
-    logger->error(e.what());
-    needs_recover = true;
+  } else {
+    graph = loaded_graph;
+    values = loaded_values;
   }
-
-  // TODO: remove
-  // logger->info("saving graph");
-  // std::ofstream os("/tmp/graph.dot");
-  // graph.saveGraph(os, values);
 
   logger->info("creating matching cost factors");
   for (const auto& factor : matching_cost_factors) {
     const auto type = std::get<0>(factor);
-    const auto first = std::get<1>(factor) + start_from_submap_id;
-    const auto second = std::get<2>(factor) + start_from_submap_id;
+    const auto first = std::get<1>(factor) + start_from_frame_id;
+    const auto second = std::get<2>(factor) + start_from_frame_id;
 
     if (type == "vgicp" || type == "vgicp_gpu") {
       if (params.enable_gpu) {
@@ -822,19 +822,14 @@ bool GlobalMapping::load(const std::string& path) {
       logger->warn("unsupported matching cost factor type ({})", type);
     }
   }
-  if (start_from_submap_id > 0) {
+  if (start_from_frame_id > 0) {
     // TODO: add factor of same type as other factors
     // create extra factor between both graphs to avoid indeterminant system exception
     const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_points::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
     const auto& stream = stream_buffer.first;
     const auto& buffer = stream_buffer.second;
-    graph.emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(
-      X(0),
-      X(start_from_submap_id),
-      submaps[0]->voxelmaps.front(),
-      subsampled_submaps[start_from_submap_id],
-      stream,
-      buffer);
+    graph
+      .emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(0), X(start_from_frame_id), submaps[0]->voxelmaps.front(), subsampled_submaps[start_from_frame_id], stream, buffer);
   }
 
   const size_t num_factors_before = graph.size();
