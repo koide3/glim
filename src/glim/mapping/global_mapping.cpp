@@ -109,6 +109,8 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 #ifdef GTSAM_USE_TBB
   tbb_task_arena = std::make_shared<tbb::task_arena>(1);
 #endif
+
+  overwrite_last_between_factor = false;
 }
 
 GlobalMapping::~GlobalMapping() {}
@@ -486,7 +488,17 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
     auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
     arena->execute([&] {
 #endif
-      result = isam2->update(new_factors, new_values);
+      gtsam::FactorIndices factors_to_remove;
+      if (overwrite_last_between_factor) {
+        logger->info("removing last factor before optimization");
+        auto fsize = isam2->getFactorsUnsafe().size();
+        if (fsize > 0) {
+          factors_to_remove.push_back(fsize - 1);
+        }
+        overwrite_last_between_factor = false;
+      }
+      result = isam2->update(new_factors, new_values, factors_to_remove);
+
 #ifdef GTSAM_USE_TBB
     });
 #endif
@@ -859,6 +871,10 @@ bool GlobalMapping::load(const std::string& path) {
   Callbacks::on_update_submaps(submaps);
 
   logger->info("done");
+
+  if (start_from_frame_id > 0) {
+    overwrite_last_between_factor = true;
+  }
 
   return true;
 }

@@ -193,14 +193,15 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
     return nullptr;
   }
 
-  if (map_previously_loaded)  // TODO: first submaps a good idea? what if they are far away... should be able to choose submaps, or remove temporary factor
+  if (map_previously_loaded)
   {
     pfd::message(
       "Confirm",
-      "To maintain consistency, a factor between first submaps,\n"
-      "and the first submap of the new map was added. \n"
-      "You probably want to update this factor to align the maps.",
+      "To maintain consistency, a temporary factor between old and new submaps has been added. \n"
+      "This temporary constraint will be removed with the next optimization",
       pfd::choice::ok);
+
+    global_factors.pop_back();
   }
 
   return std::move(global_mapping);

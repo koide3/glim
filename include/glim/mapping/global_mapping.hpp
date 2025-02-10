@@ -110,5 +110,7 @@ private:
   std::unique_ptr<gtsam_points::ISAM2Ext> isam2;
 
   std::shared_ptr<void> tbb_task_arena;
+
+  bool overwrite_last_between_factor;  // flag to overwrite last matching factor in case of temporary graph connection
 };
 }  // namespace glim
