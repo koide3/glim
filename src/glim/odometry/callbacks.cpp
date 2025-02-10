@@ -12,6 +12,7 @@ CallbackSlot<void(const double, const Eigen::Vector3d&, const Eigen::Vector3d&)>
 CallbackSlot<void(const PreprocessedFrame::Ptr& frame)> OdometryEstimationCallbacks::on_insert_frame;
 
 CallbackSlot<void(const EstimationFrame::ConstPtr&)> OdometryEstimationCallbacks::on_new_frame;
+CallbackSlot<void(const EstimationFrame::ConstPtr&)> OdometryEstimationCallbacks::on_update_new_frame;
 
 CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> OdometryEstimationCallbacks::on_marginalized_frames;
 CallbackSlot<void(const std::vector<EstimationFrame::ConstPtr>&)> OdometryEstimationCallbacks::on_marginalized_keyframes;

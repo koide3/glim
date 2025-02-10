@@ -66,10 +66,17 @@ struct OdometryEstimationCallbacks {
   static CallbackSlot<void(const PreprocessedFrame::Ptr& frame)> on_insert_frame;
 
   /**
-   * @brief New odometry estimation frame creation callback
+   * @brief New odometry estimation frame creation callback (Sensor state predicted with IMU forward integration)
    * @param frame  Odometry estimation frame (deskewed points and initial transformation estimate)
    */
   static CallbackSlot<void(const EstimationFrame::ConstPtr& frame)> on_new_frame;
+
+  /**
+   * @brief New odometry estimation frame update callback (Sensor state corrected with point cloud observation)
+   * @param frame  Updated odometry estimation frame
+   * @note  This is equivalent to `on_update_frames` with only the latest frame
+   */
+  static CallbackSlot<void(const EstimationFrame::ConstPtr& frame)> on_update_new_frame;
 
   /**
    * @brief Odometry estimation frames update callback

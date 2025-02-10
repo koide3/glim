@@ -337,6 +337,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   update_frames(current, new_factors);
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
+  Callbacks::on_update_new_frame(active_frames.back());
   Callbacks::on_update_frames(active_frames);
   logger->trace("frames updated");
 
