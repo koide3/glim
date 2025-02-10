@@ -33,6 +33,15 @@ ros2 run glim_ros glim_rosbag --ros-args -p config_path:=$(realpath config/kinec
 
 ## Outdoor driving test with Livox MID360
 
+- [Download dataset](https://zenodo.org/records/14841855)
+
+!!! tip
+    Change parameters in `config_ros.json` as follows (see also the [sensor setup guide](https://github.com/koide3/glim/wiki/Sensor-setup-guide)):
+    
+    - "acc_scale": 9.80665,
+    - "imu_topic": "/livox/imu",
+    - "points_topic": "/livox/lidar",
+
 <div class="youtube">
 <iframe width="560" height="315" src="https://www.youtube.com/embed/CIfRqeV0irE?si=r0BNpCfOh-Aaoek5" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
