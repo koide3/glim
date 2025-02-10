@@ -9,4 +9,8 @@ std::shared_ptr<ExtensionModule> ExtensionModule::load_module(const std::string&
   return load_module_from_so<ExtensionModule>(so_name, "create_extension_module");
 }
 
+void ExtensionModule::export_classes(const std::string& so_name) {
+  open_so(so_name);
+}
+
 }  // namespace glim

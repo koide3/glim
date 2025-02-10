@@ -88,8 +88,10 @@ private:
   bool point_size_metric;
   bool point_shape_circle;
 
+  int z_range_mode;
   Eigen::Vector2f z_range;
   Eigen::Vector2f auto_z_range;
+  double last_submap_z;
   double points_alpha;
   double factors_alpha;
 

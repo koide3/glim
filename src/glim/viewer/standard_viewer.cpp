@@ -58,8 +58,10 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   last_imu_bias.setZero();
   last_median_distance = 0.0;
 
+  z_range_mode = 0;
   z_range = config.param("standard_viewer", "default_z_range", Eigen::Vector2d(-2.0, 4.0)).cast<float>();
   auto_z_range << 0.0f, 0.0f;
+  last_submap_z = 0.0;
 
   show_mapping_tools = false;
   min_overlap = 0.2f;
@@ -540,6 +542,7 @@ void StandardViewer::set_callbacks() {
       auto viewer = guik::LightViewer::instance();
 
       std::vector<Eigen::Vector3f> submap_positions(submap_ids.size());
+      last_submap_z = submap_poses.back().translation().z();
 
       for (int i = 0; i < submap_ids.size(); i++) {
         submap_positions[i] = submap_poses[i].translation();
@@ -564,7 +567,14 @@ void StandardViewer::set_callbacks() {
       }
 
       viewer->update_drawable("factors", std::make_shared<glk::ThinLines>(submap_positions, indices), guik::FlatGreen().set_alpha(factors_alpha));
-      viewer->shader_setting().add<Eigen::Vector2f>("z_range", auto_z_range + z_range);
+
+      Eigen::Vector2f z = z_range;
+      if (z_range_mode == 0) {
+        z += auto_z_range;
+      } else if (z_range_mode == 1) {
+        z += Eigen::Vector2f::Constant(last_submap_z);
+      }
+      viewer->shader_setting().add<Eigen::Vector2f>("z_range", z);
     });
   });
 
@@ -752,8 +762,21 @@ void StandardViewer::drawable_selection() {
   ImGui::Checkbox("factors", &show_factors);
 
   ImGui::Separator();
-  if (ImGui::DragFloatRange2("z_range", &z_range[0], &z_range[1], 0.1f, -100.0f, 100.0f)) {
-    viewer->shader_setting().add<Eigen::Vector2f>("z_range", auto_z_range + z_range);
+
+  std::vector<const char*> z_range_modes = {"AUTO", "LOCAL", "MANUAL"};
+  bool update_z_range = false;
+
+  ImGui::SetNextItemWidth(150);
+  update_z_range |= ImGui::Combo("z_range_mode", &z_range_mode, z_range_modes.data(), z_range_modes.size());
+  update_z_range |= ImGui::DragFloatRange2("z_min", &z_range[0], &z_range[1], 0.1f, -10000.0f, 10000.0f);
+  if (update_z_range) {
+    Eigen::Vector2f z = z_range;
+    if (z_range_mode == 0) {
+      z += auto_z_range;
+    } else if (z_range_mode == 1) {
+      z += Eigen::Vector2f::Constant(last_submap_z);
+    }
+    viewer->shader_setting().add<Eigen::Vector2f>("z_range", z);
   }
 
   ImGui::End();

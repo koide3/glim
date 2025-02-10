@@ -65,26 +65,14 @@ public:
     std::vector<Eigen::Isometry3d>& pred_poses);
 
   /**
-   * @brief Integrate IMU measurements and predict IMU poses in a time range
-   * @param start_time     Integration starting time
-   * @param end_time       Integration ending time
-   * @param state          IMU NavState
-   * @param bias           IMU bias
-   * @param pred_times     Timestamps of predicted IMU poses
-   * @param pred_poses     Predicted IMU poses
-   * @param pred_vels      Predicted IMU velocities
-   * @param measurements   Integrated IMU measurements [t, ax, ay, az, wx, wy, wz]
+   * @brief Find IMU data in a time range
+   * @param start_time  Start time
+   * @param end_time    End time
+   * @param delta_times Delta times (interval between IMU frames)
+   * @param imu_data    IMU data
    * @return Index of the last integrated IMU frame
    */
-  int integrate_imu(
-    double start_time,
-    double end_time,
-    const gtsam::NavState& state,
-    const gtsam::imuBias::ConstantBias& bias,
-    std::vector<double>& pred_times,
-    std::vector<Eigen::Isometry3d>& pred_poses,
-    std::vector<Eigen::Vector3d>& pred_vels,
-    std::vector<Eigen::Matrix<double, 7, 1>>& measurements);
+  int find_imu_data(double start_time, double end_time, std::vector<double>& delta_times, std::vector<Eigen::Matrix<double, 7, 1>>& imu_data);
 
   /**
    * @brief Erase IMU data before the given index

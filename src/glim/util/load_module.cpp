@@ -5,6 +5,14 @@
 
 namespace glim {
 
+void open_so(const std::string& so_name) {
+  void* handle = dlopen(so_name.c_str(), RTLD_LAZY);
+  if (handle == nullptr) {
+    spdlog::warn("failed to open {}", so_name);
+    spdlog::warn("{}", dlerror());
+  }
+}
+
 void* load_symbol(const std::string& so_name, const std::string& symbol_name) {
   void* handle = dlopen(so_name.c_str(), RTLD_LAZY);
   if (handle == nullptr) {

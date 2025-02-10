@@ -94,6 +94,17 @@ void OfflineViewer::main_menu() {
         logger->warn("No config found in {}", map_path);
       }
 
+      const Config config_ros(GlobalConfig::get_config_path("config_ros"));
+      const std::vector<std::string> ext_module_names = config_ros.param<std::vector<std::string>>("glim_ros", "extension_modules", {});
+      for (const auto& name : ext_module_names) {
+        if (name.find("viewer") != std::string::npos || name.find("monitor") != std::string::npos) {
+          continue;
+        }
+
+        logger->info("Export classes from {}", name);
+        ExtensionModule::export_classes(name);
+      }
+
       progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path](guik::ProgressInterface& progress) { return load_map(progress, map_path); });
     }
   }
