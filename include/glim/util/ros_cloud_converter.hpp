@@ -218,30 +218,67 @@ static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, con
   msg->width = frame.size();
   msg->height = 1;
 
-  std::vector<std::string> field_names = {"x", "y", "z", "t"};
-  int num_fields = frame.times ? 4 : 3;
-  msg->fields.resize(num_fields);
+  const auto create_field = [](const std::string& name, int offset, int datatype, int count) {
+    PointField field;
+    field.name = name;
+    field.offset = offset;
+    field.datatype = datatype;
+    field.count = count;
+    return field;
+  };
 
-  for (int i = 0; i < num_fields; i++) {
-    msg->fields[i].name = field_names[i];
-    msg->fields[i].offset = sizeof(float) * i;
-    msg->fields[i].datatype = PointField::FLOAT32;
-    msg->fields[i].count = 1;
+  int point_step = 0;
+  msg->fields.reserve(6);
+
+  msg->fields.emplace_back(create_field("x", sizeof(float) * 0, PointField::FLOAT32, 1));
+  msg->fields.emplace_back(create_field("y", sizeof(float) * 1, PointField::FLOAT32, 1));
+  msg->fields.emplace_back(create_field("z", sizeof(float) * 2, PointField::FLOAT32, 1));
+  point_step += sizeof(float) * 3;
+
+  if (frame.times) {
+    msg->fields.emplace_back(create_field("t", point_step, PointField::FLOAT32, 1));
+    point_step += sizeof(float);
+  }
+
+  if (frame.intensities) {
+    msg->fields.emplace_back(create_field("intensity", point_step, PointField::FLOAT32, 1));
+    point_step += sizeof(float);
+  }
+
+  const Eigen::Vector4f* colors = frame.aux_attributes.count("colors") ? frame.aux_attribute<Eigen::Vector4f>("colors") : nullptr;
+  if (colors) {
+    msg->fields.emplace_back(create_field("rgba", point_step, PointField::UINT32, 1));
+    point_step += sizeof(std::uint32_t);
   }
 
   msg->is_bigendian = false;
-  msg->point_step = sizeof(float) * num_fields;
-  msg->row_step = sizeof(float) * num_fields * frame.size();
+  msg->point_step = point_step;
+  msg->row_step = point_step * frame.size();
 
-  msg->data.resize(sizeof(float) * num_fields * frame.size());
+  msg->data.resize(point_step * frame.size());
   for (int i = 0; i < frame.size(); i++) {
-    float* point = reinterpret_cast<float*>(msg->data.data() + msg->point_step * i);
-    for (int j = 0; j < 3; j++) {
-      point[j] = frame.points[i][j];
-    }
+    unsigned char* point_bytes = msg->data.data() + msg->point_step * i;
+    Eigen::Map<Eigen::Vector3f> xyz(reinterpret_cast<float*>(point_bytes));
+    xyz = frame.points[i].head<3>().cast<float>();
+    point_bytes += sizeof(float) * 3;
 
     if (frame.times) {
-      point[3] = frame.times[i];
+      *reinterpret_cast<float*>(point_bytes) = frame.times[i];
+      point_bytes += sizeof(float);
+    }
+
+    if (frame.intensities) {
+      *reinterpret_cast<float*>(point_bytes) = frame.intensities[i];
+      point_bytes += sizeof(float);
+    }
+
+    if (colors) {
+      const Eigen::Matrix<std::uint8_t, 4, 1> rgba = (colors[i].array() * 255.0f).min(255.0f).max(0.0f).cast<std::uint8_t>();
+      point_bytes[0] = rgba[0];
+      point_bytes[1] = rgba[1];
+      point_bytes[2] = rgba[2];
+      point_bytes[3] = rgba[3];
+      point_bytes += sizeof(std::uint32_t);
     }
   }
 

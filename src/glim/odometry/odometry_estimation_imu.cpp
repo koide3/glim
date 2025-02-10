@@ -178,6 +178,9 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     covariance_estimation->estimate(points_imu, raw_frame->neighbors, normals, covs);
 
     auto frame = std::make_shared<gtsam_points::PointCloudCPU>(points_imu);
+    if (raw_frame->intensities.size()) {
+      frame->add_intensities(raw_frame->intensities);
+    }
     frame->add_covs(covs);
     frame->add_normals(normals);
     new_frame->frame = frame;
@@ -298,6 +301,9 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
 
   auto frame = std::make_shared<gtsam_points::PointCloudCPU>(deskewed);
+  if (raw_frame->intensities.size()) {
+    frame->add_intensities(raw_frame->intensities);
+  }
   frame->add_covs(deskewed_covs);
   frame->add_normals(deskewed_normals);
   new_frame->frame = frame;
