@@ -100,7 +100,7 @@ SubMap::Ptr SubMap::load(const std::string& path, const int start_from_submap_id
   Eigen::Matrix<double, 6, 1> imu_bias = read_matrix<6, 1>(ifs);
 
   int frame_id;
-  ifs >> token >> frame_id; // what frame id is this? its always 2
+  ifs >> token >> frame_id;
 
   int num_frames;
   ifs >> token >> num_frames;
@@ -108,7 +108,7 @@ SubMap::Ptr SubMap::load(const std::string& path, const int start_from_submap_id
   for (int i = 0; i < num_frames; i++) {
     int id;
     double stamp;
-    ifs >> token >> token >> id; // TODO: need to do remapping here?
+    ifs >> token >> token >> id;
     ifs >> token >> stamp;
 
     ifs >> token;

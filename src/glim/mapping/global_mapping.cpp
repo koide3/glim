@@ -113,7 +113,6 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 
 GlobalMapping::~GlobalMapping() {}
 
-
 void GlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
   if (params.enable_imu) {
@@ -285,6 +284,9 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
   // Between factors are Vector2i actually. A bad use of Vector3i
   std::unordered_set<Eigen::Vector3i, gtsam_points::Vector3iHash> existing_factors;
   for (const auto& factor : isam2->getFactorsUnsafe()) {
+    if (factor == nullptr) {
+      continue;
+    }
     if (factor->keys().size() != 2) {
       continue;
     }
@@ -758,8 +760,8 @@ bool GlobalMapping::load(const std::string& path) {
   }
 
   // remap keys in graph and values if dump previously loaded
-  std::map<gtsam::Key, gtsam::Key> rekey_mapping;
   if (start_from_frame_id > 0) {
+    std::map<gtsam::Key, gtsam::Key> rekey_mapping;
     for (const auto& key : loaded_graph.keys()) {
       const gtsam::Symbol symbol(key);
       if (last_key_per_type.find(symbol.chr()) != last_key_per_type.end()) {
@@ -785,7 +787,7 @@ bool GlobalMapping::load(const std::string& path) {
       if (matched_key != rekey_mapping.end()) {
         values.insert(matched_key->second, it->value);
       } else {
-        logger->error("No remapping found for Value with key {}, keeping it as is", gtsam::Symbol(it->key).string());
+        logger->warn("No remapping found for Value with key {}, keeping it as is", gtsam::Symbol(it->key).string());
         values.insert(it->key, it->value);
       }
     }
@@ -823,13 +825,14 @@ bool GlobalMapping::load(const std::string& path) {
     }
   }
   if (start_from_frame_id > 0) {
-    // TODO: add factor of same type as other factors
     // create extra factor between both graphs to avoid indeterminant system exception
-    const auto stream_buffer = std::any_cast<std::shared_ptr<gtsam_points::StreamTempBufferRoundRobin>>(stream_buffer_roundrobin)->get_stream_buffer();
-    const auto& stream = stream_buffer.first;
-    const auto& buffer = stream_buffer.second;
-    graph
-      .emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(0), X(start_from_frame_id), submaps[0]->voxelmaps.front(), subsampled_submaps[start_from_frame_id], stream, buffer);
+    const auto prior_noise6 = gtsam::noiseModel::Isotropic::Precision(6, 1e6);
+    Eigen::Matrix4d delta = Eigen::Matrix4d::Identity();
+    // add some offset so nodes do not exactly overlap
+    delta(0, 3) = 1.0;
+    delta(1, 3) = 1.0;
+    delta(2, 3) = 1.0;
+    graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(start_from_frame_id), gtsam::Pose3(delta), prior_noise6);
   }
 
   const size_t num_factors_before = graph.size();

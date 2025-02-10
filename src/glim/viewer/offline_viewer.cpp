@@ -113,11 +113,10 @@ void OfflineViewer::main_menu() {
         ExtensionModule::export_classes(name);
       }
 
-      // if a map is already loaded, use this map to load new map into
+      // if a map is already loaded, use existing map to load new map into
       if (async_global_mapping) {
         logger->info("global map already exists, loading new map into existing global map");
-        auto res = async_global_mapping->getGlobalMappingSharedPtr();
-        global_mapping = std::dynamic_pointer_cast<GlobalMapping>(res);
+        global_mapping = std::dynamic_pointer_cast<GlobalMapping>(async_global_mapping->getGlobalMappingSharedPtr());
       }
 
       progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path, &global_mapping](guik::ProgressInterface& progress) {

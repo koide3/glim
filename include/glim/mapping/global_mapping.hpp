@@ -80,8 +80,6 @@ public:
    */
   bool load(const std::string& path);
 
-  gtsam::NonlinearFactorGraph rekey_graph(const gtsam::NonlinearFactorGraph& graph, const std::map<std::uint64_t,std::uint64_t>& rekey_mapping) const;
-
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);
 
