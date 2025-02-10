@@ -269,6 +269,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   }
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
+  Callbacks::on_update_new_frame(active_frames.back());
   Callbacks::on_update_frames(active_frames);
 
   // Update target point cloud (just for visualization)
