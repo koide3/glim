@@ -73,7 +73,7 @@ public:
    * @return SubMap::Ptr Loaded SubMap
    * @return nullptr if failed to load
    */
-  static SubMap::Ptr load(const std::string& path, const int start_from_submap_id = 0);
+  static SubMap::Ptr load(const std::string& path);
 
 public:
   int id;  ///< submap ID

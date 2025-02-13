@@ -1,5 +1,6 @@
 #include <glim/mapping/global_mapping.hpp>
 
+#include <map>
 #include <unordered_set>
 #include <spdlog/spdlog.h>
 #include <boost/filesystem.hpp>
@@ -109,8 +110,6 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 #ifdef GTSAM_USE_TBB
   tbb_task_arena = std::make_shared<tbb::task_arena>(1);
 #endif
-
-  overwrite_last_between_factor = false;
 }
 
 GlobalMapping::~GlobalMapping() {}
@@ -215,6 +214,8 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
       }
     }
   }
+
+  logger->debug("|new_factors|={} |new_values|={}", new_factors->size(), new_values->size());
 
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
   auto result = update_isam2(*new_factors, *new_values);
@@ -357,10 +358,13 @@ void GlobalMapping::optimize() {
     return;
   }
 
-  gtsam::NonlinearFactorGraph new_factors;
-  gtsam::Values new_values;
-  Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = update_isam2(new_factors, new_values);
+  logger->info("|new_factors|={} |new_values|={}", new_factors->size(), new_values->size());
+
+  Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
+  auto result = update_isam2(*new_factors, *new_values);
+
+  new_factors.reset(new gtsam::NonlinearFactorGraph);
+  new_values.reset(new gtsam::Values);
 
   Callbacks::on_smoother_update_result(*isam2, result);
 
@@ -488,16 +492,7 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
     auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
     arena->execute([&] {
 #endif
-      gtsam::FactorIndices factors_to_remove;
-      if (overwrite_last_between_factor) {
-        logger->info("removing last factor before optimization");
-        auto fsize = isam2->getFactorsUnsafe().size();
-        if (fsize > 0) {
-          factors_to_remove.push_back(fsize - 1);
-        }
-        overwrite_last_between_factor = false;
-      }
-      result = isam2->update(new_factors, new_values, factors_to_remove);
+      result = isam2->update(new_factors, new_values);
 
 #ifdef GTSAM_USE_TBB
     });
@@ -659,24 +654,7 @@ bool GlobalMapping::load(const std::string& path) {
     return false;
   }
 
-  // get state of existing graph if exists
-  std::map<unsigned char, gtsam::Key> last_key_per_type;
-  auto keys = isam2->getFactorsUnsafe().keys();
-  for (const auto& key : keys) {
-    const gtsam::Symbol symbol(key);
-    if (last_key_per_type.find(symbol.chr()) != last_key_per_type.end()) {
-      last_key_per_type[symbol.chr()] = key;
-    } else {
-      if (key > last_key_per_type[symbol.chr()]) {
-        last_key_per_type[symbol.chr()] = key;
-      }
-    }
-  }
-
-  int start_from_frame_id = 0;
-  if (last_key_per_type.find('x') != last_key_per_type.end()) {
-    start_from_frame_id = static_cast<int>(last_key_per_type['x']) + 1;
-  }
+  const int start_from_frame_id = submaps.size();
 
   std::string token;
   int num_submaps, num_all_frames, num_matching_cost_factors;
@@ -695,10 +673,11 @@ bool GlobalMapping::load(const std::string& path) {
   submaps.reserve(submaps.size() + num_submaps);
   subsampled_submaps.reserve(submaps.size() + num_submaps);
   for (int i = 0; i < num_submaps; i++) {
-    auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str(), start_from_frame_id);
+    auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
     if (!submap) {
       return false;
     }
+    submap->id += start_from_frame_id;
 
     // Adaptively determine the voxel resolution based on the median distance
     const int max_scan_count = 256;
@@ -774,11 +753,14 @@ bool GlobalMapping::load(const std::string& path) {
   // remap keys in graph and values if dump previously loaded
   if (start_from_frame_id > 0) {
     std::map<gtsam::Key, gtsam::Key> rekey_mapping;
-    for (const auto& key : loaded_graph.keys()) {
-      const gtsam::Symbol symbol(key);
-      if (last_key_per_type.find(symbol.chr()) != last_key_per_type.end()) {
-        rekey_mapping[key] = key + gtsam::symbolIndex(last_key_per_type.at(symbol.chr())) + 1;
-      }
+    for (int i = 0; i < num_submaps; i++) {
+      rekey_mapping[X(i)] = X(i + start_from_frame_id);
+      rekey_mapping[E(i * 2)] = E((i + start_from_frame_id) * 2);
+      rekey_mapping[E(i * 2 + 1)] = E((i + start_from_frame_id) * 2 + 1);
+      rekey_mapping[B(i * 2)] = B((i + start_from_frame_id) * 2);
+      rekey_mapping[B(i * 2 + 1)] = B((i + start_from_frame_id) * 2 + 1);
+      rekey_mapping[V(i * 2)] = V((i + start_from_frame_id) * 2);
+      rekey_mapping[V(i * 2 + 1)] = V((i + start_from_frame_id) * 2 + 1);
     }
 
     auto first_factor = loaded_graph.front();
@@ -836,16 +818,6 @@ bool GlobalMapping::load(const std::string& path) {
       logger->warn("unsupported matching cost factor type ({})", type);
     }
   }
-  if (start_from_frame_id > 0) {
-    // create extra factor between both graphs to avoid indeterminant system exception
-    const auto prior_noise6 = gtsam::noiseModel::Isotropic::Precision(6, 1e6);
-    Eigen::Matrix4d delta = Eigen::Matrix4d::Identity();
-    // add some offset so nodes do not exactly overlap
-    delta(0, 3) = 1.0;
-    delta(1, 3) = 1.0;
-    delta(2, 3) = 1.0;
-    graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(0), X(start_from_frame_id), gtsam::Pose3(delta), prior_noise6);
-  }
 
   const size_t num_factors_before = graph.size();
   const auto remove_loc = std::remove_if(graph.begin(), graph.end(), [](const auto& factor) { return factor == nullptr; });
@@ -862,19 +834,21 @@ bool GlobalMapping::load(const std::string& path) {
     values.insert_or_assign(recovered.second);
   }
 
-  logger->info("optimize");
-  Callbacks::on_smoother_update(*isam2, graph, values);
-  auto result = update_isam2(graph, values);
-  Callbacks::on_smoother_update_result(*isam2, result);
+  if (start_from_frame_id <= 0) {
+    logger->info("optimize");
+    Callbacks::on_smoother_update(*isam2, graph, values);
+    auto result = update_isam2(graph, values);
+    Callbacks::on_smoother_update_result(*isam2, result);
 
-  update_submaps();
-  Callbacks::on_update_submaps(submaps);
+    update_submaps();
+    Callbacks::on_update_submaps(submaps);
+  } else {
+    logger->info("skip optimization");
+    this->new_factors->add(graph);
+    this->new_values->insert(values);
+  }
 
   logger->info("done");
-
-  if (start_from_frame_id > 0) {
-    overwrite_last_between_factor = true;
-  }
 
   return true;
 }

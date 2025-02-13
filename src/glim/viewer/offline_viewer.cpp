@@ -116,7 +116,7 @@ void OfflineViewer::main_menu() {
       // if a map is already loaded, use existing map to load new map into
       if (async_global_mapping) {
         logger->info("global map already exists, loading new map into existing global map");
-        global_mapping = std::dynamic_pointer_cast<GlobalMapping>(async_global_mapping->getGlobalMappingSharedPtr());
+        global_mapping = std::dynamic_pointer_cast<GlobalMapping>(async_global_mapping->get_global_mapping());
       }
 
       progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path, &global_mapping](guik::ProgressInterface& progress) {
@@ -193,8 +193,7 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
     return nullptr;
   }
 
-  if (map_previously_loaded)
-  {
+  if (map_previously_loaded) {
     pfd::message(
       "Confirm",
       "To maintain consistency, a temporary factor between old and new submaps has been added. \n"
