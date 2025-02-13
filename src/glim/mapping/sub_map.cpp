@@ -74,7 +74,7 @@ Eigen::Matrix<double, ROWS, COLS> read_matrix(std::ifstream& ifs) {
 }
 }  // namespace
 
-SubMap::Ptr SubMap::load(const std::string& path, const int start_from_submap_id) {
+SubMap::Ptr SubMap::load(const std::string& path) {
   std::ifstream ifs(path + "/data.txt");
   if (!ifs) {
     spdlog::error("failed to open {}/data.txt", path);
@@ -85,7 +85,7 @@ SubMap::Ptr SubMap::load(const std::string& path, const int start_from_submap_id
 
   std::string token;
   ifs >> token >> submap->id;
-  submap->id += start_from_submap_id;
+  submap->id;
 
   ifs >> token;
   submap->T_world_origin.matrix() = read_matrix<4, 4>(ifs);
