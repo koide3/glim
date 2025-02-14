@@ -36,8 +36,6 @@ void OfflineViewer::main_menu() {
   bool start_save_map = false;
   bool start_export_map = false;
 
-  std::shared_ptr<GlobalMapping> global_mapping;
-
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (!async_global_mapping) {  // if a previously loaded map does not yet exist
@@ -114,14 +112,14 @@ void OfflineViewer::main_menu() {
       }
 
       // if a map is already loaded, use existing map to load new map into
+      std::shared_ptr<GlobalMapping> global_mapping;
       if (async_global_mapping) {
         logger->info("global map already exists, loading new map into existing global map");
         global_mapping = std::dynamic_pointer_cast<GlobalMapping>(async_global_mapping->get_global_mapping());
       }
 
-      progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path, &global_mapping](guik::ProgressInterface& progress) {
-        global_mapping = load_map(progress, map_path, std::move(global_mapping));
-        return global_mapping;
+      progress_modal->open<std::shared_ptr<GlobalMapping>>("open", [this, map_path, global_mapping](guik::ProgressInterface& progress) {
+        return load_map(progress, map_path, global_mapping);
       });
     }
   }
@@ -191,7 +189,7 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
     return nullptr;
   }
 
-  return std::move(global_mapping);
+  return global_mapping;
 }
 
 bool OfflineViewer::save_map(guik::ProgressInterface& progress, const std::string& path) {
