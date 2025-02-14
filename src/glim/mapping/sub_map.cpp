@@ -85,7 +85,6 @@ SubMap::Ptr SubMap::load(const std::string& path) {
 
   std::string token;
   ifs >> token >> submap->id;
-  submap->id;
 
   ifs >> token;
   submap->T_world_origin.matrix() = read_matrix<4, 4>(ifs);
