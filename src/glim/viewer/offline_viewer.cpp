@@ -174,9 +174,7 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
   progress.set_text("Now loading");
   progress.set_maximum(1);
 
-  bool map_previously_loaded = (global_mapping != nullptr);
-
-  if (!map_previously_loaded) {  // if no map is loaded yet initialize new GlobalMapping
+  if (global_mapping == nullptr) {  // if no map is loaded yet initialize new GlobalMapping
     glim::GlobalMappingParams params;
     params.isam2_relinearize_skip = 1;
     params.isam2_relinearize_thresh = 0.0;
@@ -191,16 +189,6 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
   if (!global_mapping->load(path)) {
     logger->error("failed to load {}", path);
     return nullptr;
-  }
-
-  if (map_previously_loaded) {
-    pfd::message(
-      "Confirm",
-      "To maintain consistency, a temporary factor between old and new submaps has been added. \n"
-      "This temporary constraint will be removed with the next optimization",
-      pfd::choice::ok);
-
-    global_factors.pop_back();
   }
 
   return std::move(global_mapping);
