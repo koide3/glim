@@ -257,6 +257,7 @@ void InteractiveViewer::context_menu() {
 
     if (type == PickType::FRAME) {
       const int frame_id = right_clicked_info[3];
+      ImGui::TextUnformatted(("frame_id " + std::to_string(frame_id)).c_str());
       if (ImGui::MenuItem("Loop begin")) {
         manual_loop_close_modal->set_target(X(frame_id), submaps[frame_id]->frame, submap_poses[frame_id]);
       }

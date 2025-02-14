@@ -72,6 +72,11 @@ public:
 
   std::vector<Eigen::Vector4d> export_points();
 
+  std::shared_ptr<glim::GlobalMappingBase> get_global_mapping() {
+    std::lock_guard<std::mutex> lock(global_mapping_mutex);
+    return global_mapping;
+  }
+
 private:
   void run();
 
