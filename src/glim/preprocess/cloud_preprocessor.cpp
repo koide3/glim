@@ -97,8 +97,8 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   
   for (int i = 0; i < frame->size(); i++) {
     const bool is_finite = frame->points[i].allFinite();
-    const double squared_dist = (Eigen::Vector4d() << frame->points[i].head<3>(), 0.0).finished().squaredNorm()();
-    if (squared_dist > squared_distance_near_thresh && dist < squared_distance_far_thresh && is_finite) {
+    const double squared_dist = (Eigen::Vector4d() << frame->points[i].head<3>(), 0.0).finished().squaredNorm();
+    if (squared_dist > squared_distance_near_thresh && squared_dist < squared_distance_far_thresh && is_finite) {
       indices.push_back(i);
     }
   }
