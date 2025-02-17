@@ -95,6 +95,7 @@ private:
   Params params;
 
   std::mt19937 mt;
+  int session_id;
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::any stream_buffer_roundrobin;

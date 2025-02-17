@@ -84,6 +84,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
   }
 #endif
 
+  session_id = 0;
   imu_integration.reset(new IMUIntegration);
 
   new_values.reset(new gtsam::Values);
@@ -669,7 +670,7 @@ bool GlobalMapping::load(const std::string& path) {
     ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
   }
 
-  logger->info("Load submaps");
+  logger->info("Load submaps (session_id={})", session_id);
   submaps.reserve(submaps.size() + num_submaps);
   subsampled_submaps.reserve(submaps.size() + num_submaps);
   for (int i = 0; i < num_submaps; i++) {
@@ -678,6 +679,7 @@ bool GlobalMapping::load(const std::string& path) {
       return false;
     }
     submap->id += start_from_frame_id;
+    submap->session_id = session_id;
 
     // Adaptively determine the voxel resolution based on the median distance
     const int max_scan_count = 256;
@@ -849,6 +851,7 @@ bool GlobalMapping::load(const std::string& path) {
   }
 
   logger->info("done");
+  session_id++;
 
   return true;
 }

@@ -74,11 +74,16 @@ protected:
   std::atomic_bool kill_switch;
   std::thread thread;
 
+  // Process params
+  int num_threads;
+
   // Tasks to be executed in the GUI thread
   std::mutex invoke_queue_mutex;
   std::vector<std::function<void()>> invoke_queue;
 
   // Visualization params
+  int color_mode;
+
   float coord_scale;
   float sphere_scale;
 
