@@ -267,12 +267,13 @@ std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> Ma
 std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::ProgressInterface& progress) {
   logger->info("Aligning global maps");
   progress.set_title("Global registration");
-  progress.set_maximum(6);
+  progress.set_maximum(10);
 
   progress.increment();
   logger->info("Creating KdTree");
   progress.set_text("Creating KdTree");
   gtsam_points::KdTree2<gtsam_points::PointCloud> target_tree(target, num_threads);
+  progress.increment();
   gtsam_points::KdTree2<gtsam_points::PointCloud> source_tree(source, num_threads);
 
   gtsam_points::FPFHEstimationParams fpfh_params;
@@ -301,6 +302,7 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::Prog
   const auto target_fpfh = target->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
   const auto source_fpfh = source->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
   gtsam_points::KdTreeX<gtsam_points::FPFH_DIM> target_fpfh_tree(target_fpfh, target->size());
+  progress.increment();
   gtsam_points::KdTreeX<gtsam_points::FPFH_DIM> source_fpfh_tree(source_fpfh, source->size());
 
   progress.increment();
