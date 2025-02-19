@@ -43,7 +43,11 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
   request_to_terminate = false;
   request_to_clear = false;
 
-  num_threads = 6;
+#ifdef _OPENMP
+  num_threads = omp_get_max_threads();
+#else
+  num_threads = 1;
+#endif
 
   color_mode = 0;
   coord_scale = 1.0f;
@@ -187,82 +191,104 @@ void InteractiveViewer::invoke(const std::function<void()>& task) {
  * @brief Drawable selection UI
  */
 void InteractiveViewer::drawable_selection() {
-  ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  if (!ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    return;
+  }
+
+  const auto show_note = [](const std::string& text) {
+    if (ImGui::IsItemHovered()) {
+      ImGui::BeginTooltip();
+      ImGui::Text("%s", text.c_str());
+      ImGui::EndTooltip();
+    }
+    return false;
+  };
+
   std::vector<const char*> color_modes = {"RAINBOW", "SESSION"};
   if (ImGui::Combo("ColorMode", &color_mode, color_modes.data(), color_modes.size())) {
     update_viewer();
   }
+  show_note("Color mode for rendering submaps.\n- RAINBOW=Altitute encoding color\n- SESSION=Session ID");
 
   ImGui::Checkbox("Trajectory", &draw_traj);
   ImGui::SameLine();
-  ImGui::Checkbox("Points", &draw_points);
+  ImGui::Checkbox("Submaps", &draw_points);
 
   ImGui::Checkbox("Factors", &draw_factors);
   ImGui::SameLine();
   ImGui::Checkbox("Spheres", &draw_spheres);
 
-  ImGui::Checkbox("Current", &draw_current);
+  ImGui::Checkbox("Current scan", &draw_current);
 
   bool do_update_viewer = false;
   do_update_viewer |= ImGui::DragFloat("coord scale", &coord_scale, 0.01f, 0.01f, 100.0f);
+  show_note("Submap coordinate system maker scale.");
   do_update_viewer |= ImGui::DragFloat("sphere scale", &sphere_scale, 0.01f, 0.01f, 100.0f);
+  show_note("Submap selection sphere maker scale.");
 
   if (do_update_viewer) {
     update_viewer();
   }
 
-  if (ImGui::Button("Merge sessions")) {
-    logger->info("merging sessions...");
-    if (submaps.empty()) {
-      logger->warn("No submaps");
-    } else if (submaps.front()->session_id == submaps.back()->session_id) {
-      logger->warn("There is only one session");
-    } else {
-      const int source_session_id = submaps.back()->session_id;
-      const auto source_begin = std::find_if(submaps.begin(), submaps.end(), [=](const SubMap::ConstPtr& submap) { return submap->session_id == source_session_id; });
-
-      const std::vector<SubMap::ConstPtr> target_submaps(submaps.begin(), source_begin);
-      const std::vector<SubMap::ConstPtr> source_submaps(source_begin, submaps.end());
-
-      logger->info("|submaps|={} |targets|={} |sources|={} source_session_id={}", submaps.size(), target_submaps.size(), source_submaps.size(), source_session_id);
-      manual_loop_close_modal->set_submaps(target_submaps, source_submaps);
-    }
-
-    std::vector<SubMap::ConstPtr> target_submaps;
-    std::vector<SubMap::ConstPtr> source_submaps;
-    for (const auto& submap : submaps) {
-      if (target_submaps.empty()) {
-        target_submaps.emplace_back(submap);
-        continue;
-      }
-      if (target_submaps.back()->session_id == submap->session_id) {
-        target_submaps.emplace_back(submap);
-        continue;
-      }
-    }
-  }
-
+  ImGui::Separator();
   ImGui::DragFloat("Min overlap", &min_overlap, 0.01f, 0.01f, 1.0f);
-  if (ImGui::Button("Find overlapping submaps")) {
+  show_note("Minimum overlap ratio for finding overlapping submaps.");
+
+  if (ImGui::Button("Find overlapping submaps") || show_note("Find overlapping submaps and create matching cost factors between them.")) {
     logger->info("finding overlapping submaps...");
     GlobalMappingCallbacks::request_to_find_overlapping_submaps(min_overlap);
   }
 
-  if (ImGui::Button("Recover graph")) {
+  if (ImGui::Button("Recover graph") || show_note("Detect and fix corrupted graph.")) {
     logger->info("recovering graph...");
     GlobalMappingCallbacks::request_to_recover();
+  }
+
+  if (submaps.size() && submaps.back()->session_id) {
+    if (ImGui::Button("Merge sessions") || show_note("Merge the lastly loaded session with the previous session.")) {
+      logger->info("merging sessions...");
+      if (submaps.empty()) {
+        logger->warn("No submaps");
+      } else if (submaps.front()->session_id == submaps.back()->session_id) {
+        logger->warn("There is only one session");
+      } else {
+        const int source_session_id = submaps.back()->session_id;
+        const auto source_begin = std::find_if(submaps.begin(), submaps.end(), [=](const SubMap::ConstPtr& submap) { return submap->session_id == source_session_id; });
+
+        const std::vector<SubMap::ConstPtr> target_submaps(submaps.begin(), source_begin);
+        const std::vector<SubMap::ConstPtr> source_submaps(source_begin, submaps.end());
+
+        logger->info("|submaps|={} |targets|={} |sources|={} source_session_id={}", submaps.size(), target_submaps.size(), source_submaps.size(), source_session_id);
+        manual_loop_close_modal->set_submaps(target_submaps, source_submaps);
+      }
+
+      std::vector<SubMap::ConstPtr> target_submaps;
+      std::vector<SubMap::ConstPtr> source_submaps;
+      for (const auto& submap : submaps) {
+        if (target_submaps.empty()) {
+          target_submaps.emplace_back(submap);
+          continue;
+        }
+        if (target_submaps.back()->session_id == submap->session_id) {
+          target_submaps.emplace_back(submap);
+          continue;
+        }
+      }
+    }
   }
 
   if (ImGui::Button("Optimize")) {
     logger->info("optimizing...");
     GlobalMappingCallbacks::request_to_optimize();
   }
+  show_note("Optimize the graph.");
 
   ImGui::SameLine();
   ImGui::Checkbox("##Cont optimize", &cont_optimize);
   if (cont_optimize) {
     GlobalMappingCallbacks::request_to_optimize();
   }
+  show_note("Continuously optimize the graph.");
 
   ImGui::End();
 }
