@@ -305,6 +305,8 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
   }
 
   gtsam::NonlinearFactorGraph new_factors;
+  
+  double squared_max_implicit_loop_distance = params.max_implicit_loop_distance * params.max_implicit_loop_distance;
 
   for (int i = 0; i < submaps.size(); i++) {
     for (int j = i + 1; j < submaps.size(); j++) {
@@ -313,8 +315,8 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
       }
 
       const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * submaps[j]->T_world_origin;
-      const double dist = delta.translation().norm();
-      if (dist > params.max_implicit_loop_distance) {
+      const double squared_dist = delta.translation().squaredNorm();
+      if (squared_dist > squared_max_implicit_loop_distance) {
         continue;
       }
 
@@ -433,9 +435,11 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
   const auto& current_submap = submaps.back();
 
   double previous_overlap = 0.0;
+  double squared_max_implicit_loop_distance = params.max_implicit_loop_distance * params.max_implicit_loop_distance;
+  
   for (int i = 0; i < current; i++) {
-    const double dist = (submaps[i]->T_world_origin.translation() - current_submap->T_world_origin.translation()).norm();
-    if (dist > params.max_implicit_loop_distance) {
+    const double squared_dist = (submaps[i]->T_world_origin.translation() - current_submap->T_world_origin.translation()).squaredNorm();
+    if (squared_dist > squared_max_implicit_loop_distance) {
       continue;
     }
 
