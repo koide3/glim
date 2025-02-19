@@ -304,8 +304,6 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
     existing_factors.emplace(sym1.index(), sym2.index(), 0);
   }
 
-  gtsam::NonlinearFactorGraph new_factors;
-
   for (int i = 0; i < submaps.size(); i++) {
     for (int j = i + 1; j < submaps.size(); j++) {
       if (existing_factors.count(Eigen::Vector3i(i, j, 0))) {
@@ -331,24 +329,26 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
         for (const auto& voxelmap : submaps[i]->voxelmaps) {
-          new_factors.emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
+          new_factors->emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
         }
       }
 #endif
       else {
         for (const auto& voxelmap : submaps[i]->voxelmaps) {
-          new_factors.emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(i), X(j), voxelmap, subsampled_submaps[j]);
+          new_factors->emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(i), X(j), voxelmap, subsampled_submaps[j]);
         }
       }
     }
   }
 
-  logger->info("new overlapping {} submap pairs found", new_factors.size());
+  logger->info("new overlapping {} submap pairs found", new_factors->size());
 
-  gtsam::Values new_values;
-  Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = update_isam2(new_factors, new_values);
+  Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
+  auto result = update_isam2(*new_factors, *new_values);
   Callbacks::on_smoother_update_result(*isam2, result);
+
+  new_factors->resize(0);
+  new_values->clear();
 
   update_submaps();
   Callbacks::on_update_submaps(submaps);

@@ -14,9 +14,12 @@
 #include <gtsam_points/features/fpfh_estimation.hpp>
 #include <gtsam_points/factors/integrated_icp_factor.hpp>
 #include <gtsam_points/factors/integrated_gicp_factor.hpp>
+#include <gtsam_points/registration/ransac.hpp>
 #include <gtsam_points/registration/graduated_non_convexity.hpp>
-#include <gtsam_points/registration/impl/graduated_non_convexity_impl.hpp>
 #include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
+
+#include <glim/util/convert_to_string.hpp>
+#include <glim/common/cloud_covariance_estimation.hpp>
 
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/primitives/primitives.hpp>
@@ -35,8 +38,17 @@ ManualLoopCloseModal::ManualLoopCloseModal(const std::shared_ptr<spdlog::logger>
   target_pose.setIdentity();
   source_pose.setIdentity();
 
+  seed = 53123;
   min_distance = 0.5f;
   fpfh_radius = 5.0f;
+  global_registration_type = 0;
+
+  ransac_max_iterations = 5000;
+  ransac_early_stop_rate = 0.9;
+  ransac_inlier_voxel_resolution = 1.0;
+  global_registration_4dof = true;
+
+  gnc_max_samples = 10000;
 
   information_scale = 1.0f;
   max_correspondence_distance = 1.0f;
@@ -54,16 +66,28 @@ ManualLoopCloseModal::~ManualLoopCloseModal() {}
 
 void ManualLoopCloseModal::set_target(const gtsam::Key target_key, const gtsam_points::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose) {
   this->target_key = target_key;
-  this->target = gtsam_points::PointCloudCPU::clone(*target);
   this->target_pose = target_pose;
-  this->target_drawable = std::make_shared<glk::PointCloudBuffer>(target->points, target->size());
+  this->target = gtsam_points::PointCloudCPU::clone(*target);
+
+  // Gravity (Z-axis) alignment
+  Eigen::Isometry3d T_world_local = Eigen::Isometry3d::Identity();
+  T_world_local.linear() = target_pose.linear();
+  gtsam_points::transform_inplace(this->target, T_world_local);
+
+  this->target_drawable = std::make_shared<glk::PointCloudBuffer>(this->target->points, this->target->size());
 }
 
 void ManualLoopCloseModal::set_source(const gtsam::Key source_key, const gtsam_points::PointCloud::ConstPtr& source, const Eigen::Isometry3d& source_pose) {
   this->source_key = source_key;
-  this->source = gtsam_points::PointCloudCPU::clone(*source);
   this->source_pose = source_pose;
-  this->source_drawable = std::make_shared<glk::PointCloudBuffer>(source->points, source->size());
+  this->source = gtsam_points::PointCloudCPU::clone(*source);
+
+  // Gravity (Z-axis) alignment
+  Eigen::Isometry3d T_world_local = Eigen::Isometry3d::Identity();
+  T_world_local.linear() = source_pose.linear();
+  gtsam_points::transform_inplace(this->source, T_world_local);
+
+  this->source_drawable = std::make_shared<glk::PointCloudBuffer>(this->source->points, this->source->size());
   request_to_open = true;
 }
 
@@ -90,6 +114,8 @@ void ManualLoopCloseModal::clear() {
   source_key = -1;
   target = nullptr;
   source = nullptr;
+  target_fpfh_tree = nullptr;
+  source_fpfh_tree = nullptr;
   target_drawable = nullptr;
   source_drawable = nullptr;
   target_submaps.clear();
@@ -100,17 +126,45 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
   gtsam::NonlinearFactor::shared_ptr factor;
 
   if (request_to_open && target && source) {
+    // Setup for submap vs submap loop closure
+    Eigen::Isometry3d init_T_target_source = Eigen::Isometry3d::Identity();
+
+    Eigen::Isometry3d R_world_target = Eigen::Isometry3d::Identity();
+    R_world_target.linear() = target_pose.linear();
+
+    Eigen::Isometry3d R_world_source = Eigen::Isometry3d::Identity();
+    R_world_source.linear() = source_pose.linear();
+
+    init_T_target_source.translation() = (R_world_target * target_pose.inverse() * source_pose * R_world_source.inverse()).translation();
+    model_control->set_model_matrix(init_T_target_source);
+
+    // Open the manual loop close modal
     ImGui::OpenPopup("manual loop close");
-    model_control->set_model_matrix((target_pose.inverse() * source_pose).cast<float>().matrix());
   } else if (request_to_open && target_submaps.size() && source_submaps.size()) {
-    ImGui::OpenPopup("preprocess maps");
+    // Setup for session vs session loop closure
     model_control->set_model_matrix(Eigen::Matrix4f::Identity().eval());
+    ImGui::OpenPopup("preprocess maps");
   }
   request_to_open = false;
 
-  bool open_preprocess_modal = false;
+  bool open_preprocess_modal = false;  // Request to open session preprocessing progress modal
+  // Preprocess parameter setting modal
   if (ImGui::BeginPopupModal("preprocess maps", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::DragFloat("Min distance", &min_distance, 0.01f, 0.01f, 100.0f);
+    ImGui::Text("Set default parameters:");
+    show_note("Select default parameters for minimum distance for downsampling and neighbor search radius for FPFH extraction.");
+
+    ImGui::SameLine();
+    if (ImGui::Button("Indoor")) {
+      min_distance = 0.25f;
+      fpfh_radius = 2.5f;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Outdoor")) {
+      min_distance = 0.5f;
+      fpfh_radius = 5.0f;
+    }
+
+    ImGui::DragFloat("Min distance", &min_distance, 0.01f, 0.01f, 100.0f) || show_note("Minimum distance between points for downsampling.");
 
     if (ImGui::Button("OK")) {
       open_preprocess_modal = true;
@@ -126,12 +180,14 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
     ImGui::EndPopup();
   }
 
+  // Open the preprocessing progress modal
   if (open_preprocess_modal) {
     progress_modal->open<std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr>>("preprocess", [this](guik::ProgressInterface& progress) {
       return preprocess(progress);
     });
   }
 
+  // Run the preprocessing progress modal and get the preprocessed point clouds
   auto preprocessed = progress_modal->run<std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr>>("preprocess");
   if (preprocessed) {
     target = preprocessed->first;
@@ -140,10 +196,13 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
     target_drawable = std::make_shared<glk::PointCloudBuffer>(target->points, target->size());
     source_drawable = std::make_shared<glk::PointCloudBuffer>(source->points, source->size());
 
+    model_control->set_model_matrix(Eigen::Matrix4f::Identity().eval());
+
+    // Open the manual loop close modal
     ImGui::OpenPopup("manual loop close");
-    model_control->set_model_matrix((target_pose.inverse() * source_pose).cast<float>().matrix());
   }
 
+  // Manual loop close modal
   if (ImGui::BeginPopupModal("manual loop close", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
     // Draw canvas
     ImGui::BeginChild(
@@ -172,23 +231,45 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
 
     ImGui::EndChild();
 
-    model_control->draw_gizmo_ui();
+    ImGui::Separator();
 
-    if (ImGui::DragFloat("fpfh_radius", &fpfh_radius, 0.01f, 0.01f, 100.0f)) {
+    /*** Global registration ***/
+
+    ImGui::Combo("Global registration type", &global_registration_type, "RANSAC\0GNC\0");
+
+    if (ImGui::DragFloat("fpfh_radius", &fpfh_radius, 0.01f, 0.01f, 100.0f) || show_note("Neighbor search radius for FPFH extraction.\n~2.5m for indoors, ~5.0m for outdoors.")) {
       target->aux_attributes.erase("fpfh");
       source->aux_attributes.erase("fpfh");
     }
+    if (target->aux_attributes.count("fpfh")) {
+      ImGui::SameLine();
+      ImGui::Text("[Cached]");
+    }
 
-    ImGui::DragFloat("max_corr_dist", &max_correspondence_distance, 0.01f, 0.01f, 100.0f);
-    ImGui::DragFloat("inf_scale", &information_scale, 0.0f, 1.0f, 10000.0f);
+    switch (global_registration_type) {
+      case 0:  // RANSAC
+        ImGui::DragInt("max_iterations", &ransac_max_iterations, 100, 1, 100000) || show_note("Maximum number of RANSAC iterations.");
+        ImGui::DragFloat("inlier_voxel_resolution", &ransac_inlier_voxel_resolution, 0.01f, 0.01f, 100.0f) || show_note("Resolution of voxelmap used for inlier check.");
+        break;
+      case 1:
+        ImGui::DragInt("max_samples", &gnc_max_samples, 100, 1, 100000) || show_note("Maximum number of feature samples for GNC.");
+        break;
+    }
+    ImGui::Checkbox("4dof", &global_registration_4dof) || show_note("Use 4DoF (XYZ + RZ) estimation instead of 6DoF (SE3).");
 
     bool open_align_global_modal = false;
-    if (ImGui::Button("Align Global")) {
+    if (ImGui::Button("Run global registration")) {
       open_align_global_modal = true;
     }
 
+    /*** Fine registration ***/
+
+    ImGui::Separator();
+    ImGui::DragFloat("max_corr_dist", &max_correspondence_distance, 0.01f, 0.01f, 100.0f) || show_note("Maximum correspondence distance for scan matching.");
+    ImGui::DragFloat("inf_scale", &information_scale, 0.0f, 1.0f, 10000.0f) || show_note("Information scale for loop factor.");
+
     bool open_align_modal = false;
-    if (ImGui::Button("Align")) {
+    if (ImGui::Button("Run fine registration")) {
       open_align_modal = true;
     }
 
@@ -203,12 +284,16 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
       model_control->set_model_matrix((*align_result)->cast<float>().matrix());
     }
 
-    if (ImGui::Button("Create Factor")) {
+    /*** Factor creation ***/
+
+    ImGui::Separator();
+    if (ImGui::Button("Create Factor") || show_note("Create a loop factor with the estimated transformation.")) {
       factor = create_factor();
       ImGui::CloseCurrentPopup();
       clear();
     }
 
+    ImGui::SameLine();
     if (ImGui::Button("Cancel")) {
       ImGui::CloseCurrentPopup();
       clear();
@@ -226,6 +311,7 @@ std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> Ma
 
   progress.set_text("Downsampling");
   const auto preprocess = [&](const std::vector<SubMap::ConstPtr>& submaps) {
+    logger->info("Downsampling");
     gtsam_points::iVox ivox(min_distance * 5.0);
     ivox.set_lru_horizon(1000000);
     ivox.voxel_insertion_setting().max_num_points_in_cell = 50;
@@ -236,28 +322,34 @@ std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> Ma
       ivox.insert(*transformed);
     }
 
-    return std::make_shared<gtsam_points::PointCloudCPU>(ivox.voxel_points());
+    auto points = std::make_shared<gtsam_points::PointCloudCPU>(ivox.voxel_points());
+
+    logger->info("Finding neighbors");
+    const int k = 10;
+    gtsam_points::KdTree2<gtsam_points::PointCloud> tree(points);
+    std::vector<int> neighbors(points->size() * k);
+
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
+    for (int i = 0; i < points->size(); i++) {
+      std::vector<size_t> k_indices(k);
+      std::vector<double> k_sq_dists(k);
+      tree.knn_search(points->points[i].data(), k, k_indices.data(), k_sq_dists.data());
+      std::copy(k_indices.begin(), k_indices.end(), neighbors.begin() + i * k);
+    }
+
+    logger->info("Estimate covariances");
+    glim::CloudCovarianceEstimation covest(num_threads);
+    covest.estimate(points->points_storage, neighbors, points->normals_storage, points->covs_storage);
+
+    points->normals = points->normals_storage.data();
+    points->covs = points->covs_storage.data();
+
+    return points;
   };
 
-  gtsam_points::PointCloudCPU::Ptr target;
-  gtsam_points::PointCloudCPU::Ptr source;
-
   logger->info("preprocessing");
-  target = preprocess(target_submaps);
-  source = preprocess(source_submaps);
-
-  gtsam_points::CovarianceEstimationParams cov_params;
-  cov_params.num_threads = num_threads;
-
-  logger->info("|target|={} |source|={}", target->size(), source->size());
-  logger->info("estimating target normals and covariances");
-  progress.set_text("Estimating covariances and normals");
-  target->add_covs(gtsam_points::estimate_covariances(target->points, target->size(), cov_params));
-  target->add_normals(gtsam_points::estimate_normals(target->points, target->covs, target->size(), num_threads));
-
-  logger->info("estimating source normals and covariances");
-  source->add_covs(gtsam_points::estimate_covariances(source->points, source->size(), cov_params));
-  source->add_normals(gtsam_points::estimate_normals(source->points, source->covs, source->size(), num_threads));
+  gtsam_points::PointCloudCPU::Ptr target = preprocess(target_submaps);
+  gtsam_points::PointCloudCPU::Ptr source = preprocess(source_submaps);
 
   progress.set_text("Done");
 
@@ -272,52 +364,97 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::Prog
   progress.increment();
   logger->info("Creating KdTree");
   progress.set_text("Creating KdTree");
-  gtsam_points::KdTree2<gtsam_points::PointCloud> target_tree(target, num_threads);
+  auto target_tree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(target);
   progress.increment();
-  gtsam_points::KdTree2<gtsam_points::PointCloud> source_tree(source, num_threads);
+  auto source_tree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(source);
 
   gtsam_points::FPFHEstimationParams fpfh_params;
   fpfh_params.num_threads = num_threads;
   fpfh_params.search_radius = fpfh_radius;
 
   progress.increment();
-  logger->info("Estimating target FPFH features");
-  progress.set_text("Estimating target FPFH features");
   if (!target->aux_attributes.count("fpfh")) {
-    const auto fpfh = gtsam_points::estimate_fpfh(target->points, target->normals, target->size(), target_tree, fpfh_params);
+    if (!target->has_normals()) {
+      logger->info("Estimating target normals");
+      progress.set_text("Estimating target normals");
+      target->add_normals(gtsam_points::estimate_normals(target->points, target->covs, target->size(), num_threads));
+    }
+
+    logger->info("Estimating target FPFH features");
+    progress.set_text("Estimating target FPFH features");
+    const auto fpfh = gtsam_points::estimate_fpfh(target->points, target->normals, target->size(), *target_tree, fpfh_params);
     target->add_aux_attribute("fpfh", fpfh);
+
+    logger->info("Constructing target FPFH KdTree");
+    progress.set_text("Constructing target FPFH KdTree");
+    const auto target_fpfh = target->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
+    target_fpfh_tree = std::make_shared<gtsam_points::KdTreeX<gtsam_points::FPFH_DIM>>(target_fpfh, target->size());
   }
 
   progress.increment();
-  logger->info("Estimating source FPFH features");
-  progress.set_text("Estimating source FPFH features");
   if (!source->aux_attributes.count("fpfh")) {
-    const auto fpfh = gtsam_points::estimate_fpfh(source->points, source->normals, source->size(), source_tree, fpfh_params);
+    if (!source->has_normals()) {
+      logger->info("Estimating source normals");
+      progress.set_text("Estimating source normals");
+      source->add_normals(gtsam_points::estimate_normals(source->points, source->covs, source->size(), num_threads));
+    }
+
+    logger->info("Estimating source FPFH features");
+    progress.set_text("Estimating source FPFH features");
+    const auto fpfh = gtsam_points::estimate_fpfh(source->points, source->normals, source->size(), *source_tree, fpfh_params);
     source->add_aux_attribute("fpfh", fpfh);
+
+    logger->info("Constructing source FPFH KdTree");
+    progress.set_text("Constructing source FPFH KdTree");
+    const auto source_fpfh = source->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
+    source_fpfh_tree = std::make_shared<gtsam_points::KdTreeX<gtsam_points::FPFH_DIM>>(source_fpfh, source->size());
   }
 
-  progress.increment();
-  logger->info("Creating feature KdTree");
-  progress.set_text("Creating feature KdTree");
   const auto target_fpfh = target->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
   const auto source_fpfh = source->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
-  gtsam_points::KdTreeX<gtsam_points::FPFH_DIM> target_fpfh_tree(target_fpfh, target->size());
-  progress.increment();
-  gtsam_points::KdTreeX<gtsam_points::FPFH_DIM> source_fpfh_tree(source_fpfh, source->size());
+
+  std::shared_ptr<Eigen::Isometry3d> trans(new Eigen::Isometry3d);
 
   progress.increment();
-  logger->info("Estimating transformation");
-  progress.set_text("Estimating transformation");
-  gtsam_points::GNCParams gnc_params;
-  gnc_params.max_init_samples = 15000;
-  gnc_params.reciprocal_check = false;
-  gnc_params.tuple_check = true;
-  gnc_params.max_num_tuples = 2500;
-  gnc_params.verbose = true;
-  gnc_params.num_threads = num_threads;
-  auto result = gtsam_points::estimate_pose_gnc<gtsam_points::PointCloud>(*target, *source, target_fpfh, source_fpfh, target_tree, target_fpfh_tree, source_fpfh_tree, gnc_params);
 
-  std::shared_ptr<Eigen::Isometry3d> trans(new Eigen::Isometry3d(result.T_target_source));
+  gtsam_points::RegistrationResult result;
+
+  if (global_registration_type == 0) {
+    logger->info("Estimating transformation RANSAC (seed={})", seed);
+    progress.set_text("Estimating transformation RANSAC");
+
+    gtsam_points::RANSACParams ransac_params;
+    ransac_params.max_iterations = ransac_max_iterations;
+    ransac_params.early_stop_inlier_rate = ransac_early_stop_rate;
+    ransac_params.inlier_voxel_resolution = ransac_inlier_voxel_resolution;
+    ransac_params.dof = global_registration_4dof ? 4 : 6;
+    ransac_params.seed = (seed += 4322);
+    ransac_params.num_threads = num_threads;
+
+    result = gtsam_points::estimate_pose_ransac<gtsam_points::PointCloud>(*target, *source, target_fpfh, source_fpfh, *target_tree, *target_fpfh_tree, ransac_params);
+
+  } else {
+    logger->info("Estimating transformation GNC (seed={})", seed);
+    progress.set_text("Estimating transformation (GNC)");
+
+    gtsam_points::GNCParams gnc_params;
+    gnc_params.max_init_samples = gnc_max_samples;
+    gnc_params.reciprocal_check = true;
+    gnc_params.tuple_check = false;
+    gnc_params.max_num_tuples = 5000;
+    gnc_params.dof = global_registration_4dof ? 4 : 6;
+    gnc_params.seed = (seed += 4322);
+    gnc_params.num_threads = num_threads;
+
+    result = gtsam_points::estimate_pose_gnc<gtsam_points::PointCloud>(*target, *source, target_fpfh, source_fpfh, *target_tree, *target_fpfh_tree, *source_fpfh_tree, gnc_params);
+  }
+
+  logger->info("Registration result");
+  logger->info("T_target_source={}", convert_to_string(result.T_target_source));
+  logger->info("inlier_rate={}", result.inlier_rate);
+
+  *trans = result.T_target_source;
+
   return trans;
 }
 
@@ -376,10 +513,8 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align(guik::ProgressInt
 gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
   using gtsam::symbol_shorthand::X;
 
-  const gtsam::Pose3 relative(model_control->model_matrix().cast<double>());
-
   if (target_submaps.size()) {
-    const Eigen::Isometry3d T_target_source(relative.matrix());
+    const Eigen::Isometry3d T_target_source(model_control->model_matrix().cast<double>());
 
     double min_distance = std::numeric_limits<double>::max();
     std::pair<SubMap::ConstPtr, SubMap::ConstPtr> best_pair;
@@ -409,9 +544,11 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
       gtsam::noiseModel::Isotropic::Sigma(6, 1e-6));
   }
 
+  const gtsam::Pose3 T_target_source(model_control->model_matrix().cast<double>());
+
   gtsam::Values values;
   values.insert(0, gtsam::Pose3::Identity());
-  values.insert(1, relative);
+  values.insert(1, T_target_source);
 
   auto factor = gtsam::make_shared<gtsam_points::IntegratedGICPFactor>(0, 1, target, source);
   factor->set_num_threads(num_threads);
@@ -420,11 +557,21 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
   const auto linearized = factor->linearize(values);
   const auto H = linearized->hessianBlockDiagonal()[1];
 
-  return gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(target_key, source_key, relative, gtsam::noiseModel::Gaussian::Information(information_scale * H));
+  // Cancel out the gravity alignment
+  const gtsam::Pose3 T_gb_b = gtsam::Pose3(gtsam::Rot3(source_pose.linear()), gtsam::Vector3::Zero());
+  const gtsam::Pose3 T_ga_a = gtsam::Pose3(gtsam::Rot3(target_pose.linear()), gtsam::Vector3::Zero());
+  const gtsam::Pose3 T_a_b = T_ga_a.inverse() * T_target_source * T_gb_b;
+
+  return gtsam::make_shared<gtsam::BetweenFactor<gtsam::Pose3>>(target_key, source_key, T_a_b, gtsam::noiseModel::Gaussian::Information(information_scale * H));
 }
 
 void ManualLoopCloseModal::draw_canvas() {
   canvas->bind();
+  canvas->shader->set_uniform("color_mode", guik::ColorMode::VERTEX_COLOR);
+  canvas->shader->set_uniform("model_matrix", Eigen::Matrix4f::Identity().eval());
+
+  glk::Primitives::coordinate_system()->draw(*canvas->shader);
+
   canvas->shader->set_uniform("color_mode", guik::ColorMode::FLAT_COLOR);
   canvas->shader->set_uniform("material_color", Eigen::Vector4f(1.0f, 0.0f, 0.0f, 1.0f));
   canvas->shader->set_uniform("model_matrix", Eigen::Matrix4f::Identity().eval());
@@ -437,6 +584,15 @@ void ManualLoopCloseModal::draw_canvas() {
   source_drawable->draw(*canvas->shader);
 
   canvas->unbind();
+}
+
+bool ManualLoopCloseModal::show_note(const std::string& note) {
+  if (ImGui::IsItemHovered()) {
+    ImGui::BeginTooltip();
+    ImGui::Text("%s", note.c_str());
+    ImGui::EndTooltip();
+  }
+  return false;
 }
 
 }  // namespace glim
