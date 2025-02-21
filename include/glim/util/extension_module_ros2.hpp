@@ -48,7 +48,7 @@ public:
     sub = node.create_subscription<Msg>(topic, 100, [&](const std::shared_ptr<Msg> msg) { callback(msg); });
   }
 
-  virtual void insert_message_instance(const rclcpp::SerializedMessage& serialized_msg, const std::string& msg_type) override {
+  virtual void insert_message_instance(const rclcpp::SerializedMessage& serialized_msg, const std::string& msg_type = "") override {
     if (!msg_type.empty() && !this->msg_type.empty() && msg_type != this->msg_type) {
       spdlog::warn("msg type mismatch: topic={} expected={} actual={}", topic, this->msg_type, msg_type);
       return;
