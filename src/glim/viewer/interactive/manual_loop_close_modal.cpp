@@ -64,6 +64,14 @@ ManualLoopCloseModal::ManualLoopCloseModal(const std::shared_ptr<spdlog::logger>
 
 ManualLoopCloseModal::~ManualLoopCloseModal() {}
 
+bool ManualLoopCloseModal::is_target_set() const {
+  return target_key != -1 && target && target_drawable;
+}
+
+bool ManualLoopCloseModal::is_source_set() const {
+  return source_key != -1 && source && source_drawable;
+}
+
 void ManualLoopCloseModal::set_target(const gtsam::Key target_key, const gtsam_points::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose) {
   this->target_key = target_key;
   this->target_pose = target_pose;

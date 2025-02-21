@@ -27,6 +27,9 @@ public:
   ManualLoopCloseModal(const std::shared_ptr<spdlog::logger>& logger, int num_threads);
   ~ManualLoopCloseModal();
 
+  bool is_target_set() const;
+  bool is_source_set() const;
+
   void set_target(const gtsam::Key target_key, const gtsam_points::PointCloud::ConstPtr& target, const Eigen::Isometry3d& target_pose);
   void set_source(const gtsam::Key source_key, const gtsam_points::PointCloud::ConstPtr& source, const Eigen::Isometry3d& source_pose);
 
@@ -88,7 +91,7 @@ private:
   glk::Drawable::ConstPtr source_drawable;  // Gravity aligned source drawable
 
   gtsam_points::NearestNeighborSearch::Ptr target_fpfh_tree;
-  gtsam_points::NearestNeighborSearch::Ptr source_fpfh_tree; 
+  gtsam_points::NearestNeighborSearch::Ptr source_fpfh_tree;
 
   std::vector<SubMap::ConstPtr> target_submaps;
   std::vector<SubMap::ConstPtr> source_submaps;

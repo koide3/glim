@@ -108,6 +108,8 @@ protected:
   double points_alpha;
   double factors_alpha;
 
+  std::atomic_bool additional_session_loaded;
+
   // Click information
   Eigen::Vector4i right_clicked_info;
   Eigen::Vector3f right_clicked_pos;
