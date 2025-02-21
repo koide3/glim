@@ -439,7 +439,7 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::Prog
     ransac_params.seed = (seed += 4322);
     ransac_params.num_threads = num_threads;
 
-    result = gtsam_points::estimate_pose_ransac<gtsam_points::PointCloud>(*target, *source, target_fpfh, source_fpfh, *target_tree, *target_fpfh_tree, ransac_params);
+    result = gtsam_points::estimate_pose_ransac(*target, *source, target_fpfh, source_fpfh, *target_tree, *target_fpfh_tree, ransac_params);
 
   } else {
     logger->info("Estimating transformation GNC (seed={})", seed);
@@ -454,7 +454,7 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::Prog
     gnc_params.seed = (seed += 4322);
     gnc_params.num_threads = num_threads;
 
-    result = gtsam_points::estimate_pose_gnc<gtsam_points::PointCloud>(*target, *source, target_fpfh, source_fpfh, *target_tree, *target_fpfh_tree, *source_fpfh_tree, gnc_params);
+    result = gtsam_points::estimate_pose_gnc(*target, *source, target_fpfh, source_fpfh, *target_tree, *target_fpfh_tree, *source_fpfh_tree, gnc_params);
   }
 
   logger->info("Registration result");
