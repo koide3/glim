@@ -15,7 +15,7 @@ public:
   GenericTopicSubscription(const std::string& topic, const std::string& msg_type = "") : topic(topic), msg_type(msg_type) {}
 
   virtual void create_subscriber(rclcpp::Node& node) = 0;
-  virtual void insert_message_instance(const rclcpp::SerializedMessage& serialized_msg, const std::string& msg_type) = 0;
+  virtual void insert_message_instance(const rclcpp::SerializedMessage& serialized_msg, const std::string& msg_type = "") = 0;
 
   const std::string topic;
   const std::string msg_type;
