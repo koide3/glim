@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_set>
 #include <glim/mapping/global_mapping.hpp>
 #include <glim/mapping/async_global_mapping.hpp>
 #include <glim/viewer/interactive_viewer.hpp>
@@ -29,6 +30,7 @@ private:
   std::string init_map_path;
   std::unique_ptr<guik::ProgressModal> progress_modal;
 
+  std::unordered_set<std::string> imported_shared_libs;
   std::unique_ptr<AsyncGlobalMapping> async_global_mapping;
 };
 

@@ -80,6 +80,7 @@ void OfflineViewer::main_menu() {
 
   // open map
   if (start_open_map) {
+    logger->debug("open map");
     std::string map_path;
 
     guik::RecentFiles recent_files("offline_viewer_open");
@@ -91,6 +92,7 @@ void OfflineViewer::main_menu() {
     }
 
     if (!map_path.empty()) {
+      logger->debug("open map from {}", map_path);
       recent_files.push(map_path);
 
       if (boost::filesystem::exists(map_path + "/config")) {
@@ -106,9 +108,14 @@ void OfflineViewer::main_menu() {
         if (name.find("viewer") != std::string::npos || name.find("monitor") != std::string::npos) {
           continue;
         }
+        if (imported_shared_libs.count(name)) {
+          logger->debug("Extension module {} already loaded", name);
+          continue;
+        }
 
         logger->info("Export classes from {}", name);
         ExtensionModule::export_classes(name);
+        imported_shared_libs.insert(name);
       }
 
       // if a map is already loaded, use existing map to load new map into
