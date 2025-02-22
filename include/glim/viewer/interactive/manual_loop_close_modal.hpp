@@ -40,7 +40,7 @@ public:
   gtsam::NonlinearFactor::shared_ptr run();
 
 private:
-  std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> preprocess(guik::ProgressInterface& progress);
+  std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> preprocess_maps(guik::ProgressInterface& progress);
 
   std::shared_ptr<Eigen::Isometry3d> align_global(guik::ProgressInterface& progress);
 

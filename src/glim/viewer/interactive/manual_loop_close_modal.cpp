@@ -165,11 +165,13 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
     if (ImGui::Button("Indoor")) {
       min_distance = 0.25f;
       fpfh_radius = 2.5f;
+      max_correspondence_distance = 1.0f;
     }
     ImGui::SameLine();
     if (ImGui::Button("Outdoor")) {
       min_distance = 0.5f;
       fpfh_radius = 5.0f;
+      max_correspondence_distance = 3.0f;
     }
 
     ImGui::DragFloat("Min distance", &min_distance, 0.01f, 0.01f, 100.0f) || show_note("Minimum distance between points for downsampling.");
@@ -191,7 +193,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
   // Open the preprocessing progress modal
   if (open_preprocess_modal) {
     progress_modal->open<std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr>>("preprocess", [this](guik::ProgressInterface& progress) {
-      return preprocess(progress);
+      return preprocess_maps(progress);
     });
   }
 
@@ -312,7 +314,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
   return factor;
 }
 
-std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> ManualLoopCloseModal::preprocess(guik::ProgressInterface& progress) {
+std::pair<gtsam_points::PointCloudCPU::Ptr, gtsam_points::PointCloudCPU::Ptr> ManualLoopCloseModal::preprocess_maps(guik::ProgressInterface& progress) {
   logger->info("preprocessing maps");
   progress.set_title("Preprocessing maps");
   progress.set_maximum(target_submaps.size() + source_submaps.size());
@@ -421,8 +423,6 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::Prog
   const auto target_fpfh = target->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
   const auto source_fpfh = source->aux_attribute<gtsam_points::FPFHSignature>("fpfh");
 
-  std::shared_ptr<Eigen::Isometry3d> trans(new Eigen::Isometry3d);
-
   progress.increment();
 
   gtsam_points::RegistrationResult result;
@@ -461,7 +461,7 @@ std::shared_ptr<Eigen::Isometry3d> ManualLoopCloseModal::align_global(guik::Prog
   logger->info("T_target_source={}", convert_to_string(result.T_target_source));
   logger->info("inlier_rate={}", result.inlier_rate);
 
-  *trans = result.T_target_source;
+  std::shared_ptr<Eigen::Isometry3d> trans(new Eigen::Isometry3d(result.T_target_source));
 
   return trans;
 }

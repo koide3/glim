@@ -62,7 +62,7 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
   min_overlap = 0.2f;
   cont_optimize = false;
 
-  additional_session_loaded = false;
+  needs_session_merge = false;
 
   enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
   partial_rendering_budget = config.param("interactive_viewer", "partial_rendering_budget", 1024);
@@ -242,7 +242,7 @@ void InteractiveViewer::drawable_selection() {
   ImGui::DragFloat("Min overlap", &min_overlap, 0.01f, 0.01f, 1.0f);
   show_note("Minimum overlap ratio for finding overlapping submaps.");
 
-  if (additional_session_loaded) {
+  if (needs_session_merge) {
     ImGui::BeginDisabled();
   }
 
@@ -256,11 +256,11 @@ void InteractiveViewer::drawable_selection() {
     GlobalMappingCallbacks::request_to_recover();
   }
 
-  if (additional_session_loaded) {
+  if (needs_session_merge) {
     ImGui::EndDisabled();
   }
 
-  if (submaps.size() && additional_session_loaded) {
+  if (submaps.size() && needs_session_merge) {
     if (ImGui::Button("Merge sessions") || show_note("Merge the lastly loaded session with the previous session.")) {
       logger->info("merging sessions...");
       if (submaps.empty()) {
@@ -293,7 +293,7 @@ void InteractiveViewer::drawable_selection() {
     }
   }
 
-  if (additional_session_loaded) {
+  if (needs_session_merge) {
     ImGui::BeginDisabled();
   }
 
@@ -310,7 +310,7 @@ void InteractiveViewer::drawable_selection() {
   }
   show_note("Continuously optimize the graph.");
 
-  if (additional_session_loaded) {
+  if (needs_session_merge) {
     ImGui::EndDisabled();
   }
 
@@ -346,7 +346,7 @@ void InteractiveViewer::context_menu() {
 
     if (type == PickType::FRAME) {
       const int frame_id = right_clicked_info[3];
-      ImGui::TextUnformatted(("Submap ID=" + std::to_string(frame_id)).c_str());
+      ImGui::TextUnformatted(("Submap ID : " + std::to_string(frame_id)).c_str());
       if (ImGui::MenuItem("Loop begin", nullptr, manual_loop_close_modal->is_target_set())) {
         manual_loop_close_modal->set_target(X(frame_id), submaps[frame_id]->frame, submap_poses[frame_id]);
       }
@@ -373,7 +373,7 @@ void InteractiveViewer::run_modals() {
 
   auto manual_loop_close_factor = manual_loop_close_modal->run();
   if (manual_loop_close_factor) {
-    additional_session_loaded = false;
+    needs_session_merge = false;
   }
   factors.push_back(manual_loop_close_factor);
   factors.push_back(bundle_adjustment_modal->run());
@@ -535,7 +535,7 @@ void InteractiveViewer::globalmap_on_insert_submap(const SubMap::ConstPtr& subma
   std::shared_ptr<Eigen::Isometry3d> pose(new Eigen::Isometry3d(submap->T_world_origin));
   invoke([this, submap, pose] {
     if (submaps.size() && submaps.back()->session_id != submap->session_id) {
-      additional_session_loaded = true;
+      needs_session_merge = true;
     }
 
     trajectory->update_anchor(submap->frames[submap->frames.size() / 2]->stamp, submap->T_world_origin);

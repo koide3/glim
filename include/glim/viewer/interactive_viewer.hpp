@@ -108,7 +108,7 @@ protected:
   double points_alpha;
   double factors_alpha;
 
-  std::atomic_bool additional_session_loaded;
+  std::atomic_bool needs_session_merge;
 
   // Click information
   Eigen::Vector4i right_clicked_info;
