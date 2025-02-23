@@ -4,7 +4,7 @@
 
 **GLIM** is a versatile and extensible range-based 3D mapping framework.
 
-- ***Accuracy:*** GLIM is based on direct multi-scan registration error minimization on factor graphs that enables to accurately retain the consistency of mappint results. GPU acceleration is supported to maximize the mapping speed and quality.
+- ***Accuracy:*** GLIM is based on direct multi-scan registration error minimization on factor graphs that enables to accurately retain the consistency of mapping results. GPU acceleration is supported to maximize the mapping speed and quality.
 - ***Easy-to-use:*** GLIM offers an interactive map correction interface that enables the user to manually correct mapping failures and easily refine mapping results.
 - ***Versatility:*** As we eliminated sensor-specific processes, GLIM can be applied to any kind of range sensors including:
     - Spinning-type LiDAR (e.g., Velodyne HDL32e)
@@ -15,7 +15,7 @@
 
 **Documentation: [https://koide3.github.io/glim/](https://koide3.github.io/glim/)**  
 **Docker hub:** [koide3/glim_ros1](https://hub.docker.com/repository/docker/koide3/glim_ros1/tags), [koide3/glim_ros2](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags), [ROS1 on Jetpack 5.1.4](https://hub.docker.com/r/junekyoopark/arm64v8_glim_ros1_cuda12.2) (made by [junekyoopark](https://github.com/junekyoopark))  
-**Related packges:** [gtsam_points](https://github.com/koide3/gtsam_points), [glim](https://github.com/koide3/glim), [glim_ros1](https://github.com/koide3/glim_ros1), [glim_ros2](https://github.com/koide3/glim_ros2), [glim_ext](https://github.com/koide3/glim_ext)
+**Related packages:** [gtsam_points](https://github.com/koide3/gtsam_points), [glim](https://github.com/koide3/glim), [glim_ros1](https://github.com/koide3/glim_ros1), [glim_ros2](https://github.com/koide3/glim_ros2), [glim_ext](https://github.com/koide3/glim_ext)
 
 Tested on Ubuntu 22.04 /24.04 with CUDA 12.2 / 12.5, and NVIDIA Jetson Orin (Jetpack 6.0).
 
