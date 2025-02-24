@@ -44,21 +44,13 @@ If you find this package useful for your project, please consider leaving a comm
 
 See more at [Video Gallery](https://github.com/koide3/glim/wiki/Video-Gallery).
 
-### Mapping with various range sensors
+| Mapping with various range sensors | Outdoor driving test with Livox MID360 |
+|---|---|
+|[<img width="480" src="https://github.com/user-attachments/assets/95e153cd-1538-4ca6-8dd0-691e920dccd9">](https://www.youtube.com/watch?v=_fwK4awbW18)|[<img width="480" src="https://github.com/user-attachments/assets/6b337369-a32c-4b07-b0e0-b63f6747cdab">](https://www.youtube.com/watch?v=CIfRqeV0irE)|
 
-[<img width="450" src="https://github.com/user-attachments/assets/95e153cd-1538-4ca6-8dd0-691e920dccd9">](https://www.youtube.com/watch?v=_fwK4awbW18)
-
-### Outdoor driving test with Livox MID360
-
-[<img width="450" src="https://github.com/user-attachments/assets/6b337369-a32c-4b07-b0e0-b63f6747cdab">](https://www.youtube.com/watch?v=CIfRqeV0irE)
-
-### Manual loop closing
-
-![Image](https://github.com/user-attachments/assets/0f02950a-6b7b-437c-a100-21d6575f7c93)
-
-### Merging multiple mapping sessions
-
-![Image](https://github.com/user-attachments/assets/c77cca29-921b-4e1c-9583-2b962ccda2cb)
+| Manual loop closing | Merging multiple mapping sessions |
+|---|---|
+|![Image](https://github.com/user-attachments/assets/0f02950a-6b7b-437c-a100-21d6575f7c93)|![Image](https://github.com/user-attachments/assets/c77cca29-921b-4e1c-9583-2b962ccda2cb)|
 
 ## Estimation modules
 
