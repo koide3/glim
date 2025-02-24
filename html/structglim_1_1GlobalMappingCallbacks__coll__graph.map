@@ -1,0 +1,19 @@
+<map id="glim::GlobalMappingCallbacks" name="glim::GlobalMappingCallbacks">
+<area shape="rect" id="Node000001" title="Global mapping&#45;related callbacks." alt="" coords="497,332,717,357"/>
+<area shape="rect" id="Node000002" href="$classCallbackSlot.html" title=" " alt="" coords="41,5,224,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,43,296,56,358,75,419,101,475,136,501,158,523,184,561,240,588,293,604,331,599,333,583,295,557,243,519,188,497,162,472,140,416,106,356,80,294,61,237,48"/>
+<area shape="rect" id="Node000003" href="$classCallbackSlot.html" title=" " alt="" coords="36,84,229,168"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="243,144,358,176,418,199,475,226,513,251,547,280,597,330,593,334,544,284,509,256,472,231,415,204,356,181,242,149"/>
+<area shape="rect" id="Node000004" href="$classCallbackSlot.html" title=" " alt="" coords="42,192,223,247"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="237,235,352,259,474,291,577,329,575,334,473,297,351,265,236,240"/>
+<area shape="rect" id="Node000005" href="$classCallbackSlot.html" title=" " alt="" coords="29,271,237,325"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="251,307,497,331,497,337,250,312"/>
+<area shape="rect" id="Node000006" href="$classCallbackSlot.html" title=" " alt="" coords="5,349,260,433"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="274,375,497,353,497,358,274,380"/>
+<area shape="rect" id="Node000007" href="$classCallbackSlot.html" title=" " alt="" coords="27,458,238,527"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="251,469,360,444,472,409,534,382,583,355,586,360,536,387,474,414,361,449,252,474"/>
+<area shape="rect" id="Node000008" href="$classCallbackSlot.html" title=" " alt="" coords="49,552,216,577"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="229,560,287,554,350,542,413,523,472,496,515,463,551,424,579,386,597,356,601,359,583,389,555,427,518,467,475,500,415,528,351,547,288,559,230,565"/>
+<area shape="rect" id="Node000009" href="$classCallbackSlot.html" title=" " alt="" coords="59,603,206,643"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="219,634,279,636,345,632,412,618,443,605,472,589,502,565,527,535,548,502,565,468,589,403,601,357,606,358,594,405,570,470,553,505,531,538,505,568,475,594,445,610,413,623,346,638,279,642,219,639"/>
+</map>
