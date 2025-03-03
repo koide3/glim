@@ -30,6 +30,7 @@ namespace glim {
 class SubMapEditor {
 public:
   SubMapEditor(const std::shared_ptr<spdlog::logger>& logger, int num_threads) : logger(logger) {
+    show_picked_point = false;
     show_selection_radius = false;
     draw_gizmo = true;
     selected_tool = 0;
@@ -63,10 +64,12 @@ public:
       ImGui::OpenPopup("context_menu");
     }
 
+    show_picked_point = false;
     show_selection_radius = false;
     show_segmentation_radius = false;
 
     if (ImGui::BeginPopup("context_menu", ImGuiWindowFlags_AlwaysAutoResize)) {
+      show_picked_point = true;
       ImGui::Text("Point: (%.1f, %.1f, %.1f)", this->picked_point.x(), this->picked_point.y(), this->picked_point.z());
       ImGui::Separator();
 
@@ -193,6 +196,12 @@ public:
 
     if (selected_points.empty()) {
       viewer->remove_drawable("selected_points");
+    }
+
+    if (show_picked_point) {
+      viewer->update_sphere("picked_point", guik::FlatRed().translate(this->picked_point).scale(0.2));
+    } else {
+      viewer->remove_drawable("picked_point");
     }
 
     if (show_selection_radius) {
@@ -352,6 +361,7 @@ private:
   glim::SubMap::Ptr submap;
   glk::PointCloudBuffer::Ptr submap_drawable;
 
+  bool show_picked_point;
   bool show_selection_radius;
 
   bool draw_gizmo;
@@ -440,6 +450,14 @@ void MapEditor::main_menu() {
         }
       }
 
+      if (ImGui::MenuItem("Save map")) {
+        if (submaps.empty()) {
+          logger->warn("No map to save");
+        } else {
+          start_save_map = true;
+        }
+      }
+
       if (ImGui::MenuItem("Close map")) {
         if (submaps.empty()) {
           logger->warn("No map to close");
@@ -448,14 +466,6 @@ void MapEditor::main_menu() {
           submap_drawables.clear();
           update_viewer();
           submap_editor->set_submap(nullptr);
-        }
-      }
-
-      if (ImGui::MenuItem("Save map")) {
-        if (submaps.empty()) {
-          logger->warn("No map to save");
-        } else {
-          start_save_map = true;
         }
       }
 
