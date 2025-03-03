@@ -1,5 +1,6 @@
 #include <glim/mapping/global_mapping.hpp>
 
+#include <map>
 #include <unordered_set>
 #include <spdlog/spdlog.h>
 #include <boost/filesystem.hpp>
@@ -83,6 +84,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
   }
 #endif
 
+  session_id = 0;
   imu_integration.reset(new IMUIntegration);
 
   new_values.reset(new gtsam::Values);
@@ -214,6 +216,8 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
     }
   }
 
+  logger->debug("|new_factors|={} |new_values|={}", new_factors->size(), new_values->size());
+
   Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
   auto result = update_isam2(*new_factors, *new_values);
   Callbacks::on_smoother_update_result(*isam2, result);
@@ -284,6 +288,9 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
   // Between factors are Vector2i actually. A bad use of Vector3i
   std::unordered_set<Eigen::Vector3i, gtsam_points::Vector3iHash> existing_factors;
   for (const auto& factor : isam2->getFactorsUnsafe()) {
+    if (factor == nullptr) {
+      continue;
+    }
     if (factor->keys().size() != 2) {
       continue;
     }
@@ -297,8 +304,7 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
     existing_factors.emplace(sym1.index(), sym2.index(), 0);
   }
 
-  gtsam::NonlinearFactorGraph new_factors;
-
+  double squared_max_implicit_loop_distance = params.max_implicit_loop_distance * params.max_implicit_loop_distance;
   for (int i = 0; i < submaps.size(); i++) {
     for (int j = i + 1; j < submaps.size(); j++) {
       if (existing_factors.count(Eigen::Vector3i(i, j, 0))) {
@@ -306,8 +312,8 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
       }
 
       const Eigen::Isometry3d delta = submaps[i]->T_world_origin.inverse() * submaps[j]->T_world_origin;
-      const double dist = delta.translation().norm();
-      if (dist > params.max_implicit_loop_distance) {
+      const double squared_dist = delta.translation().squaredNorm();
+      if (squared_dist > squared_max_implicit_loop_distance) {
         continue;
       }
 
@@ -324,24 +330,26 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
         for (const auto& voxelmap : submaps[i]->voxelmaps) {
-          new_factors.emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
+          new_factors->emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
         }
       }
 #endif
       else {
         for (const auto& voxelmap : submaps[i]->voxelmaps) {
-          new_factors.emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(i), X(j), voxelmap, subsampled_submaps[j]);
+          new_factors->emplace_shared<gtsam_points::IntegratedVGICPFactor>(X(i), X(j), voxelmap, subsampled_submaps[j]);
         }
       }
     }
   }
 
-  logger->info("new overlapping {} submap pairs found", new_factors.size());
+  logger->info("new overlapping {} submap pairs found", new_factors->size());
 
-  gtsam::Values new_values;
-  Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = update_isam2(new_factors, new_values);
+  Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
+  auto result = update_isam2(*new_factors, *new_values);
   Callbacks::on_smoother_update_result(*isam2, result);
+
+  new_factors->resize(0);
+  new_values->clear();
 
   update_submaps();
   Callbacks::on_update_submaps(submaps);
@@ -352,10 +360,13 @@ void GlobalMapping::optimize() {
     return;
   }
 
-  gtsam::NonlinearFactorGraph new_factors;
-  gtsam::Values new_values;
-  Callbacks::on_smoother_update(*isam2, new_factors, new_values);
-  auto result = update_isam2(new_factors, new_values);
+  logger->info("|new_factors|={} |new_values|={}", new_factors->size(), new_values->size());
+
+  Callbacks::on_smoother_update(*isam2, *new_factors, *new_values);
+  auto result = update_isam2(*new_factors, *new_values);
+
+  new_factors.reset(new gtsam::NonlinearFactorGraph);
+  new_values.reset(new gtsam::Values);
 
   Callbacks::on_smoother_update_result(*isam2, result);
 
@@ -423,9 +434,11 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_co
   const auto& current_submap = submaps.back();
 
   double previous_overlap = 0.0;
+  double squared_max_implicit_loop_distance = params.max_implicit_loop_distance * params.max_implicit_loop_distance;
+
   for (int i = 0; i < current; i++) {
-    const double dist = (submaps[i]->T_world_origin.translation() - current_submap->T_world_origin.translation()).norm();
-    if (dist > params.max_implicit_loop_distance) {
+    const double squared_dist = (submaps[i]->T_world_origin.translation() - current_submap->T_world_origin.translation()).squaredNorm();
+    if (squared_dist > squared_max_implicit_loop_distance) {
       continue;
     }
 
@@ -484,6 +497,7 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
     arena->execute([&] {
 #endif
       result = isam2->update(new_factors, new_values);
+
 #ifdef GTSAM_USE_TBB
     });
 #endif
@@ -644,6 +658,8 @@ bool GlobalMapping::load(const std::string& path) {
     return false;
   }
 
+  const int start_from_frame_id = submaps.size();
+
   std::string token;
   int num_submaps, num_all_frames, num_matching_cost_factors;
 
@@ -657,14 +673,16 @@ bool GlobalMapping::load(const std::string& path) {
     ifs >> token >> std::get<0>(factor) >> std::get<1>(factor) >> std::get<2>(factor);
   }
 
-  logger->info("Load submaps");
-  submaps.resize(num_submaps);
-  subsampled_submaps.resize(num_submaps);
+  logger->info("Load submaps (session_id={})", session_id);
+  submaps.reserve(submaps.size() + num_submaps);
+  subsampled_submaps.reserve(submaps.size() + num_submaps);
   for (int i = 0; i < num_submaps; i++) {
     auto submap = SubMap::load((boost::format("%s/%06d") % path % i).str());
     if (!submap) {
       return false;
     }
+    submap->id += start_from_frame_id;
+    submap->session_id = session_id;
 
     // Adaptively determine the voxel resolution based on the median distance
     const int max_scan_count = 256;
@@ -680,19 +698,19 @@ bool GlobalMapping::load(const std::string& path) {
       subsampled_submap = gtsam_points::random_sampling(submap->frame, params.randomsampling_rate, mt);
     }
 
-    submaps[i] = submap;
-    submaps[i]->voxelmaps.clear();
-    subsampled_submaps[i] = subsampled_submap;
+    submaps.push_back(submap);
+    submaps.back()->voxelmaps.clear();
+    subsampled_submaps.push_back(subsampled_submap);
 
     if (params.enable_gpu) {
 #ifdef GTSAM_POINTS_USE_CUDA
-      subsampled_submaps[i] = gtsam_points::PointCloudGPU::clone(*subsampled_submaps[i]);
+      subsampled_submaps.back() = gtsam_points::PointCloudGPU::clone(*subsampled_submaps.back());
 
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
         const double resolution = base_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
         auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution);
-        voxelmap->insert(*subsampled_submaps[i]);
-        submaps[i]->voxelmaps.push_back(voxelmap);
+        voxelmap->insert(*subsampled_submaps.back());
+        submaps.back()->voxelmaps.push_back(voxelmap);
       }
 #else
       logger->warn("GPU is enabled for global_mapping but gtsam_points was built without CUDA!!");
@@ -701,21 +719,21 @@ bool GlobalMapping::load(const std::string& path) {
       for (int j = 0; j < params.submap_voxelmap_levels; j++) {
         const double resolution = base_resolution * std::pow(params.submap_voxelmap_scaling_factor, j);
         auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapCPU>(resolution);
-        voxelmap->insert(*subsampled_submaps[i]);
-        submaps[i]->voxelmaps.push_back(voxelmap);
+        voxelmap->insert(*subsampled_submaps.back());
+        submaps.back()->voxelmaps.push_back(voxelmap);
       }
     }
 
     Callbacks::on_insert_submap(submap);
   }
 
-  gtsam::Values values;
-  gtsam::NonlinearFactorGraph graph;
+  gtsam::Values values, loaded_values;
+  gtsam::NonlinearFactorGraph graph, loaded_graph;
   bool needs_recover = false;
 
+  logger->info("deserializing factor graph");
   try {
-    logger->info("deserializing factor graph");
-    gtsam::deserializeFromBinaryFile(path + "/graph.bin", graph);
+    gtsam::deserializeFromBinaryFile(path + "/graph.bin", loaded_graph);
   } catch (boost::archive::archive_exception e) {
     logger->error("failed to deserialize factor graph!!");
     logger->error(e.what());
@@ -725,9 +743,9 @@ bool GlobalMapping::load(const std::string& path) {
     needs_recover = true;
   }
 
+  logger->info("deserializing values");
   try {
-    logger->info("deserializing values");
-    gtsam::deserializeFromBinaryFile(path + "/values.bin", values);
+    gtsam::deserializeFromBinaryFile(path + "/values.bin", loaded_values);
   } catch (boost::archive::archive_exception e) {
     logger->error("failed to deserialize values!!");
     logger->error(e.what());
@@ -735,13 +753,53 @@ bool GlobalMapping::load(const std::string& path) {
     logger->error("failed to deserialize values!!");
     logger->error(e.what());
     needs_recover = true;
+  }
+
+  // remap keys in graph and values if dump previously loaded
+  if (start_from_frame_id > 0) {
+    std::map<gtsam::Key, gtsam::Key> rekey_mapping;
+    for (int i = 0; i < num_submaps; i++) {
+      rekey_mapping[X(i)] = X(i + start_from_frame_id);
+      rekey_mapping[E(i * 2)] = E((i + start_from_frame_id) * 2);
+      rekey_mapping[E(i * 2 + 1)] = E((i + start_from_frame_id) * 2 + 1);
+      rekey_mapping[B(i * 2)] = B((i + start_from_frame_id) * 2);
+      rekey_mapping[B(i * 2 + 1)] = B((i + start_from_frame_id) * 2 + 1);
+      rekey_mapping[V(i * 2)] = V((i + start_from_frame_id) * 2);
+      rekey_mapping[V(i * 2 + 1)] = V((i + start_from_frame_id) * 2 + 1);
+    }
+
+    auto first_factor = loaded_graph.front();
+    if (boost::dynamic_pointer_cast<gtsam::LinearContainerFactor>(first_factor)) {
+      logger->info("First factor is a LinearContainerFactor, removing from graph before loading");
+      graph = gtsam::NonlinearFactorGraph(loaded_graph.begin() + 1, loaded_graph.end());
+    } else {
+      graph = loaded_graph;
+    }
+
+    // rekey graph
+    logger->info("rekeying factors");
+    graph = graph.rekey(rekey_mapping);
+
+    // rekey values
+    for (auto it = loaded_values.begin(); it != loaded_values.end(); ++it) {
+      auto matched_key = rekey_mapping.find(it->key);
+      if (matched_key != rekey_mapping.end()) {
+        values.insert(matched_key->second, it->value);
+      } else {
+        logger->warn("No remapping found for Value with key {}, keeping it as is", gtsam::Symbol(it->key).string());
+        values.insert(it->key, it->value);
+      }
+    }
+  } else {
+    graph = loaded_graph;
+    values = loaded_values;
   }
 
   logger->info("creating matching cost factors");
   for (const auto& factor : matching_cost_factors) {
     const auto type = std::get<0>(factor);
-    const auto first = std::get<1>(factor);
-    const auto second = std::get<2>(factor);
+    const auto first = std::get<1>(factor) + start_from_frame_id;
+    const auto second = std::get<2>(factor) + start_from_frame_id;
 
     if (type == "vgicp" || type == "vgicp_gpu") {
       if (params.enable_gpu) {
@@ -781,15 +839,22 @@ bool GlobalMapping::load(const std::string& path) {
     values.insert_or_assign(recovered.second);
   }
 
-  logger->info("optimize");
-  Callbacks::on_smoother_update(*isam2, graph, values);
-  auto result = update_isam2(graph, values);
-  Callbacks::on_smoother_update_result(*isam2, result);
+  if (start_from_frame_id <= 0) {
+    logger->info("optimize");
+    Callbacks::on_smoother_update(*isam2, graph, values);
+    auto result = update_isam2(graph, values);
+    Callbacks::on_smoother_update_result(*isam2, result);
 
-  update_submaps();
-  Callbacks::on_update_submaps(submaps);
+    update_submaps();
+    Callbacks::on_update_submaps(submaps);
+  } else {
+    logger->info("skip optimization");
+    this->new_factors->add(graph);
+    this->new_values->insert(values);
+  }
 
   logger->info("done");
+  session_id++;
 
   return true;
 }

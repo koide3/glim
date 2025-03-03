@@ -43,6 +43,13 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
   request_to_terminate = false;
   request_to_clear = false;
 
+#ifdef _OPENMP
+  num_threads = omp_get_max_threads();
+#else
+  num_threads = 1;
+#endif
+
+  color_mode = 0;
   coord_scale = 1.0f;
   sphere_scale = 0.5f;
 
@@ -54,6 +61,8 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
 
   min_overlap = 0.2f;
   cont_optimize = false;
+
+  needs_session_merge = false;
 
   enable_partial_rendering = config.param("interactive_viewer", "enable_partial_rendering", false);
   partial_rendering_budget = config.param("interactive_viewer", "partial_rendering_budget", 1024);
@@ -145,7 +154,7 @@ void InteractiveViewer::viewer_loop() {
     return true;
   });
 
-  manual_loop_close_modal.reset(new ManualLoopCloseModal);
+  manual_loop_close_modal.reset(new ManualLoopCloseModal(logger, num_threads));
   bundle_adjustment_modal.reset(new BundleAdjustmentModal);
 
   setup_ui();
@@ -184,45 +193,125 @@ void InteractiveViewer::invoke(const std::function<void()>& task) {
  * @brief Drawable selection UI
  */
 void InteractiveViewer::drawable_selection() {
-  ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  if (!ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    return;
+  }
+
+  const auto show_note = [](const std::string& text) {
+    if (ImGui::IsItemHovered()) {
+      ImGui::BeginTooltip();
+      ImGui::Text("%s", text.c_str());
+      ImGui::EndTooltip();
+    }
+    return false;
+  };
+
+  std::vector<const char*> color_modes = {"RAINBOW", "INTENSITY", "SESSION"};
+  if (ImGui::Combo("ColorMode", &color_mode, color_modes.data(), color_modes.size())) {
+    update_viewer();
+  }
+  show_note("Color mode for rendering submaps.\n- RAINBOW=Altitute encoding color\n- INTENSITY=Point intensity\n- SESSION=Session ID");
+
   ImGui::Checkbox("Trajectory", &draw_traj);
   ImGui::SameLine();
-  ImGui::Checkbox("Points", &draw_points);
+  ImGui::Checkbox("Submaps", &draw_points);
 
   ImGui::Checkbox("Factors", &draw_factors);
   ImGui::SameLine();
   ImGui::Checkbox("Spheres", &draw_spheres);
 
-  ImGui::Checkbox("Current", &draw_current);
+  ImGui::Checkbox("Current scan", &draw_current);
 
-  bool do_update_viewer = false;
-  do_update_viewer |= ImGui::DragFloat("coord scale", &coord_scale, 0.01f, 0.01f, 100.0f);
-  do_update_viewer |= ImGui::DragFloat("sphere scale", &sphere_scale, 0.01f, 0.01f, 100.0f);
+  if (ImGui::BeginMenu("Display settings")) {
+    bool do_update_viewer = false;
 
-  if (do_update_viewer) {
-    update_viewer();
+    do_update_viewer |= ImGui::DragFloat("coord scale", &coord_scale, 0.01f, 0.01f, 100.0f);
+    show_note("Submap coordinate system maker scale.");
+
+    do_update_viewer |= ImGui::DragFloat("sphere scale", &sphere_scale, 0.01f, 0.01f, 100.0f);
+    show_note("Submap selection sphere maker scale.");
+
+    ImGui::EndMenu();
+
+    if (do_update_viewer) {
+      update_viewer();
+    }
   }
 
+  ImGui::Separator();
   ImGui::DragFloat("Min overlap", &min_overlap, 0.01f, 0.01f, 1.0f);
-  if (ImGui::Button("Find overlapping submaps")) {
+  show_note("Minimum overlap ratio for finding overlapping submaps.");
+
+  if (needs_session_merge) {
+    ImGui::BeginDisabled();
+  }
+
+  if (ImGui::Button("Find overlapping submaps") || show_note("Find overlapping submaps and create matching cost factors between them.")) {
     logger->info("finding overlapping submaps...");
     GlobalMappingCallbacks::request_to_find_overlapping_submaps(min_overlap);
   }
 
-  if (ImGui::Button("Recover graph")) {
+  if (ImGui::Button("Recover graph") || show_note("Detect and fix corrupted graph.")) {
     logger->info("recovering graph...");
     GlobalMappingCallbacks::request_to_recover();
+  }
+
+  if (needs_session_merge) {
+    ImGui::EndDisabled();
+  }
+
+  if (submaps.size() && needs_session_merge) {
+    if (ImGui::Button("Merge sessions") || show_note("Merge the lastly loaded session with the previous session.")) {
+      logger->info("merging sessions...");
+      if (submaps.empty()) {
+        logger->warn("No submaps");
+      } else if (submaps.front()->session_id == submaps.back()->session_id) {
+        logger->warn("There is only one session");
+      } else {
+        const int source_session_id = submaps.back()->session_id;
+        const auto source_begin = std::find_if(submaps.begin(), submaps.end(), [=](const SubMap::ConstPtr& submap) { return submap->session_id == source_session_id; });
+
+        const std::vector<SubMap::ConstPtr> target_submaps(submaps.begin(), source_begin);
+        const std::vector<SubMap::ConstPtr> source_submaps(source_begin, submaps.end());
+
+        logger->info("|submaps|={} |targets|={} |sources|={} source_session_id={}", submaps.size(), target_submaps.size(), source_submaps.size(), source_session_id);
+        manual_loop_close_modal->set_submaps(target_submaps, source_submaps);
+      }
+
+      std::vector<SubMap::ConstPtr> target_submaps;
+      std::vector<SubMap::ConstPtr> source_submaps;
+      for (const auto& submap : submaps) {
+        if (target_submaps.empty()) {
+          target_submaps.emplace_back(submap);
+          continue;
+        }
+        if (target_submaps.back()->session_id == submap->session_id) {
+          target_submaps.emplace_back(submap);
+          continue;
+        }
+      }
+    }
+  }
+
+  if (needs_session_merge) {
+    ImGui::BeginDisabled();
   }
 
   if (ImGui::Button("Optimize")) {
     logger->info("optimizing...");
     GlobalMappingCallbacks::request_to_optimize();
   }
+  show_note("Optimize the graph.");
 
   ImGui::SameLine();
   ImGui::Checkbox("##Cont optimize", &cont_optimize);
   if (cont_optimize) {
     GlobalMappingCallbacks::request_to_optimize();
+  }
+  show_note("Continuously optimize the graph.");
+
+  if (needs_session_merge) {
+    ImGui::EndDisabled();
   }
 
   ImGui::End();
@@ -257,10 +346,11 @@ void InteractiveViewer::context_menu() {
 
     if (type == PickType::FRAME) {
       const int frame_id = right_clicked_info[3];
-      if (ImGui::MenuItem("Loop begin")) {
+      ImGui::TextUnformatted(("Submap ID : " + std::to_string(frame_id)).c_str());
+      if (ImGui::MenuItem("Loop begin", nullptr, manual_loop_close_modal->is_target_set())) {
         manual_loop_close_modal->set_target(X(frame_id), submaps[frame_id]->frame, submap_poses[frame_id]);
       }
-      if (ImGui::MenuItem("Loop end")) {
+      if (ImGui::MenuItem("Loop end", nullptr, manual_loop_close_modal->is_source_set())) {
         manual_loop_close_modal->set_source(X(frame_id), submaps[frame_id]->frame, submap_poses[frame_id]);
       }
     }
@@ -280,7 +370,12 @@ void InteractiveViewer::context_menu() {
  */
 void InteractiveViewer::run_modals() {
   std::vector<gtsam::NonlinearFactor::shared_ptr> factors;
-  factors.push_back(manual_loop_close_modal->run());
+
+  auto manual_loop_close_factor = manual_loop_close_modal->run();
+  if (manual_loop_close_factor) {
+    needs_session_merge = false;
+  }
+  factors.push_back(manual_loop_close_factor);
   factors.push_back(bundle_adjustment_modal->run());
 
   factors.erase(std::remove(factors.begin(), factors.end(), nullptr), factors.end());
@@ -309,10 +404,30 @@ void InteractiveViewer::update_viewer() {
     auto drawable = viewer->find_drawable("submap_" + std::to_string(submap->id));
     if (drawable.first) {
       drawable.first->add("model_matrix", submap_pose.matrix());
+
+      switch (color_mode) {
+        case 0:
+          drawable.first->set_color_mode(guik::ColorMode::RAINBOW);
+          break;
+        case 1:
+          drawable.first->set_color_mode(guik::ColorMode::VERTEX_COLOR);
+          break;
+        case 2:
+          drawable.first->set_color_mode(guik::ColorMode::FLAT_COLOR);
+          break;
+      }
     } else {
+      const Eigen::Vector4f color = glk::colormap_categoricalf(glk::COLORMAP::TURBO, submap->session_id, 6);
+
       const Eigen::Vector4i info(static_cast<int>(PickType::POINTS), 0, 0, submap->id);
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
-      auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info).set_alpha(points_alpha);
+
+      if (submap->frame->has_intensities()) {
+        cloud_buffer
+          ->add_intensity(glk::COLORMAP::TURBO, submap->frame->intensities, submap->frame->size(), 1.0 / *std::max_element(submap->frame->intensities, submap->frame->intensities));
+      }
+
+      auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info).set_color(color).set_alpha(points_alpha);
 
       if (enable_partial_rendering) {
         cloud_buffer->enable_partial_rendering(partial_rendering_budget);
@@ -419,6 +534,10 @@ void InteractiveViewer::odometry_on_new_frame(const EstimationFrame::ConstPtr& n
 void InteractiveViewer::globalmap_on_insert_submap(const SubMap::ConstPtr& submap) {
   std::shared_ptr<Eigen::Isometry3d> pose(new Eigen::Isometry3d(submap->T_world_origin));
   invoke([this, submap, pose] {
+    if (submaps.size() && submaps.back()->session_id != submap->session_id) {
+      needs_session_merge = true;
+    }
+
     trajectory->update_anchor(submap->frames[submap->frames.size() / 2]->stamp, submap->T_world_origin);
 
     submap_poses.push_back(*pose);
