@@ -60,6 +60,8 @@ public:
   double isam2_relinearize_skip;
   double isam2_relinearize_thresh;
 
+  double max_correspondence_distance;
+
   int num_threads;                  // Number of threads for preprocessing and per-factor parallelism
   int num_smoother_update_threads;  // Number of threads for TBB parallelism in smoother update (should be kept 1)
 };

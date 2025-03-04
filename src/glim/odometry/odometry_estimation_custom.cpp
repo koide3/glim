@@ -68,6 +68,8 @@ OdometryEstimationCustomParams::OdometryEstimationCustomParams() {
   isam2_relinearize_skip = config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1);
   isam2_relinearize_thresh = config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1);
 
+  max_correspondence_distance = config.param<double>("odometry_estimation", "max_correspondence_distance", 1.0);
+
   num_threads = config.param<int>("odometry_estimation", "num_threads", 4);
   num_smoother_update_threads = 1;
 }
@@ -96,7 +98,7 @@ OdometryEstimationCustom::OdometryEstimationCustom(std::unique_ptr<OdometryEstim
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation(params->num_threads));
 
-  target_ivox.reset(new gtsam_points::iVox(2.0));
+  target_ivox.reset(new gtsam_points::iVox(params->max_correspondence_distance));
   target_ivox->voxel_insertion_setting().set_min_dist_in_cell(0.1);
   target_ivox->set_lru_horizon(300);
   target_ivox->set_neighbor_voxel_mode(7);
@@ -445,7 +447,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationCustom::create_factors(const int c
       target_ivox,
       frames[current]->frame,
       target_ivox);
-    gicp_factor->set_max_correspondence_distance(2.0);
+    gicp_factor->set_max_correspondence_distance(params->max_correspondence_distance);
     gicp_factor->set_num_threads(params->num_threads);
     graph.add(gicp_factor);
 
