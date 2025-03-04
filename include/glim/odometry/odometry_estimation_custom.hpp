@@ -5,6 +5,7 @@
 #include <random>
 
 #include <boost/shared_ptr.hpp>
+#include <gtsam_points/ann/ivox.hpp>
 #include <glim/odometry/odometry_estimation_base.hpp>
 
 namespace gtsam {
@@ -79,11 +80,14 @@ public:
 
 protected:
   virtual void fallback_smoother() {}
+  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values);
   virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors);
 
   virtual void
   update_smoother(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values, const std::map<std::uint64_t, double>& new_stamp, int update_count = 0);
   virtual void update_smoother(int update_count = 1);
+
+  void update_target(const int current, const Eigen::Isometry3d& T_target_imu);
 
 protected:
   std::unique_ptr<OdometryEstimationCustomParams> params;
@@ -101,6 +105,9 @@ protected:
   std::unique_ptr<IMUIntegration> imu_integration;
   std::unique_ptr<CloudDeskewing> deskewing;
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
+
+  // Target model
+  std::shared_ptr<gtsam_points::iVox> target_ivox;  ///< GICP target iVox
 
   // Optimizer
   using FixedLagSmootherExt = gtsam_points::IncrementalFixedLagSmootherExtWithFallback;

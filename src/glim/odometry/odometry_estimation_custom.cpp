@@ -6,8 +6,12 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 
+#include <gtsam_points/ann/ivox.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/factors/linear_damping_factor.hpp>
+#include <gtsam_points/factors/integrated_gicp_factor.hpp>
+#include <gtsam_points/factors/integrated_ct_gicp_factor.hpp>
+#include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
 #include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 
 #include <glim/util/config.hpp>
@@ -92,6 +96,11 @@ OdometryEstimationCustom::OdometryEstimationCustom(std::unique_ptr<OdometryEstim
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation(params->num_threads));
 
+  target_ivox.reset(new gtsam_points::iVox(2.0));
+  target_ivox->voxel_insertion_setting().set_min_dist_in_cell(0.1);
+  target_ivox->set_lru_horizon(300);
+  target_ivox->set_neighbor_voxel_mode(7);
+
   gtsam::ISAM2Params isam2_params;
   if (params->use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
@@ -117,7 +126,6 @@ void OdometryEstimationCustom::insert_imu(const double stamp, const Eigen::Vecto
 }
 
 EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
-  /*
   if (raw_frame->size()) {
     logger->trace("insert_frame points={} times={} ~ {}", raw_frame->size(), raw_frame->times.front(), raw_frame->times.back());
   } else {
@@ -151,7 +159,7 @@ EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const Preproces
       state->v_world_imu.setZero();
       state->imu_bias.setZero();
       state->raw_frame = raw_frame;
-      state->frame_id = FrameID::LIDAR;
+      state->frame_id = FrameID::IMU;
       init_state = state;
     }
 
@@ -184,12 +192,8 @@ EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const Preproces
 
     // Transform points into IMU frame
     std::vector<Eigen::Vector4d> points(raw_frame->size());
-    if (params->enable_imu) {
-      for (int i = 0; i < raw_frame->size(); i++) {
-        points[i] = T_imu_lidar * raw_frame->points[i];
-      }
-    } else {
-      std::copy(raw_frame->points.begin(), raw_frame->points.end(), points.begin());
+    for (int i = 0; i < raw_frame->size(); i++) {
+      points[i] = T_imu_lidar * raw_frame->points[i];
     }
 
     std::vector<Eigen::Vector4d> normals;
@@ -229,6 +233,7 @@ EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const Preproces
     // Prior for initial IMU states
     update_smoother(new_factors, new_values, new_stamps);
     update_frames(current, new_factors);
+    update_target(current, new_frame->T_world_imu);
 
     return frames.back();
   }
@@ -240,96 +245,117 @@ EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const Preproces
   const double last_stamp = frames[last]->stamp;
   const auto last_T_world_imu_ = smoother->calculateEstimate<gtsam::Pose3>(X(last));
   const auto last_T_world_imu = gtsam::Pose3(last_T_world_imu_.rotation().normalized(), last_T_world_imu_.translation());
-  const auto last_v_world_imu = smoother->calculateEstimate<gtsam::Vector3>(V(last));
-  const auto last_imu_bias = smoother->calculateEstimate<gtsam::imuBias::ConstantBias>(B(last));
-  const gtsam::NavState last_nav_world_imu(last_T_world_imu, last_v_world_imu);
-
-  // IMU integration between LiDAR scans (inter-scan)
-  int num_imu_integrated = 0;
-  const int imu_read_cursor = imu_integration->integrate_imu(last_stamp, raw_frame->stamp, last_imu_bias, &num_imu_integrated);
-  imu_integration->erase_imu_data(imu_read_cursor);
-  logger->trace("num_imu_integrated={}", num_imu_integrated);
-
-  // IMU state prediction
-  const gtsam::NavState predicted_nav_world_imu = imu_integration->integrated_measurements().predict(last_nav_world_imu, last_imu_bias);
-  const gtsam::Pose3 predicted_T_world_imu = predicted_nav_world_imu.pose();
-  const gtsam::Vector3 predicted_v_world_imu = predicted_nav_world_imu.velocity();
-
   new_stamps[X(current)] = raw_frame->stamp;
-  new_stamps[V(current)] = raw_frame->stamp;
-  new_stamps[B(current)] = raw_frame->stamp;
+  new_values.insert(X(current), last_T_world_imu);
 
-  new_values.insert(X(current), predicted_T_world_imu);
-  new_values.insert(V(current), predicted_v_world_imu);
-  new_values.insert(B(current), last_imu_bias);
-
-  // Constant IMU bias assumption
-  new_factors.add(
-    gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Sigma(6, params->imu_bias_noise)));
-  if (params->fix_imu_bias) {
-    new_factors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(params->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e3)));
-  }
-
-  // Create IMU factor
   gtsam::ImuFactor::shared_ptr imu_factor;
-  if (num_imu_integrated >= 2) {
-    imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
-    new_factors.add(imu_factor);
-  } else {
-    logger->warn("insufficient number of IMU data between LiDAR scans!! (odometry_estimation)");
-    logger->warn("t_last={:.6f} t_current={:.6f} num_imu={}", last_stamp, raw_frame->stamp, num_imu_integrated);
-    new_factors.add(gtsam::BetweenFactor<gtsam::Vector3>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Sigma(3, 1.0)));
-  }
+  if (params->enable_imu) {
+    const auto last_v_world_imu = smoother->calculateEstimate<gtsam::Vector3>(V(last));
+    const auto last_imu_bias = smoother->calculateEstimate<gtsam::imuBias::ConstantBias>(B(last));
+    const gtsam::NavState last_nav_world_imu(last_T_world_imu, last_v_world_imu);
 
-  // Motion prediction for deskewing (intra-scan)
-  std::vector<double> pred_imu_times;
-  std::vector<Eigen::Isometry3d> pred_imu_poses;
-  imu_integration->integrate_imu(raw_frame->stamp, raw_frame->scan_end_time, predicted_nav_world_imu, last_imu_bias, pred_imu_times, pred_imu_poses);
+    // IMU integration between LiDAR scans (inter-scan)
+    int num_imu_integrated = 0;
+    const int imu_read_cursor = imu_integration->integrate_imu(last_stamp, raw_frame->stamp, last_imu_bias, &num_imu_integrated);
+    imu_integration->erase_imu_data(imu_read_cursor);
+    logger->trace("num_imu_integrated={}", num_imu_integrated);
 
-  // Create EstimationFrame
-  EstimationFrame::Ptr new_frame(new EstimationFrame);
-  new_frame->id = current;
-  new_frame->stamp = raw_frame->stamp;
+    // IMU state prediction
+    const gtsam::NavState predicted_nav_world_imu = imu_integration->integrated_measurements().predict(last_nav_world_imu, last_imu_bias);
+    const gtsam::Pose3 predicted_T_world_imu = predicted_nav_world_imu.pose();
+    const gtsam::Vector3 predicted_v_world_imu = predicted_nav_world_imu.velocity();
 
-  new_frame->T_lidar_imu = T_lidar_imu;
-  new_frame->T_world_imu = Eigen::Isometry3d(predicted_T_world_imu.matrix());
-  new_frame->T_world_lidar = Eigen::Isometry3d(predicted_T_world_imu.matrix()) * T_imu_lidar;
-  new_frame->v_world_imu = predicted_v_world_imu;
-  new_frame->imu_bias = last_imu_bias.vector();
-  new_frame->raw_frame = raw_frame;
+    new_stamps[V(current)] = raw_frame->stamp;
+    new_stamps[B(current)] = raw_frame->stamp;
 
-  if (params->save_imu_rate_trajectory) {
-    new_frame->imu_rate_trajectory.resize(8, pred_imu_times.size());
+    new_values.insert_or_assign(X(current), predicted_T_world_imu);
+    new_values.insert_or_assign(V(current), predicted_v_world_imu);
+    new_values.insert_or_assign(B(current), last_imu_bias);
 
-    for (int i = 0; i < pred_imu_times.size(); i++) {
-      const Eigen::Vector3d trans = pred_imu_poses[i].translation();
-      const Eigen::Quaterniond quat(pred_imu_poses[i].linear());
-      new_frame->imu_rate_trajectory.col(i) << pred_imu_times[i], trans, quat.x(), quat.y(), quat.z(), quat.w();
+    // Constant IMU bias assumption
+    new_factors.add(
+      gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(B(last), B(current), gtsam::imuBias::ConstantBias(), gtsam::noiseModel::Isotropic::Sigma(6, params->imu_bias_noise)));
+    if (params->fix_imu_bias) {
+      new_factors.add(
+        gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(current), gtsam::imuBias::ConstantBias(params->imu_bias), gtsam::noiseModel::Isotropic::Precision(6, 1e3)));
     }
+
+    // Create IMU factor
+    if (num_imu_integrated >= 2) {
+      imu_factor = gtsam::make_shared<gtsam::ImuFactor>(X(last), V(last), X(current), V(current), B(last), imu_integration->integrated_measurements());
+      new_factors.add(imu_factor);
+    } else {
+      logger->warn("insufficient number of IMU data between LiDAR scans!! (odometry_estimation)");
+      logger->warn("t_last={:.6f} t_current={:.6f} num_imu={}", last_stamp, raw_frame->stamp, num_imu_integrated);
+      new_factors.add(gtsam::BetweenFactor<gtsam::Vector3>(V(last), V(current), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Sigma(3, 1.0)));
+    }
+
+    // Motion prediction for deskewing (intra-scan)
+    std::vector<double> pred_imu_times;
+    std::vector<Eigen::Isometry3d> pred_imu_poses;
+    imu_integration->integrate_imu(raw_frame->stamp, raw_frame->scan_end_time, predicted_nav_world_imu, last_imu_bias, pred_imu_times, pred_imu_poses);
+
+    // Create EstimationFrame
+    EstimationFrame::Ptr new_frame(new EstimationFrame);
+    new_frame->id = current;
+    new_frame->stamp = raw_frame->stamp;
+
+    new_frame->T_lidar_imu = T_lidar_imu;
+    new_frame->T_world_imu = Eigen::Isometry3d(predicted_T_world_imu.matrix());
+    new_frame->T_world_lidar = Eigen::Isometry3d(predicted_T_world_imu.matrix()) * T_imu_lidar;
+    new_frame->v_world_imu = predicted_v_world_imu;
+    new_frame->imu_bias = last_imu_bias.vector();
+    new_frame->raw_frame = raw_frame;
+
+    // Deskew and tranform points into IMU frame
+    auto deskewed = deskewing->deskew(T_imu_lidar, pred_imu_times, pred_imu_poses, raw_frame->stamp, raw_frame->times, raw_frame->points);
+    for (auto& pt : deskewed) {
+      pt = T_imu_lidar * pt;
+    }
+
+    std::vector<Eigen::Vector4d> deskewed_normals;
+    std::vector<Eigen::Matrix4d> deskewed_covs;
+    covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
+
+    auto frame = std::make_shared<gtsam_points::PointCloudCPU>(deskewed);
+    frame->add_covs(deskewed_covs);
+    frame->add_normals(deskewed_normals);
+    new_frame->frame = frame;
+    new_frame->frame_id = FrameID::IMU;
+
+    Callbacks::on_new_frame(new_frame);
+    frames.push_back(new_frame);
+  } else {
+    // Create EstimationFrame
+    EstimationFrame::Ptr new_frame(new EstimationFrame);
+    new_frame->id = current;
+    new_frame->stamp = raw_frame->stamp;
+
+    new_frame->T_lidar_imu = T_lidar_imu;
+    new_frame->T_world_imu = Eigen::Isometry3d(last_T_world_imu.matrix());
+    new_frame->T_world_lidar = Eigen::Isometry3d(last_T_world_imu.matrix()) * T_imu_lidar;
+    new_frame->v_world_imu = Eigen::Vector3d::Zero();
+    new_frame->imu_bias = gtsam::Vector6::Zero();
+    new_frame->raw_frame = raw_frame;
+
+    std::vector<Eigen::Vector4d> points(raw_frame->size());
+    for (int i = 0; i < raw_frame->size(); i++) {
+      points[i] = T_imu_lidar * raw_frame->points[i];
+    }
+
+    std::vector<Eigen::Vector4d> normals;
+    std::vector<Eigen::Matrix4d> covs;
+    covariance_estimation->estimate(points, raw_frame->neighbors, normals, covs);
+
+    auto frame = std::make_shared<gtsam_points::PointCloudCPU>(points);
+    frame->add_covs(covs);
+    frame->add_normals(normals);
+    new_frame->frame = frame;
+    new_frame->frame_id = FrameID::IMU;
+
+    Callbacks::on_new_frame(new_frame);
+    frames.push_back(new_frame);
   }
-
-  // Deskew and tranform points into IMU frame
-  auto deskewed = deskewing->deskew(T_imu_lidar, pred_imu_times, pred_imu_poses, raw_frame->stamp, raw_frame->times, raw_frame->points);
-  for (auto& pt : deskewed) {
-    pt = T_imu_lidar * pt;
-  }
-
-  std::vector<Eigen::Vector4d> deskewed_normals;
-  std::vector<Eigen::Matrix4d> deskewed_covs;
-  covariance_estimation->estimate(deskewed, raw_frame->neighbors, deskewed_normals, deskewed_covs);
-
-  auto frame = std::make_shared<gtsam_points::PointCloudCPU>(deskewed);
-  if (raw_frame->intensities.size()) {
-    frame->add_intensities(raw_frame->intensities);
-  }
-  frame->add_covs(deskewed_covs);
-  frame->add_normals(deskewed_normals);
-  new_frame->frame = frame;
-  new_frame->frame_id = FrameID::IMU;
-  create_frame(new_frame);
-
-  Callbacks::on_new_frame(new_frame);
-  frames.push_back(new_frame);
 
   new_factors.add(create_factors(current, imu_factor, new_values));
 
@@ -353,6 +379,7 @@ EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const Preproces
 
   // Update frames
   update_frames(current, new_factors);
+  update_target(current, frames[current]->T_world_imu);
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
   Callbacks::on_update_new_frame(active_frames.back());
@@ -364,7 +391,305 @@ EstimationFrame::ConstPtr OdometryEstimationCustom::insert_frame(const Preproces
   }
 
   return frames[current];
-  */
+}
+
+gtsam::NonlinearFactorGraph OdometryEstimationCustom::create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) {
+  const int last = current - 1;
+  if (current == 0) {
+    update_target(current, frames[current]->T_world_imu);
+    return gtsam::NonlinearFactorGraph();
+  }
+
+  // Discrete-time matching
+  if (!params->enable_continuous_time) {
+    gtsam::Values values;
+    gtsam::NonlinearFactorGraph graph;
+
+    if (params->enable_imu) {
+      values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+      values.insert_or_assign(V(current), frames[current]->v_world_imu);
+      values.insert_or_assign(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+
+      values.insert_or_assign(X(last), gtsam::Pose3(frames[last]->T_world_imu.matrix()));
+      values.insert_or_assign(V(last), frames[last]->v_world_imu);
+      values.insert_or_assign(B(last), gtsam::imuBias::ConstantBias(frames[last]->imu_bias));
+
+      graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(last), gtsam::Pose3(frames[last]->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+      graph.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(last), frames[last]->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
+      graph.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(
+        B(last),
+        gtsam::imuBias::ConstantBias(frames[last]->imu_bias),
+        gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+      graph.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(
+        B(last),
+        B(current),
+        gtsam::imuBias::ConstantBias(),
+        gtsam::noiseModel::Isotropic::Sigma(6, params->imu_bias_noise));
+      graph.add(imu_factor);
+    } else {
+      if (current > 3) {
+        const gtsam::Pose3 T0(frames[current - 2]->T_world_imu.matrix());
+        const gtsam::Pose3 T1(frames[current - 1]->T_world_imu.matrix());
+        const gtsam::Pose3 delta = T0.between(T1);
+        const gtsam::Vector6 v = gtsam::Pose3::Logmap(delta);
+        const gtsam::Pose3 pred = T1 * gtsam::Pose3::Expmap(v * 0.9);
+        values.insert_or_assign(X(current), pred);
+      } else {
+        values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+      }
+    }
+
+    auto gicp_factor = gtsam::make_shared<gtsam_points::IntegratedGICPFactor_<gtsam_points::iVox, gtsam_points::PointCloud>>(
+      gtsam::Pose3(),
+      X(current),
+      target_ivox,
+      frames[current]->frame,
+      target_ivox);
+    gicp_factor->set_max_correspondence_distance(2.0);
+    gicp_factor->set_num_threads(params->num_threads);
+    graph.add(gicp_factor);
+
+    gtsam_points::LevenbergMarquardtExtParams lm_params;
+    // lm_params.set_verbose();
+    lm_params.setMaxIterations(32);
+    lm_params.setAbsoluteErrorTol(0.1);
+
+    gtsam::Pose3 last_estimate = values.at<gtsam::Pose3>(X(current));
+    lm_params.termination_criteria = [&](const gtsam::Values& values) {
+      const gtsam::Pose3 current_pose = values.at<gtsam::Pose3>(X(current));
+      const gtsam::Pose3 delta = last_estimate.inverse() * current_pose;
+
+      const double delta_t = delta.translation().norm();
+      const double delta_r = Eigen::AngleAxisd(delta.rotation().matrix()).angle();
+      last_estimate = current_pose;
+
+      if (delta_t < 1e-10 && delta_r < 1e-10) {
+        // Maybe failed to solve the linear system
+        std::cerr << "failed to solve the linear system" << std::endl;
+        return false;
+      }
+
+      // Convergence check
+      return delta_t < 1e-3 && delta_r < 1e-3 * M_PI / 180.0;
+    };
+
+    // Optimize
+    // lm_params.setDiagonalDamping(true);
+    gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
+
+#ifdef GTSAM_USE_TBB
+    auto arena = static_cast<tbb::task_arena*>(this->tbb_task_arena.get());
+    arena->execute([&] {
+#endif
+      values = optimizer.optimize();
+#ifdef GTSAM_USE_TBB
+    });
+#endif
+
+    frames[current]->T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
+    new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+
+    if (params->enable_imu) {
+      frames[current]->v_world_imu = values.at<gtsam::Vector3>(V(current));
+      frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
+      new_values.insert_or_assign(V(current), frames[current]->v_world_imu);
+      new_values.insert_or_assign(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+    }
+  }
+  // Continuous-time matching
+  else {
+    gtsam::Values values;
+    gtsam::NonlinearFactorGraph graph;
+
+    if (params->enable_imu) {
+      // values.insert_or_assign(X(last), gtsam::Pose3(frames[last]->T_world_imu.matrix()));
+      // values.insert_or_assign(V(last), frames[last]->v_world_imu);
+      // values.insert_or_assign(B(last), gtsam::imuBias::ConstantBias(frames[last]->imu_bias));
+
+      // values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+      // values.insert_or_assign(V(current), frames[current]->v_world_imu);
+      // values.insert_or_assign(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+
+      // graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(last), gtsam::Pose3(frames[last]->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+      // graph.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(V(last), frames[last]->v_world_imu, gtsam::noiseModel::Isotropic::Precision(3, 1e3));
+      // graph.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(
+      //   B(last),
+      //   gtsam::imuBias::ConstantBias(frames[last]->imu_bias),
+      //   gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+      // graph.emplace_shared<gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>>(
+      //   B(last),
+      //   B(current),
+      //   gtsam::imuBias::ConstantBias(),
+      //   gtsam::noiseModel::Isotropic::Sigma(6, params->imu_bias_noise));
+      graph.add(imu_factor);
+    } else {
+      gtsam::Vector6 v = gtsam::Vector6::Zero();
+
+      if (current > 3) {
+        const gtsam::Pose3 T0(frames[current - 2]->T_world_imu.matrix());
+        const gtsam::Pose3 T1(frames[current - 1]->T_world_imu.matrix());
+        const gtsam::Pose3 delta = T0.between(T1);
+        v = gtsam::Pose3::Logmap(delta) / (frames[current - 1]->stamp - frames[current - 2]->stamp);
+      }
+
+      const gtsam::Pose3 last_T_world_imu(frames[last]->T_world_imu.matrix());
+      const gtsam::Pose3 beg_T_world_imu = last_T_world_imu * gtsam::Pose3::Expmap(v * (frames[current]->stamp - frames[last]->stamp));
+
+      const double dt = frames[current]->raw_frame->times.back();
+      const gtsam::Pose3 end_T_world_imu = beg_T_world_imu * gtsam::Pose3::Expmap(v * dt);
+
+      values.insert_or_assign(X(current), beg_T_world_imu);
+      values.insert_or_assign(X(current + 1), end_T_world_imu);
+    }
+
+    auto frame = std::make_shared<gtsam_points::PointCloudCPU>(frames[current]->raw_frame->points);
+    frame->add_times(frames[current]->raw_frame->times);
+    frame->add_covs(frames[current]->frame->covs, frames[current]->frame->size());
+
+    auto factor =
+      gtsam::make_shared<gtsam_points::IntegratedCT_GICPFactor_<gtsam_points::iVox, gtsam_points::PointCloud>>(X(current), X(current + 1), target_ivox, frame, target_ivox);
+    factor->set_num_threads(params->num_threads);
+    factor->set_max_correspondence_distance(2.0);
+    graph.add(factor);
+    graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(current), X(current + 1), gtsam::Pose3(), gtsam::noiseModel::Isotropic::Precision(6, 1e-3));
+
+    gtsam_points::LevenbergMarquardtExtParams lm_params;
+    lm_params.setMaxIterations(12);
+    lm_params.setAbsoluteErrorTol(0.1);
+
+    // Optimize
+    // lm_params.setDiagonalDamping(true);
+    gtsam_points::LevenbergMarquardtOptimizerExt optimizer(graph, values, lm_params);
+
+#ifdef GTSAM_USE_TBB
+    auto arena = static_cast<tbb::task_arena*>(this->tbb_task_arena.get());
+    arena->execute([&] {
+#endif
+      values = optimizer.optimize();
+#ifdef GTSAM_USE_TBB
+    });
+#endif
+
+    auto deskewed = factor->deskewed_source_points(values, true);
+    auto frame_cpu = std::dynamic_pointer_cast<gtsam_points::PointCloudCPU>(std::const_pointer_cast<gtsam_points::PointCloud>(frames[current]->frame));
+    frame_cpu->add_points(deskewed);
+
+    frames[current]->T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
+    new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+
+    // if (params->enable_imu) {
+    //   frames[current]->v_world_imu = values.at<gtsam::Vector3>(V(current));
+    //   frames[current]->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(current)).vector();
+    //   new_values.insert_or_assign(V(current), frames[current]->v_world_imu);
+    //   new_values.insert_or_assign(B(current), gtsam::imuBias::ConstantBias(frames[current]->imu_bias));
+    // }
+  }
+
+  const Eigen::Isometry3d T_last_current = frames[last]->T_world_imu.inverse() * frames[current]->T_world_imu;
+  gtsam::NonlinearFactorGraph factors;
+  factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+  factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+
+  update_target(current, frames[current]->T_world_imu);
+
+  return factors;
+}
+
+void OdometryEstimationCustom::update_frames(int current, const gtsam::NonlinearFactorGraph& new_factors) {
+  logger->trace("update frames current={} marginalized_cursor={}", current, marginalized_cursor);
+
+  for (int i = marginalized_cursor; i < frames.size(); i++) {
+    try {
+      Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
+      frames[i]->T_world_imu = T_world_imu;
+      frames[i]->T_world_lidar = T_world_imu * T_imu_lidar;
+
+      if (params->enable_imu) {
+        Eigen::Vector3d v_world_imu = smoother->calculateEstimate<gtsam::Vector3>(V(i));
+        Eigen::Matrix<double, 6, 1> imu_bias = smoother->calculateEstimate<gtsam::imuBias::ConstantBias>(B(i)).vector();
+        frames[i]->v_world_imu = v_world_imu;
+        frames[i]->imu_bias = imu_bias;
+      }
+    } catch (std::out_of_range& e) {
+      logger->error("caught {}", e.what());
+      logger->error("current={}", current);
+      logger->error("marginalized_cursor={}", marginalized_cursor);
+      Callbacks::on_smoother_corruption(frames[current]->stamp);
+      fallback_smoother();
+      break;
+    }
+  }
+}
+
+std::vector<EstimationFrame::ConstPtr> OdometryEstimationCustom::get_remaining_frames() {
+  // Perform a few optimization iterations at the end
+  // for(int i=0; i<5; i++) {
+  //   smoother->update();
+  // }
+  // OdometryEstimationIMU::update_frames(frames.size() - 1, gtsam::NonlinearFactorGraph());
+
+  std::vector<EstimationFrame::ConstPtr> marginalized_frames;
+  for (int i = marginalized_cursor; i < frames.size(); i++) {
+    marginalized_frames.push_back(frames[i]);
+  }
+
+  Callbacks::on_marginalized_frames(marginalized_frames);
+
+  return marginalized_frames;
+}
+
+void OdometryEstimationCustom::update_smoother(
+  const gtsam::NonlinearFactorGraph& new_factors,
+  const gtsam::Values& new_values,
+  const std::map<std::uint64_t, double>& new_stamp,
+  int update_count) {
+#ifdef GTSAM_USE_TBB
+  auto arena = static_cast<tbb::task_arena*>(tbb_task_arena.get());
+  arena->execute([&] {
+#endif
+    smoother->update(new_factors, new_values, new_stamp);
+    for (int i = 0; i < update_count; i++) {
+      smoother->update();
+    }
+#ifdef GTSAM_USE_TBB
+  });
+#endif
+}
+
+void OdometryEstimationCustom::update_smoother(int count) {
+  if (count <= 0) {
+    return;
+  }
+
+  update_smoother(gtsam::NonlinearFactorGraph(), gtsam::Values(), std::map<std::uint64_t, double>(), count - 1);
+}
+
+void OdometryEstimationCustom::update_target(const int current, const Eigen::Isometry3d& T_target_imu) {
+  const auto frame = frames[current]->frame;
+  auto transformed = gtsam_points::transform(frame, T_target_imu);
+  target_ivox->insert(*transformed);
+
+  // Update target point cloud (just for visualization).
+  // This is not necessary for mapping and can safely be removed.
+  if (frames.size() % 50 == 0) {
+    EstimationFrame::Ptr frame(new EstimationFrame);
+    frame->id = frames.size() - 1;
+    frame->stamp = frames.back()->stamp;
+
+    frame->T_lidar_imu = frames.back()->T_lidar_imu;
+    frame->T_world_lidar = frame->T_lidar_imu.inverse();
+    frame->T_world_imu.setIdentity();
+
+    frame->v_world_imu.setZero();
+    frame->imu_bias.setZero();
+
+    frame->frame_id = FrameID::IMU;
+
+    frame->frame = std::make_shared<gtsam_points::PointCloudCPU>(target_ivox->voxel_points());
+
+    std::vector<EstimationFrame::ConstPtr> keyframes = {frame};
+    Callbacks::on_update_keyframes(keyframes);
+  }
 }
 
 }  // namespace glim

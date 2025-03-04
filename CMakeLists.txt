@@ -74,7 +74,7 @@ add_library(glim SHARED
   src/glim/odometry/odometry_estimation_imu.cpp
   src/glim/odometry/odometry_estimation_ct.cpp
   src/glim/odometry/odometry_estimation_cpu.cpp
-  # src/glim/odometry/odometry_estimation_custom.cpp
+  src/glim/odometry/odometry_estimation_custom.cpp
   # mapping
   src/glim/mapping/callbacks.cpp
   src/glim/mapping/sub_map.cpp
@@ -112,6 +112,7 @@ list(APPEND glim_LIBRARIES glim)
 list(APPEND module_srcs
   src/glim/odometry/odometry_estimation_ct_create.cpp
   src/glim/odometry/odometry_estimation_cpu_create.cpp
+  src/glim/odometry/odometry_estimation_custom_create.cpp
   src/glim/mapping/sub_mapping_create.cpp
   src/glim/mapping/sub_mapping_passthrough_create.cpp
   src/glim/mapping/global_mapping_create.cpp
