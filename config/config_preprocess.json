@@ -9,6 +9,7 @@
   // enable_outlier_removal      : If true, enable statistical outlier removal
   // outlier_removal_k           : Number of neighbors for outlier removal
   // outlier_std_mul_factor      : Standard deviation multiplier for outlier removal
+  // enable_cropbox_filter       : Filter points inside MMS bounding box
   // k_correspondences           : Number of neighbors for covariance estimation
   // num_threads                 : Number of threads for preprocessing
   */
@@ -22,6 +23,7 @@
     "enable_outlier_removal": false,
     "outlier_removal_k": 10,
     "outlier_std_mul_factor": 1.0,
+    "enable_cropbox_filter": false,
     "k_correspondences": 10,
     "num_threads": 2
   }

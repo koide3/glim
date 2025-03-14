@@ -22,6 +22,15 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
 
   global_shutter = sensor_config.param<bool>("sensors", "global_shutter_lidar", false);
+  Eigen::Isometry3d T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
+  T_imu_lidar = T_lidar_imu.inverse();
+
+  std::vector<double> tmp_bbox = sensor_config.param<std::vector<double>>("sensors", "mms_bbox", {});
+  mms_bbox.min = {tmp_bbox[0], tmp_bbox[2], tmp_bbox[4]};
+  mms_bbox.max = {tmp_bbox[1], tmp_bbox[3], tmp_bbox[5]};
+  if ((mms_bbox.min.array() > mms_bbox.max.array()).any()) {
+    throw std::runtime_error(fmt::format("Invalid bbox configuration: min=({}, {}, {}), max=({}, {}, {})", mms_bbox.min.x(), mms_bbox.min.y(), mms_bbox.min.z(), mms_bbox.max.x(), mms_bbox.max.y(), mms_bbox.max.z()));
+  }
 
   distance_near_thresh = config.param<double>("preprocess", "distance_near_thresh", 1.0);
   distance_far_thresh = config.param<double>("preprocess", "distance_far_thresh", 100.0);
@@ -32,7 +41,7 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   enable_outlier_removal = config.param<bool>("preprocess", "enable_outlier_removal", false);
   outlier_removal_k = config.param<int>("preprocess", "outlier_removal_k", 10);
   outlier_std_mul_factor = config.param<double>("preprocess", "outlier_std_mul_factor", 2.0);
-
+  enable_cropbox_filter = config.param<bool>("preprocess", "enable_cropbox_filter", false);
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
 
   num_threads = config.param<int>("preprocess", "num_threads", 2);
@@ -113,6 +122,19 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
 
   if (params.global_shutter) {
     std::fill(frame->times, frame->times + frame->size(), 0.0);
+  }
+
+  // MMS cropbox filter
+  if (params.enable_cropbox_filter) {
+    auto is_inside_mms_bbox = [&](const Eigen::Vector3d& p_lidar) {
+      const auto p_imu = params.T_imu_lidar * p_lidar;
+      return (p_imu.array() >= params.mms_bbox.min.array()).all()
+          && (p_imu.array() <= params.mms_bbox.max.array()).all();
+    };
+    // keep only points outside the MMS box
+    frame = gtsam_points::filter(frame, [&](const auto& pt) {
+      return !is_inside_mms_bbox(pt.template head<3>());
+    });
   }
 
   // Outlier removal
