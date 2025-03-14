@@ -25,11 +25,22 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   Eigen::Isometry3d T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
   T_imu_lidar = T_lidar_imu.inverse();
 
+  enable_cropbox_filter = config.param<bool>("preprocess", "enable_cropbox_filter", false);
   std::vector<double> tmp_bbox = sensor_config.param<std::vector<double>>("sensors", "mms_bbox", {});
-  mms_bbox.min = {tmp_bbox[0], tmp_bbox[2], tmp_bbox[4]};
-  mms_bbox.max = {tmp_bbox[1], tmp_bbox[3], tmp_bbox[5]};
-  if ((mms_bbox.min.array() > mms_bbox.max.array()).any()) {
-    throw std::runtime_error(fmt::format("Invalid bbox configuration: min=({}, {}, {}), max=({}, {}, {})", mms_bbox.min.x(), mms_bbox.min.y(), mms_bbox.min.z(), mms_bbox.max.x(), mms_bbox.max.y(), mms_bbox.max.z()));
+  if (!tmp_bbox.empty()) {
+    if (tmp_bbox.size() != 6) {
+      throw std::runtime_error(fmt::format("Misconfigured mms_bbox: expect 6 parameters, got {}", tmp_bbox.size()));
+    }
+
+    mms_bbox.min = {tmp_bbox[0], tmp_bbox[2], tmp_bbox[4]};
+    mms_bbox.max = {tmp_bbox[1], tmp_bbox[3], tmp_bbox[5]};
+
+    if ((mms_bbox.min.array() > mms_bbox.max.array()).any()) {
+      throw std::runtime_error(fmt::format("Misconfigured bbox configuration: min=({}, {}, {}), max=({}, {}, {})", mms_bbox.min.x(), mms_bbox.min.y(), mms_bbox.min.z(), mms_bbox.max.x(), mms_bbox.max.y(), mms_bbox.max.z()));
+    }
+  } else if (enable_cropbox_filter) {
+    spdlog::warn("mms_bbox is not defined. Cropbox filter is disabled");
+    enable_cropbox_filter = false;
   }
 
   distance_near_thresh = config.param<double>("preprocess", "distance_near_thresh", 1.0);
@@ -41,7 +52,7 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   enable_outlier_removal = config.param<bool>("preprocess", "enable_outlier_removal", false);
   outlier_removal_k = config.param<int>("preprocess", "outlier_removal_k", 10);
   outlier_std_mul_factor = config.param<double>("preprocess", "outlier_std_mul_factor", 2.0);
-  enable_cropbox_filter = config.param<bool>("preprocess", "enable_cropbox_filter", false);
+
   k_correspondences = config.param<int>("preprocess", "k_correspondences", 8);
 
   num_threads = config.param<int>("preprocess", "num_threads", 2);
@@ -103,7 +114,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   indices.reserve(frame->size());
   double squared_distance_near_thresh = params.distance_near_thresh * params.distance_near_thresh;
   double squared_distance_far_thresh  = params.distance_far_thresh  * params.distance_far_thresh;
-  
+
   for (int i = 0; i < frame->size(); i++) {
     const bool is_finite = frame->points[i].allFinite();
     const double squared_dist = (Eigen::Vector4d() << frame->points[i].head<3>(), 0.0).finished().squaredNorm();
