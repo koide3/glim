@@ -424,7 +424,7 @@ void InteractiveViewer::update_viewer() {
 
       if (submap->frame->has_intensities()) {
         cloud_buffer
-          ->add_intensity(glk::COLORMAP::TURBO, submap->frame->intensities, submap->frame->size(), 1.0 / *std::max_element(submap->frame->intensities, submap->frame->intensities));
+          ->add_intensity(glk::COLORMAP::TURBO, submap->frame->intensities, submap->frame->size(), 1.0 / *std::max_element(submap->frame->intensities, submap->frame->intensities + submap->frame->size()));
       }
 
       auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info).set_color(color).set_alpha(points_alpha);
