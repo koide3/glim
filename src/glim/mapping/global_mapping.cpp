@@ -8,6 +8,8 @@
 #include <gtsam/base/serialization.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/slam/PoseRotationPrior.h>
+#include <gtsam/slam/PoseTranslationPrior.h>
 #include <gtsam/navigation/ImuBias.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
@@ -497,7 +499,6 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
     arena->execute([&] {
 #endif
       result = isam2->update(new_factors, new_values);
-
 #ifdef GTSAM_USE_TBB
     });
 #endif
@@ -519,7 +520,7 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
 
     gtsam::Values values = isam2->getLinearizationPoint();
     gtsam::NonlinearFactorGraph factors = isam2->getFactorsUnsafe();
-    factors.emplace_shared<gtsam_points::LinearDampingFactor>(indeterminant_nearby_key, 6, 1e4);
+    factors.emplace_shared<gtsam_points::LinearDampingFactor>(indeterminant_nearby_key, 6, 1e3);
 
     gtsam::ISAM2Params isam2_params;
     if (params.use_isam2_dogleg) {
@@ -768,15 +769,29 @@ bool GlobalMapping::load(const std::string& path) {
       rekey_mapping[V(i * 2 + 1)] = V((i + start_from_frame_id) * 2 + 1);
     }
 
-    auto first_factor = loaded_graph.front();
-    if (boost::dynamic_pointer_cast<gtsam::LinearContainerFactor>(first_factor)) {
-      logger->info("First factor is a LinearContainerFactor, removing from graph before loading");
-      graph = gtsam::NonlinearFactorGraph(loaded_graph.begin() + 1, loaded_graph.end());
-    } else {
-      graph = loaded_graph;
-    }
+    logger->info("removing translation prior factors");
+    auto remove_loc = std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) {
+      return boost::dynamic_pointer_cast<gtsam::PoseTranslationPrior<gtsam::Pose3>>(factor) != nullptr;
+    });
+    logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
+    loaded_graph.erase(remove_loc, loaded_graph.end());
+
+    logger->info("removing damping factors");
+    remove_loc = std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) {
+      return boost::dynamic_pointer_cast<gtsam_points::LinearDampingFactor>(factor) != nullptr;
+    });
+    logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
+    loaded_graph.erase(remove_loc, loaded_graph.end());
+
+    logger->info("removing prior factors");
+    remove_loc = std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) {
+      return boost::dynamic_pointer_cast<gtsam::PriorFactor<gtsam::Pose3>>(factor) != nullptr;
+    });
+    logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
+    loaded_graph.erase(remove_loc, loaded_graph.end());
 
     // rekey graph
+    graph = loaded_graph;
     logger->info("rekeying factors");
     graph = graph.rekey(rekey_mapping);
 
