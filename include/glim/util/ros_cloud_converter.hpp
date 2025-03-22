@@ -61,7 +61,7 @@ Eigen::Vector4d get_vec4(const void* x, const void* y, const void* z) {
   return Eigen::Vector4d(*reinterpret_cast<const T*>(x), *reinterpret_cast<const T*>(y), *reinterpret_cast<const T*>(z), 1.0);
 }
 
-static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const std::string& intensity_channel = "intensity") {
+static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const std::string& intensity_channel, const std::string& ring_channel) {
   int num_points = points_msg.width * points_msg.height;
 
   int x_type = 0;
@@ -70,6 +70,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
   int time_type = 0;  // ouster and livox
   int intensity_type = 0;
   int color_type = 0;
+  int ring_type = 0;
 
   int x_offset = -1;
   int y_offset = -1;
@@ -77,6 +78,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
   int time_offset = -1;
   int intensity_offset = -1;
   int color_offset = -1;
+  int ring_offset = -1;
 
   std::unordered_map<std::string, std::pair<int*, int*>> fields;
   fields["x"] = std::make_pair(&x_type, &x_offset);
@@ -88,6 +90,7 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
   fields["timestamp"] = std::make_pair(&time_type, &time_offset);
   fields[intensity_channel] = std::make_pair(&intensity_type, &intensity_offset);
   fields["rgba"] = std::make_pair(&color_type, &color_offset);
+  fields[ring_channel] = std::make_pair(&ring_type, &ring_offset);
 
   for (const auto& field : points_msg.fields) {
     auto found = fields.find(field.name);
@@ -202,12 +205,38 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
     }
   }
 
+  if (ring_offset >= 0) {
+    raw_points->rings.resize(num_points);
+
+    for (int i = 0; i < num_points; i++) {
+      const auto* ring_ptr = &points_msg.data[points_msg.point_step * i + ring_offset];
+      switch (ring_type) {
+        case PointField::UINT8:
+          raw_points->rings[i] = *reinterpret_cast<const std::uint8_t*>(ring_ptr);
+          break;
+        case PointField::UINT16:
+          raw_points->rings[i] = *reinterpret_cast<const std::uint16_t*>(ring_ptr);
+          break;
+        case PointField::UINT32:
+          raw_points->rings[i] = *reinterpret_cast<const std::uint32_t*>(ring_ptr);
+          break;
+        default:
+          spdlog::warn("unsupported ring type {}", ring_type);
+          return nullptr;
+      }
+    }
+  }
+
   raw_points->stamp = to_sec(points_msg.header.stamp);
   return raw_points;
 }
 
+static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const std::string& intensity_channel = "intensity") {
+  return extract_raw_points(points_msg, intensity_channel, "");
+}
+
 static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, const std::string& intensity_channel = "intensity") {
-  return extract_raw_points(*points_msg);
+  return extract_raw_points(*points_msg, intensity_channel, "");
 }
 
 static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_points::PointCloud& frame) {
