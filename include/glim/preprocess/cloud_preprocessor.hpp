@@ -18,11 +18,6 @@ public:
   ~CloudPreprocessorParams();
 
 public:
-  struct BoundingBox {
-    Eigen::Vector3d min;
-    Eigen::Vector3d max;
-  };
-
   double distance_near_thresh;        ///< Minimum distance threshold
   double distance_far_thresh;         ///< Maximum distance threshold
   bool global_shutter;                ///< Assume all points in a scan are takes at the same moment and replace per-point timestamps with zero (disable deskewing)
@@ -33,13 +28,14 @@ public:
   bool enable_outlier_removal;        ///< If true, apply statistical outlier removal
   int outlier_removal_k;              ///< Number of neighbors used for outlier removal
   double outlier_std_mul_factor;      ///< Statistical outlier removal std dev threshold multiplication factor
-  bool enable_cropbox_filter;         ///< If true, filter points in MMS bounding box
+  bool enable_cropbox_filter;         ///< If true, filter points out points within box
+  std::string crop_bbox_frame;        ///< Bounding box reference frame
+  Eigen::Vector3d crop_bbox_min;      ///< Bounding box min point
+  Eigen::Vector3d crop_bbox_max;      ///< Bounding box max point
+  Eigen::Isometry3d T_imu_lidar;      ///< LiDAR-IMU transformation when cropbox is defined in IMU frame
   int k_correspondences;              ///< Number of neighboring points
 
-  Eigen::Isometry3d T_imu_lidar;      ///< LiDAR-IMU transformation
-  BoundingBox mms_bbox;               ///< MMS bounding box
-
-  int num_threads;  ///< Number of threads
+  int num_threads;                    ///< Number of threads
 };
 
 /**

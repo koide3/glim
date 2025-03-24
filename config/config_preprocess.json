@@ -9,7 +9,10 @@
   // enable_outlier_removal      : If true, enable statistical outlier removal
   // outlier_removal_k           : Number of neighbors for outlier removal
   // outlier_std_mul_factor      : Standard deviation multiplier for outlier removal
-  // enable_cropbox_filter       : Filter points inside MMS bounding box
+  // enable_cropbox_filter       : If true, filter points out points within box
+  // crop_bbox_frame             : Bounding box reference frame
+  // crop_bbox_min               : Bounding box min point
+  // crop_bbox_max               : Bounding box max point
   // k_correspondences           : Number of neighbors for covariance estimation
   // num_threads                 : Number of threads for preprocessing
   */
@@ -24,6 +27,9 @@
     "outlier_removal_k": 10,
     "outlier_std_mul_factor": 1.0,
     "enable_cropbox_filter": false,
+    "crop_bbox_frame": "lidar",
+    "crop_bbox_min": [-1.0, -1.0, -1.0],
+    "crop_bbox_max": [1.0, 1.0, 1.0],
     "k_correspondences": 10,
     "num_threads": 2
   }
