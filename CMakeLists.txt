@@ -36,6 +36,8 @@ endif()
 if(BUILD_WITH_OPENCV)
   set(GLIM_USE_OPENCV 1)
   find_package(OpenCV REQUIRED COMPONENTS core)
+else()
+  set(GLIM_USE_OPENCV 0)
 endif()
 
 ###########
