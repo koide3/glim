@@ -1,8 +1,5 @@
 {
   /*** Sensor configurations ***
-  // --- MMS config ---
-  // mms_bbox                    : Mapping device dimensions in IMU frame
-  //
   // --- IMU config ---
   // imu_acc_noise               : Accelerometer noise
   // imu_gyro_noise              : Gyroscope noise
@@ -44,15 +41,6 @@
   // rooftop: [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
   */
   "sensors": {
-    // MMS config
-    "mms_bbox": [
-      -1.0, // min x
-      1.0,  // max x
-      -1.0, // min y
-      1.0,  // max y
-      -1.0, // min z
-      1.0   // max z
-    ],
     // IMU config
     "imu_acc_noise": 0.05,
     "imu_gyro_noise": 0.02,
