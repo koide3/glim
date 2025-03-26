@@ -85,6 +85,8 @@ add_library(glim SHARED
   src/glim/mapping/sub_mapping_passthrough.cpp
   src/glim/mapping/global_mapping.cpp
   src/glim/mapping/global_mapping_pose_graph.cpp
+  # viewer
+  src/glim/viewer/callbacks.cpp
   # GPU-related
   ${GPU_SRCS}
 )

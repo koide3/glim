@@ -1,4 +1,5 @@
 #include <glim/viewer/standard_viewer.hpp>
+#include <glim/viewer/callbacks.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -603,6 +604,8 @@ void StandardViewer::set_callbacks() {
     logger->debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
     logger->debug(result.to_string());
   });
+
+  ViewerCallbacks::request_to_invoke.add([this](std::function<void(guik::LightViewer & viewer)> callback) { invoke([callback]() { callback(*guik::viewer()); }); });
 }
 
 void StandardViewer::viewer_loop() {
