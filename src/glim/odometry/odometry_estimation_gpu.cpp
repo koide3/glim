@@ -1,5 +1,6 @@
 #include <glim/odometry/odometry_estimation_gpu.hpp>
 
+#include <filesystem>
 #include <spdlog/spdlog.h>
 
 #include <gtsam/inference/Symbol.h>
@@ -20,6 +21,7 @@
 #include <gtsam_points/cuda/nonlinear_factor_set_gpu.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/convert_to_string.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -121,6 +123,25 @@ void OdometryEstimationGPU::update_frames(const int current, const gtsam::Nonlin
     case OdometryEstimationGPUParams::KeyframeUpdateStrategy::ENTROPY:
       update_keyframes_entropy(new_factors, current);
       break;
+  }
+
+  if (current && current % 100 == 0) {
+    const std::string path = fmt::format("/tmp/odom/{:06d}", current);
+    std::filesystem::create_directories(path);
+    std::ofstream ofs(fmt::format(path + "/data.txt", current));
+    ofs << "frames" << std::endl;
+    for (size_t i = marginalized_cursor; i < frames.size(); i++) {
+      const auto& frame = frames[i];
+      ofs << fmt::format("{} {:.9f} {}", frame->id, frame->stamp, convert_to_string(frame->T_world_imu)) << std::endl;
+      frame->frame->save(fmt::format("{}/frame_{:06d}", path, frame->id));
+    }
+
+    ofs << "keyframes" << std::endl;
+    for (size_t i = 0; i < keyframes.size(); i++) {
+      const auto& keyframe = keyframes[i];
+      ofs << fmt::format("{} {:.9f} {}", keyframe->id, keyframe->stamp, convert_to_string(keyframe->T_world_imu)) << std::endl;
+      keyframe->frame->save(fmt::format("{}/keyframe_{:06d}", path, keyframe->id));
+    }
   }
 
   Callbacks::on_update_keyframes(keyframes);
