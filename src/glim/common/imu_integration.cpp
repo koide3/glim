@@ -43,6 +43,10 @@ int IMUIntegration::integrate_imu(double start_time, double end_time, const gtsa
   auto imu_itr = imu_queue.begin();
   double last_stamp = start_time;
 
+  if (imu_itr == imu_queue.end()) {
+    return cursor;
+  }
+
   for (; imu_itr != imu_queue.end(); imu_itr++, cursor++) {
     const auto& imu_frame = *imu_itr;
     const double imu_stamp = imu_frame[0];
@@ -85,12 +89,19 @@ int IMUIntegration::integrate_imu(
   //
   imu_measurements->resetIntegrationAndSetBias(bias);
 
-  pred_times.push_back(start_time);
-  pred_poses.push_back(Eigen::Isometry3d(state.pose().matrix()));
+  pred_times.emplace_back(start_time);
+  pred_poses.emplace_back(Eigen::Isometry3d(state.pose().matrix()));
 
   int cursor = 0;
   auto imu_itr = imu_queue.begin();
   double last_stamp = start_time;
+
+  if (imu_itr == imu_queue.end()) {
+    pred_times.emplace_back(end_time);
+    pred_poses.emplace_back(Eigen::Isometry3d(state.pose().matrix()));
+    return cursor;
+  }
+
   for (; imu_itr != imu_queue.end(); imu_itr++, cursor++) {
     const auto& imu_frame = *imu_itr;
     const double imu_stamp = imu_frame[0];
@@ -108,8 +119,8 @@ int IMUIntegration::integrate_imu(
     imu_measurements->integrateMeasurement(a, w, dt);
 
     auto predicted = imu_measurements->predict(state, bias);
-    pred_times.push_back(imu_stamp);
-    pred_poses.push_back(Eigen::Isometry3d(predicted.pose().matrix()));
+    pred_times.emplace_back(imu_stamp);
+    pred_poses.emplace_back(Eigen::Isometry3d(predicted.pose().matrix()));
     last_stamp = imu_stamp;
   }
 
@@ -121,8 +132,8 @@ int IMUIntegration::integrate_imu(
     imu_measurements->integrateMeasurement(a, w, dt);
 
     auto predicted = imu_measurements->predict(state, bias);
-    pred_times.push_back(end_time);
-    pred_poses.push_back(Eigen::Isometry3d(predicted.pose().matrix()));
+    pred_times.emplace_back(end_time);
+    pred_poses.emplace_back(Eigen::Isometry3d(predicted.pose().matrix()));
   }
 
   return cursor;
@@ -133,6 +144,11 @@ int IMUIntegration::find_imu_data(double start_time, double end_time, std::vecto
   int cursor = 0;
   auto imu_itr = imu_queue.begin();
   double last_stamp = start_time;
+
+  if (imu_itr == imu_queue.end()) {
+    return cursor;
+  }
+
   for (; imu_itr != imu_queue.end(); imu_itr++, cursor++) {
     const auto& imu_frame = *imu_itr;
     const double imu_stamp = imu_frame[0];
