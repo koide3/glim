@@ -43,7 +43,7 @@ public:
    * @param args  Arguments for the callbacks
    */
   template <class... Args>
-  void call(Args&... args) const {
+  void call(Args&&... args) const {
     if (callbacks.empty()) {
       return;
     }
@@ -60,7 +60,7 @@ public:
    * @param args  Arguments for the callbacks
    */
   template <class... Args>
-  void operator()(Args&... args) const {
+  void operator()(Args&&... args) const {
     return call(args...);
   }
 

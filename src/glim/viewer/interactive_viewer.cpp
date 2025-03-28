@@ -1,4 +1,5 @@
 #include <glim/viewer/interactive_viewer.hpp>
+#include <glim/viewer/callbacks.hpp>
 
 #include <atomic>
 #include <thread>
@@ -87,6 +88,7 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
   GlobalMappingCallbacks::on_update_submaps.add(std::bind(&InteractiveViewer::globalmap_on_update_submaps, this, _1));
   GlobalMappingCallbacks::on_smoother_update.add(std::bind(&InteractiveViewer::globalmap_on_smoother_update, this, _1, _2, _3));
   GlobalMappingCallbacks::on_smoother_update_result.add(std::bind(&InteractiveViewer::globalmap_on_smoother_update_result, this, _1, _2));
+  ViewerCallbacks::request_to_invoke.add([this](std::function<void(guik::LightViewer & viewer)> callback) { invoke([callback]() { callback(*guik::viewer()); }); });
 
   thread = std::thread([this] { viewer_loop(); });
 }
