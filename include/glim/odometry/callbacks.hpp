@@ -4,9 +4,11 @@
 #include <glim/util/callback_slot.hpp>
 #include <glim/odometry/estimation_frame.hpp>
 
+#ifdef GLIM_USE_OPENCV
 namespace cv {
 class Mat;
 }
+#endif
 
 namespace gtsam {
 class Values;
@@ -44,12 +46,14 @@ public:
  *
  */
 struct OdometryEstimationCallbacks {
+#ifdef GLIM_USE_OPENCV
   /**
    * @brief Image input callback
    * @param stamp  Timestamp
    * @param image  Image
    */
   static CallbackSlot<void(const double stamp, const cv::Mat& image)> on_insert_image;
+#endif
 
   /**
    * @brief IMU input callback

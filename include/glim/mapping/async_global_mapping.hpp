@@ -31,12 +31,14 @@ public:
    */
   ~AsyncGlobalMapping();
 
+#ifdef GLIM_USE_OPENCV
   /**
    * @brief Insert an image
    * @param stamp   Timestamp
    * @param image   Image
    */
   void insert_image(const double stamp, const cv::Mat& image);
+#endif
 
   /**
    * @brief Insert an IMU frame
@@ -85,7 +87,9 @@ private:
   std::atomic_bool end_of_sequence;  ///< Flag to stop the thread when the input queues become empty (Soft kill switch)
   std::thread thread;
 
+#ifdef GLIM_USE_OPENCV
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;
+#endif
   ConcurrentVector<Eigen::Matrix<double, 7, 1>> input_imu_queue;
   ConcurrentVector<SubMap::Ptr> input_submap_queue;
 

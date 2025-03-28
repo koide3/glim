@@ -29,9 +29,11 @@ AsyncGlobalMapping::~AsyncGlobalMapping() {
   join();
 }
 
+#ifdef GLIM_USE_OPENCV
 void AsyncGlobalMapping::insert_image(const double stamp, const cv::Mat& image) {
   input_image_queue.push_back(std::make_pair(stamp, image));
 }
+#endif
 
 void AsyncGlobalMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Eigen::Matrix<double, 7, 1> imu_data;
@@ -76,11 +78,17 @@ void AsyncGlobalMapping::run() {
   auto last_optimization_time = std::chrono::high_resolution_clock::now();
 
   while (!kill_switch) {
+#ifdef GLIM_USE_OPENCV
     auto images = input_image_queue.get_all_and_clear();
+#endif
     auto imu_frames = input_imu_queue.get_all_and_clear();
     auto submaps = input_submap_queue.get_all_and_clear();
 
-    if (images.empty() && imu_frames.empty() && submaps.empty()) {
+    if (
+#ifdef GLIM_USE_OPENCV
+      images.empty() &&
+#endif
+      imu_frames.empty() && submaps.empty()) {
       if (end_of_sequence) {
         break;
       }
@@ -117,9 +125,11 @@ void AsyncGlobalMapping::run() {
       global_mapping->insert_imu(stamp, linear_acc, angular_vel);
     }
 
+#ifdef GLIM_USE_OPENCV
     for (const auto& image : images) {
       global_mapping->insert_image(image.first, image.second);
     }
+#endif
 
     for (const auto& submap : submaps) {
       global_mapping->insert_submap(submap);

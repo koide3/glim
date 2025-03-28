@@ -20,9 +20,11 @@ AsyncOdometryEstimation::~AsyncOdometryEstimation() {
   join();
 }
 
+#ifdef GLIM_USE_OPENCV
 void AsyncOdometryEstimation::insert_image(const double stamp, const cv::Mat& image) {
   input_image_queue.push_back(std::make_pair(stamp, image));
 }
+#endif
 
 void AsyncOdometryEstimation::insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) {
   Eigen::Matrix<double, 7, 1> imu_data;
@@ -52,19 +54,27 @@ void AsyncOdometryEstimation::get_results(std::vector<EstimationFrame::ConstPtr>
 
 void AsyncOdometryEstimation::run() {
   double last_imu_time = enable_imu ? 0.0 : std::numeric_limits<double>::max();
+#ifdef GLIM_USE_OPENCV
   std::deque<std::pair<double, cv::Mat>> images;
+#endif
   std::deque<PreprocessedFrame::Ptr> raw_frames;
 
   while (!kill_switch) {
     auto imu_frames = input_imu_queue.get_all_and_clear();
-    auto new_images = input_image_queue.get_all_and_clear();
     auto new_raw_frames = input_frame_queue.get_all_and_clear();
-
-    images.insert(images.end(), new_images.begin(), new_images.end());
     raw_frames.insert(raw_frames.end(), new_raw_frames.begin(), new_raw_frames.end());
     internal_frame_queue_size = raw_frames.size();
 
-    if (images.empty() && imu_frames.empty() && raw_frames.empty()) {
+#ifdef GLIM_USE_OPENCV
+    auto new_images = input_image_queue.get_all_and_clear();
+    images.insert(images.end(), new_images.begin(), new_images.end());
+#endif
+
+    if (
+#ifdef GLIM_USE_OPENCV
+      images.empty() &&
+#endif
+      imu_frames.empty() && raw_frames.empty()) {
       if (end_of_sequence) {
         break;
       }
@@ -82,6 +92,7 @@ void AsyncOdometryEstimation::run() {
       last_imu_time = stamp;
     }
 
+#ifdef GLIM_USE_OPENCV
     while (!images.empty()) {
       if (!end_of_sequence && images.front().first > last_imu_time) {
         logger->debug("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f})", images.front().first, last_imu_time);
@@ -93,6 +104,7 @@ void AsyncOdometryEstimation::run() {
       odometry_estimation->insert_image(image.first, image.second);
       images.pop_front();
     }
+#endif
 
     while (!raw_frames.empty()) {
       if (!end_of_sequence && raw_frames.front()->scan_end_time > last_imu_time) {

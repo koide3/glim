@@ -4,9 +4,11 @@
 #include <glim/odometry/estimation_frame.hpp>
 #include <glim/mapping/sub_map.hpp>
 
+#ifdef GLIM_USE_OPENCV
 namespace cv {
 class Mat;
 }
+#endif
 
 namespace gtsam {
 class Values;
@@ -26,12 +28,14 @@ namespace glim {
  *
  */
 struct SubMappingCallbacks {
+#ifdef GLIM_USE_OPENCV
   /**
    * @brief Image input callback
    * @param stamp  Timestamp
    * @param image  Image
    */
   static CallbackSlot<void(const double stamp, const cv::Mat& image)> on_insert_image;
+#endif
 
   /**
    * @brief IMU input callback
@@ -80,12 +84,14 @@ struct SubMappingCallbacks {
  *
  */
 struct GlobalMappingCallbacks {
+#ifdef GLIM_USE_OPENCV
   /**
    * @brief Image input callback
    * @param stamp  Timestamp
    * @param image  Image
    */
   static CallbackSlot<void(const double stamp, const cv::Mat& image)> on_insert_image;
+#endif
 
   /**
    * @brief IMU input callback
@@ -145,4 +151,4 @@ struct GlobalMappingCallbacks {
    */
   static CallbackSlot<void(double)> request_to_find_overlapping_submaps;
 };
-}
+}  // namespace glim

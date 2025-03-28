@@ -24,7 +24,9 @@
 
 #include <glk/colormap.hpp>
 #include <glk/texture.hpp>
+#ifdef GLIM_USE_OPENCV
 #include <glk/texture_opencv.hpp>
+#endif
 #include <glk/thin_lines.hpp>
 #include <glk/pointcloud_buffer.hpp>
 #include <glk/indexed_pointcloud_buffer.hpp>
@@ -137,6 +139,7 @@ void StandardViewer::set_callbacks() {
     });
   });
 
+#ifdef GLIM_USE_OPENCV
   // New image callback
   OdometryEstimationCallbacks::on_insert_image.add([this](const double stamp, const cv::Mat& image) {
     invoke([this, image] {
@@ -145,6 +148,7 @@ void StandardViewer::set_callbacks() {
       viewer->update_image("image", texture);
     });
   });
+#endif
 
   // New frame callback
   OdometryEstimationCallbacks::on_new_frame.add([this](const EstimationFrame::ConstPtr& new_frame) {
