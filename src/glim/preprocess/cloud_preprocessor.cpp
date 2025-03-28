@@ -1,4 +1,5 @@
 #include <glim/preprocess/cloud_preprocessor.hpp>
+#include <glim/preprocess/callbacks.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -51,6 +52,7 @@ CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : pa
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
+  PreprocessCallbacks::on_raw_points_received(raw_points);
   if (gtsam_points::is_omp_default() || params.num_threads == 1 || !tbb_task_arena) {
     return preprocess_impl(raw_points);
   }
@@ -93,8 +95,8 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   std::vector<int> indices;
   indices.reserve(frame->size());
   double squared_distance_near_thresh = params.distance_near_thresh * params.distance_near_thresh;
-  double squared_distance_far_thresh  = params.distance_far_thresh  * params.distance_far_thresh;
-  
+  double squared_distance_far_thresh = params.distance_far_thresh * params.distance_far_thresh;
+
   for (int i = 0; i < frame->size(); i++) {
     const bool is_finite = frame->points[i].allFinite();
     const double squared_dist = (Eigen::Vector4d() << frame->points[i].head<3>(), 0.0).finished().squaredNorm();
