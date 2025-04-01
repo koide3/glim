@@ -23,6 +23,7 @@ public:
   std::vector<double> intensities;      ///< Point intensities
   std::vector<Eigen::Vector4d> points;  ///< Point coordinates
   std::vector<Eigen::Vector4d> colors;  ///< Point colors
+  std::vector<uint32_t> rings;          ///< Ring numbers of scanned points
 };
 
 }  // namespace glim
