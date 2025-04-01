@@ -3,7 +3,9 @@
 namespace glim {
 
 // sub mapping
+#ifdef GLIM_USE_OPENCV
 CallbackSlot<void(const double, const cv::Mat&)> SubMappingCallbacks::on_insert_image;
+#endif
 CallbackSlot<void(const double, const Eigen::Vector3d&, const Eigen::Vector3d&)> SubMappingCallbacks::on_insert_imu;
 CallbackSlot<void(const EstimationFrame::ConstPtr& frame)> SubMappingCallbacks::on_insert_frame;
 CallbackSlot<void(int id, const EstimationFrame::ConstPtr&)> SubMappingCallbacks::on_new_keyframe;
@@ -13,7 +15,9 @@ CallbackSlot<void(const gtsam_points::LevenbergMarquardtOptimizationStatus&, con
 CallbackSlot<void(const SubMap::ConstPtr&)> SubMappingCallbacks::on_new_submap;
 
 // global mapping
+#ifdef GLIM_USE_OPENCV
 CallbackSlot<void(const double, const cv::Mat&)> GlobalMappingCallbacks::on_insert_image;
+#endif
 CallbackSlot<void(const double, const Eigen::Vector3d&, const Eigen::Vector3d&)> GlobalMappingCallbacks::on_insert_imu;
 CallbackSlot<void(const SubMap::ConstPtr& frame)> GlobalMappingCallbacks::on_insert_submap;
 

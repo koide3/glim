@@ -30,12 +30,12 @@ If you find this package useful for your project, please consider leaving a comm
 ### Mandatory
 - [Eigen](https://eigen.tuxfamily.org/index.php)
 - [nanoflann](https://github.com/jlblancoc/nanoflann)
-- [OpenCV](https://opencv.org/)
 - [GTSAM](https://github.com/borglab/gtsam)
 - [gtsam_points](https://github.com/koide3/gtsam_points)
 
 ### Optional
 - [CUDA](https://developer.nvidia.com/cuda-toolkit)
+- [OpenCV](https://opencv.org/)
 - [OpenMP](https://www.openmp.org/)
 - [ROS/ROS2](https://www.ros.org/)
 - [Iridescence](https://github.com/koide3/iridescence)
