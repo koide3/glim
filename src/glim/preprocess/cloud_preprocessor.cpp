@@ -1,4 +1,5 @@
 #include <glim/preprocess/cloud_preprocessor.hpp>
+#include <glim/preprocess/callbacks.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -67,6 +68,7 @@ CloudPreprocessor::CloudPreprocessor(const CloudPreprocessorParams& params) : pa
 CloudPreprocessor::~CloudPreprocessor() {}
 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& raw_points) {
+  PreprocessCallbacks::on_raw_points_received(raw_points);
   if (gtsam_points::is_omp_default() || params.num_threads == 1 || !tbb_task_arena) {
     return preprocess_impl(raw_points);
   }

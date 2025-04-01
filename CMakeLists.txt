@@ -66,6 +66,7 @@ add_library(glim SHARED
   src/glim/util/data_validator.cpp
   src/glim/util/serialization.cpp
   # preprocess
+  src/glim/preprocess/callbacks.cpp
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
   src/glim/common/imu_integration.cpp
