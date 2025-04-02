@@ -1,0 +1,23 @@
+<map id="glim::OdometryEstimationCallbacks" name="glim::OdometryEstimationCallbacks">
+<area shape="rect" id="Node000001" title="Odometry estimation&#45;related callbacks." alt="" coords="601,426,796,466"/>
+<area shape="rect" id="Node000002" href="$classCallbackSlot.html" title=" " alt="" coords="88,5,281,89"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="295,41,365,46,440,60,514,86,548,105,579,128,611,162,637,201,657,243,672,286,691,366,699,425,693,426,686,367,667,287,652,245,632,203,607,165,576,132,545,110,511,91,439,65,364,51,295,46"/>
+<area shape="rect" id="Node000003" href="$classCallbackSlot.html" title=" " alt="" coords="87,113,282,168"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="296,137,365,144,439,158,512,183,547,200,579,221,604,243,626,269,659,327,682,382,695,425,690,427,677,384,655,329,621,272,600,247,576,225,544,205,510,188,437,163,364,149,296,142"/>
+<area shape="rect" id="Node000004" href="$classCallbackSlot.html" title=" " alt="" coords="96,192,273,247"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="288,231,355,245,430,265,507,293,579,329,610,351,639,377,683,424,679,428,635,381,607,356,576,334,505,298,429,270,354,250,287,236"/>
+<area shape="rect" id="Node000005" href="$classCallbackSlot.html" title=" " alt="" coords="85,271,285,341"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="299,326,433,357,578,397,651,423,649,428,577,402,432,362,297,331"/>
+<area shape="rect" id="Node000006" href="$classCallbackSlot.html" title=" " alt="" coords="85,365,285,434"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="299,407,601,435,601,440,299,412"/>
+<area shape="rect" id="Node000007" href="$classCallbackSlot.html" title=" " alt="" coords="82,458,287,527"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="301,479,601,452,601,457,302,485"/>
+<area shape="rect" id="Node000008" href="$classCallbackSlot.html" title=" " alt="" coords="71,551,299,621"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="312,559,440,529,577,491,651,464,653,469,578,497,442,534,313,564"/>
+<area shape="rect" id="Node000009" href="$classCallbackSlot.html" title=" " alt="" coords="5,645,364,743"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="377,646,478,610,529,587,576,561,607,539,636,513,680,464,684,468,640,517,611,543,579,566,531,592,480,615,378,651"/>
+<area shape="rect" id="Node000010" href="$classCallbackSlot.html" title=" " alt="" coords="61,767,308,837"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="321,785,386,770,453,748,518,718,576,677,599,653,620,626,654,566,676,509,690,466,695,467,681,511,658,568,625,629,603,657,579,681,520,723,455,753,387,775,322,790"/>
+<area shape="rect" id="Node000011" href="$classCallbackSlot.html" title=" " alt="" coords="111,861,258,901"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="272,882,345,878,426,865,467,853,506,837,543,816,576,791,608,753,635,710,655,664,670,617,688,529,694,466,699,467,693,530,675,618,660,666,639,713,613,757,579,795,546,821,508,842,468,858,427,870,345,884,272,887"/>
+</map>

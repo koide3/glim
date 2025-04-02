@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$structglim_1_1OdometryEstimationIMUParams.html" title="Parameters for OdometryEstimationIMU." alt="" coords="5,37,200,77"/>
+<area shape="rect" id="Node000001" href="$structglim_1_1OdometryEstimationCPUParams.html" title="Parameters for OdometryEstimationCPU." alt="" coords="248,5,443,45"/>
+<area shape="poly" id="edge16_Node000000_Node000001" title=" " alt="" coords="213,40,247,36,248,41,214,45"/>
+<area shape="rect" id="Node000002" href="$structglim_1_1OdometryEstimationGPUParams.html" title="Parameters for OdometryEstimationGPU." alt="" coords="248,69,443,109"/>
+<area shape="poly" id="edge17_Node000000_Node000002" title=" " alt="" coords="214,69,248,74,247,79,213,75"/>
+</map>
