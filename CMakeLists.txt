@@ -13,6 +13,7 @@ option(BUILD_WITH_CUDA "Build with GPU support" ON)
 option(BUILD_WITH_CUDA_MULTIARCH "Build with GPU cross-platform support" OFF)
 option(BUILD_WITH_VIEWER "Build with visualizer" ON)
 option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
+option(BUILD_WITH_OPENCV "Build with OpenCV to support camera images" ON)
 
 if(BUILD_WITH_MARCH_NATIVE)
   add_definitions(-march=native)
@@ -23,7 +24,6 @@ endif()
 
 find_package(Boost REQUIRED serialization)
 find_package(Eigen3 REQUIRED)
-find_package(OpenCV REQUIRED COMPONENTS core)
 find_package(GTSAM REQUIRED)
 find_package(gtsam_points REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -31,6 +31,13 @@ find_package(spdlog REQUIRED)
 
 if(BUILD_WITH_VIEWER)
   find_package(Iridescence REQUIRED)
+endif()
+
+if(BUILD_WITH_OPENCV)
+  set(GLIM_USE_OPENCV 1)
+  find_package(OpenCV REQUIRED COMPONENTS core)
+else()
+  set(GLIM_USE_OPENCV 0)
 endif()
 
 ###########
@@ -59,6 +66,7 @@ add_library(glim SHARED
   src/glim/util/data_validator.cpp
   src/glim/util/serialization.cpp
   # preprocess
+  src/glim/preprocess/callbacks.cpp
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
   src/glim/common/imu_integration.cpp
@@ -106,6 +114,9 @@ target_link_libraries(glim
   $<TARGET_NAME_IF_EXISTS:Iridescence::Iridescence>
   ${OpenCV_LIBRARIES}
 )
+if(BUILD_WITH_OPENCV)
+  target_compile_definitions(glim PUBLIC GLIM_USE_OPENCV)
+endif()
 list(APPEND glim_LIBRARIES glim)
 
 # Create shared libraries for estimation modules

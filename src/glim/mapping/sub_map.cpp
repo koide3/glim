@@ -141,6 +141,11 @@ SubMap::Ptr SubMap::load(const std::string& path) {
 
   auto frame = gtsam_points::PointCloudCPU::load(path);
 
+  if (!frame) {
+    spdlog::error("failed to load frame from {}", path);
+    return nullptr;
+  }
+
   if (frame->size()) {
     const auto valid_point = [](const Eigen::Vector4d& p) { return std::abs(p.w() - 1.0) < 1e-3 && p.head<3>().allFinite(); };
     const auto valid_cov = [](const Eigen::Matrix4d& cov) {

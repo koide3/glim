@@ -2,7 +2,9 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#ifdef GLIM_USE_OPENCV
 #include <opencv2/core.hpp>
+#endif
 
 #include <glim/odometry/estimation_frame.hpp>
 #include <glim/mapping/sub_map.hpp>
@@ -22,12 +24,14 @@ public:
   SubMappingBase();
   virtual ~SubMappingBase() {}
 
+#ifdef GLIM_USE_OPENCV
   /**
    * @brief Insert an image
    * @param stamp   Timestamp
    * @param image   Image
    */
   virtual void insert_image(const double stamp, const cv::Mat& image);
+#endif
 
   /**
    * @brief Insert an IMU data
