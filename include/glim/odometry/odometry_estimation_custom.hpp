@@ -62,6 +62,10 @@ public:
 
   double max_correspondence_distance;
 
+  // continuous-time params
+  double location_consistency_inf_scale;
+  double constant_velocity_inf_scale;
+
   int num_threads;                  // Number of threads for preprocessing and per-factor parallelism
   int num_smoother_update_threads;  // Number of threads for TBB parallelism in smoother update (should be kept 1)
 };
@@ -82,7 +86,11 @@ public:
 
 protected:
   virtual void fallback_smoother() {}
-  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values);
+  virtual gtsam::NonlinearFactorGraph create_factors(
+    const int current,
+    const boost::shared_ptr<gtsam::ImuFactor>& imu_factor,
+    const boost::shared_ptr<gtsam::ImuFactor>& intra_scan_imu_factor,
+    gtsam::Values& new_values);
   virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors);
 
   virtual void
