@@ -39,6 +39,7 @@ namespace glim {
 StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
 
+  viewer_started = false;
   kill_switch = false;
   request_to_terminate = false;
 
@@ -82,6 +83,14 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
 
   set_callbacks();
   thread = std::thread([this] { viewer_loop(); });
+
+  const auto t1 = std::chrono::high_resolution_clock::now();
+  while (!viewer_started && std::chrono::high_resolution_clock::now() - t1 < std::chrono::seconds(1)) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  if (!viewer_started) {
+    logger->critical("Timeout waiting for viewer to start");
+  }
 }
 
 StandardViewer::~StandardViewer() {
@@ -613,6 +622,8 @@ void StandardViewer::viewer_loop() {
   glim::Config config(glim::GlobalConfig::get_config_path("config_viewer"));
 
   auto viewer = guik::LightViewer::instance(Eigen::Vector2i(config.param("standard_viewer", "viewer_width", 2560), config.param("standard_viewer", "viewer_height", 1440)));
+  viewer_started = true;
+
   viewer->enable_vsync();
   viewer->shader_setting().add("z_range", z_range);
   viewer->shader_setting().set_point_size(point_size);
