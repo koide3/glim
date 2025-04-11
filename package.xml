@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>glim</name>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
   <description>3D LiDAR-IMU mapping framework</description>
   <maintainer email="k.koide@aist.go.jp">k.koide</maintainer>
   <license>MIT</license>
@@ -10,8 +10,6 @@
   <depend>fmt</depend>
   <depend>spdlog</depend>
   <depend>gtsam</depend>
-  <depend>gtsam_points</depend>
-  <depend>iridescence</depend>
 
   <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
   <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
