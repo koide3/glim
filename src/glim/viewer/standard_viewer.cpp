@@ -794,6 +794,40 @@ void StandardViewer::drawable_selection() {
     viewer->shader_setting().add<Eigen::Vector2f>("z_range", z);
   }
 
+  if (ImGui::Checkbox("Cumulative rendering", &enable_partial_rendering)) {
+    if (enable_partial_rendering) {
+      viewer->enable_partial_rendering(1e-1);
+      viewer->shader_setting().add("dynamic_object", 1);
+
+      for (int i = 0;; i++) {
+        auto found = viewer->find_drawable("submap_" + std::to_string(i));
+        if (!found.first) {
+          break;
+        }
+
+        auto cb = std::dynamic_pointer_cast<const glk::PointCloudBuffer>(found.second);
+        auto cloud_buffer = std::const_pointer_cast<glk::PointCloudBuffer>(cb);  // !!
+        cloud_buffer->enable_partial_rendering(1024);
+        found.first->add("dynamic_object", 0).make_transparent();
+      }
+    } else {
+      for (int i = 0;; i++) {
+        auto found = viewer->find_drawable("submap_" + std::to_string(i));
+        if (!found.first) {
+          break;
+        }
+
+        auto cb = std::dynamic_pointer_cast<const glk::PointCloudBuffer>(found.second);
+        auto cloud_buffer = std::const_pointer_cast<glk::PointCloudBuffer>(cb);  // !!
+        cloud_buffer->disable_partial_rendering();
+      }
+    }
+  }
+
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(60);
+  ImGui::DragInt("Budget", &partial_rendering_budget, 1, 1, 1000000);
+
   ImGui::End();
 
   if (show_odometry_status) {
