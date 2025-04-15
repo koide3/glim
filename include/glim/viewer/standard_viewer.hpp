@@ -48,6 +48,7 @@ private:
   void drawable_selection();
 
 private:
+  std::atomic_bool viewer_started;
   std::atomic_bool request_to_terminate;
   std::atomic_bool kill_switch;
   std::thread thread;
