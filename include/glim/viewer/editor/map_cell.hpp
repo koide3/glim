@@ -2,7 +2,6 @@
 
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <glim/mapping/sub_map.hpp>
-#include <glk/pointcloud_buffer.hpp>
 
 namespace glim {
 
@@ -16,19 +15,17 @@ public:
 
   std::string name() const;
 
+  void clear();
   void add_point(const SubMap::Ptr& submap, int point_id);
-  void finalize();
-  void reset_points();
+  void remove_submap(int submap_id);
 
 public:
   const double resolution;
   const Eigen::Vector3i coord;
 
   std::vector<glim::SubMap::Ptr> submaps;
-  glk::PointCloudBuffer::Ptr cloud_buffer;
 
-  std::vector<std::uint64_t> point_ids;
-  gtsam_points::PointCloudCPU::Ptr points;
+  std::vector<std::uint64_t> point_ids;  // (submap_id << 32bit) | point_id
 };
 
 }  // namespace glim

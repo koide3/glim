@@ -143,29 +143,6 @@ void MapEditor::ui_callback() {
   main_menu();
 
   selector->draw_ui();
-
-  // if (ImGui::Begin("submap editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-  //   // Submap selection
-  //   const int old_selected_submap = selected_submap;
-  //   ImGui::DragInt("submap_id", &selected_submap, 1, 0, submaps.size() - 1);
-  //   ImGui::SameLine();
-  //   ImGui::PushButtonRepeat(true);
-  //   selected_submap += ImGui::ArrowButton("Dec", ImGuiDir_Left) ? -1 : 0;
-  //   ImGui::SameLine();
-  //   selected_submap += ImGui::ArrowButton("Inc", ImGuiDir_Right) ? 1 : 0;
-  //   ImGui::PopButtonRepeat();
-  //   selected_submap = std::max<int>(0, std::min<int>(static_cast<int>(submaps.size()) - 1, selected_submap));
-
-  //   if (old_selected_submap != selected_submap && selected_submap < submaps.size()) {
-  //     update_viewer();
-  //     submap_editor->set_submap(submaps[selected_submap]);
-  //   }
-
-  //   ImGui::Separator();
-  //   submap_editor->draw_ui();
-
-  //   ImGui::End();
-  // }
 }
 
 std::vector<glim::SubMap::Ptr> MapEditor::load_submaps(guik::ProgressInterface& progress, const std::string& map_path) {

@@ -35,7 +35,7 @@ private:
   std::string map_path;
   std::string init_map_path;
 
-  std::vector<glim::SubMap::Ptr> submaps;
+  std::vector<glim::SubMap::Ptr> submaps;  // Points are transformed to world coordinates
   std::unique_ptr<PointsSelector> selector;
 };
 
