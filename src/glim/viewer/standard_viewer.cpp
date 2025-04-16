@@ -798,6 +798,8 @@ void StandardViewer::drawable_selection() {
     if (enable_partial_rendering && !viewer->partial_rendering_enabled()) {
       viewer->enable_partial_rendering(1e-1);
       viewer->shader_setting().add("dynamic_object", 1);
+    } else {
+      viewer->disable_partial_rendering();
     }
 
     // Update existing submap buffers
