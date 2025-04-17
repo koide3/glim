@@ -2,6 +2,7 @@
 
 #include <glk/html_colors.hpp>
 #include <glk/drawable_container.hpp>
+#include <glk/primitives/primitives.hpp>
 #include <guik/model_control.hpp>
 #include <guik/viewer/light_viewer.hpp>
 #include <gtsam_points/util/vector3i_hash.hpp>
@@ -21,6 +22,7 @@ PointsSelector::PointsSelector(std::shared_ptr<spdlog::logger> logger) : picked_
   show_picked_point = false;
   show_selection_radius = false;
 
+  show_cells = false;
   show_gizmo = false;
   selected_tool = 0;
   select_radius = 0.5f;
@@ -29,6 +31,13 @@ PointsSelector::PointsSelector(std::shared_ptr<spdlog::logger> logger) : picked_
   segmentation_method = 0;
 
   min_cut_params.foreground_weight = 10.0;
+
+  guik::viewer()->register_drawable_filter("filter", [this](const std::string& name) {
+    if (!show_cells && name == "cells") {
+      return false;
+    }
+    return true;
+  });
 }
 
 PointsSelector::~PointsSelector() {}
@@ -47,6 +56,32 @@ void PointsSelector::set_submaps(const std::vector<glim::SubMap::Ptr>& submaps) 
   });
 
   update_cells();
+}
+
+std::vector<std::uint64_t> PointsSelector::collect_neighbor_point_ids(const Eigen::Vector3d& point) {
+  const Eigen::Vector3i center = (point.array() / map_cell_resolution).floor().cast<int>();
+
+  std::vector<MapCell::Ptr> selected_cells;
+  const int w = cell_selection_window;
+  for (int i = -w; i <= w; i++) {
+    for (int j = -w; j <= w; j++) {
+      for (int k = -w; k <= w; k++) {
+        const Eigen::Vector3i coord = center + Eigen::Vector3i(i, j, k);
+        auto it = map_cells.find(coord);
+        if (it != map_cells.end()) {
+          selected_cells.push_back(it->second);
+        }
+      }
+    }
+  }
+
+  std::vector<std::uint64_t> selected_point_ids;
+  for (const auto& cell : selected_cells) {
+    selected_point_ids.insert(selected_point_ids.end(), cell->point_ids.begin(), cell->point_ids.end());
+  }
+  logger->info("|selected_cells|={} |selected_points|={}", selected_cells.size(), selected_point_ids.size());
+
+  return selected_point_ids;
 }
 
 gtsam_points::PointCloudCPU::Ptr PointsSelector::collect_submap_points(const std::vector<std::uint64_t>& point_ids) {
@@ -105,6 +140,16 @@ void PointsSelector::update_cells() {
     }
   }
 
+  auto container = std::make_shared<glk::DrawableContainer>(false);
+  for (const auto& cell : map_cells) {
+    const auto& coord = cell.first;
+    const auto& map_cell = cell.second;
+
+    const Eigen::Vector3d center = coord.cast<double>() * map_cell_resolution + Eigen::Vector3d::Constant(map_cell_resolution * 0.5);
+    container->push_back(glk::Primitives::wire_cube(), guik::FlatGreen().translate(center).scale(map_cell_resolution).set_alpha(0.5));
+  }
+
+  guik::viewer()->update_drawable("cells", container, guik::FlatGreen().set_alpha(0.5));
   logger->info("|cells|={}", map_cells.size());
 }
 
@@ -121,12 +166,21 @@ void PointsSelector::draw_ui() {
   };
 
   if (ImGui::Begin("editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::Text("Submaps: %ld", submaps.size());
+    ImGui::Text("Submaps: %ld  Cells: %ld", submaps.size(), map_cells.size());
+    ImGui::Text("Selected points: %ld", selected_point_ids.size());
+
     ImGui::Separator();
-    ImGui::DragFloat("map cell resolution", &map_cell_resolution, 0.1f, 0.1f, 10.0f);
-    ImGui::DragInt("selection window", &cell_selection_window, 1, 1, 10);
-    if (ImGui::Button("Update cells")) {
-      update_cells();
+    if (ImGui::BeginMenu("Map cells config")) {
+      show_note("Config of map cells for rough neighbor points extraction");
+
+      ImGui::Checkbox("Show cells", &show_cells) || show_note("Show map cells");
+      ImGui::DragFloat("map cell resolution", &map_cell_resolution, 0.1f, 0.1f, 10.0f) || show_note("Map cell resolution [m]");
+      ImGui::DragInt("selection window", &cell_selection_window, 1, 1, 10) || show_note("Neighbor cell selection window");
+      if (ImGui::MenuItem("Update cells")) {
+        update_cells();
+      }
+
+      ImGui::EndMenu();
     }
 
     // Gizmo selection tool
@@ -135,33 +189,40 @@ void PointsSelector::draw_ui() {
     show_note("Show gizmo for selection tool");
 
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(150);
-    ImGui::Combo("Selection tool", &selected_tool, "Box\0Sphere\0");
+    ImGui::SetNextItemWidth(100);
+    if (ImGui::Combo("Selection tool", &selected_tool, "Box\0Sphere\0")) {
+      show_gizmo = true;
+    }
 
-    if (ImGui::Button("Select points") || show_note("Select points within the selection tool")) {
-      select_points_tool();
+    if (ImGui::Button("Reset") || show_note("Reset gizmo size")) {
+      Eigen::Matrix4f matrix = model_control->model_matrix();
+      matrix.block<3, 3>(0, 0).setIdentity();
+      model_control->set_model_matrix(matrix);
+      show_gizmo = true;
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Reset gizmo")) {
-      model_control->set_model_matrix(Eigen::Matrix4d::Identity().eval());
+    if (ImGui::Button("Select points") || (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S)) || show_note("Select points within the selection tool")) {
+      select_points_tool();
     }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(Ctrl+S)");
 
     if (show_gizmo) {
       model_control->draw_gizmo();
     }
 
     ImGui::Separator();
-    if (ImGui::Button("Unselect points") || show_note("Unselect all points")) {
-      selected_point_ids.clear();
-      viewer->remove_drawable("selected");
-    }
-
     if (ImGui::Button("Remove selected points") || (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_R)) || show_note("Remove selected points from the submap")) {
-      remove_points();
+      remove_selected_points();
     }
     ImGui::SameLine();
     ImGui::TextDisabled("(Ctrl+R)");
+
+    if (ImGui::Button("Unselect points") || show_note("Clear selected points")) {
+      selected_point_ids.clear();
+      viewer->remove_drawable("selected");
+    }
 
     ImGui::End();
   }
@@ -175,34 +236,10 @@ void PointsSelector::draw_ui() {
   // Select cells based on the picked point position
   auto pick = viewer->pick_point(1, 3);
   if (pick) {
-    const Eigen::Vector3i center = (pick->cast<double>().array() / map_cell_resolution).floor().cast<int>();
-
-    std::vector<MapCell::Ptr> selected_cells;
-    const int w = cell_selection_window;
-    for (int i = -w; i <= w; i++) {
-      for (int j = -w; j <= w; j++) {
-        for (int k = -w; k <= w; k++) {
-          const Eigen::Vector3i coord = center + Eigen::Vector3i(i, j, k);
-          auto it = map_cells.find(coord);
-          if (it != map_cells.end()) {
-            selected_cells.push_back(it->second);
-          }
-        }
-      }
-    }
-
-    std::vector<std::uint64_t> selected_point_ids;
-    for (const auto& cell : selected_cells) {
-      selected_point_ids.insert(selected_point_ids.end(), cell->point_ids.begin(), cell->point_ids.end());
-    }
-
-    logger->info("|selected_cells|={} |selected_points|={}", selected_cells.size(), selected_point_ids.size());
-
-    this->selected_point_ids = std::move(selected_point_ids);
-    this->selected_points = collect_submap_points(this->selected_point_ids);
     this->picked_point = pick->cast<double>();
-
-    viewer->update_points("selected", this->selected_points->points, this->selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
+    auto neighbor_point_ids = collect_neighbor_point_ids(pick->cast<double>());
+    auto selected_points = collect_submap_points(neighbor_point_ids);
+    viewer->update_points("selected_cells", selected_points->points, selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
 
     ImGui::OpenPopup("context_menu");
   }
@@ -335,6 +372,8 @@ void PointsSelector::draw_ui() {
     }
 
     ImGui::EndPopup();
+  } else {
+    viewer->remove_drawable("selected_cells");
   }
 
   if (selected_point_ids.empty()) {
@@ -376,7 +415,7 @@ void PointsSelector::draw_ui() {
   }
 }
 
-void PointsSelector::remove_points() {
+void PointsSelector::remove_selected_points() {
   std::sort(selected_point_ids.begin(), selected_point_ids.end());
 
   std::vector<SubMap::Ptr> updated_submaps;
@@ -435,10 +474,15 @@ void PointsSelector::remove_points() {
   }
 
   selected_point_ids.clear();
-  selected_points.reset();
 }
 
 void PointsSelector::select_points_tool() {
+  if (!show_gizmo) {
+    show_gizmo = true;
+    logger->warn("Gizmo is not shown");
+    return;
+  }
+
   const Eigen::Matrix4d inv_model_matrix = model_control->model_matrix().cast<double>().inverse();
 
   selected_point_ids.clear();
@@ -463,51 +507,54 @@ void PointsSelector::select_points_tool() {
     return;
   }
 
-  selected_points = collect_submap_points(selected_point_ids);
-  guik::viewer()->update_points("selected", this->selected_points->points, this->selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
+  auto selected_points = collect_submap_points(selected_point_ids);
+  guik::viewer()->update_points("selected", selected_points->points, selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
   show_gizmo = false;
 }
 
 void PointsSelector::select_points_radius() {
-  if (selected_point_ids.empty()) {
+  const auto neighbor_point_ids = collect_neighbor_point_ids(picked_point);
+
+  if (neighbor_point_ids.empty()) {
     logger->warn("No points selected");
     return;
   }
 
-  std::vector<std::uint64_t> new_selected_point_ids;
-  std::vector<int> selected_indices;
+  const auto neighbor_points = collect_submap_points(neighbor_point_ids);
 
+  selected_point_ids.clear();
   const double sq_thresh = select_radius * select_radius;
-  for (int i = 0; i < selected_points->size(); i++) {
-    const double dist_sq = (selected_points->points[i] - picked_point.homogeneous()).squaredNorm();
+  for (int i = 0; i < neighbor_points->size(); i++) {
+    const double dist_sq = (neighbor_points->points[i] - picked_point.homogeneous()).squaredNorm();
     if (dist_sq < sq_thresh) {
-      selected_indices.emplace_back(i);
-      new_selected_point_ids.emplace_back(selected_point_ids[i]);
+      selected_point_ids.emplace_back(neighbor_point_ids[i]);
     }
   }
 
-  selected_points = gtsam_points::sample(selected_points, selected_indices);
-  selected_point_ids = std::move(new_selected_point_ids);
-  logger->info("Select points in radius: {} points selected", selected_points->size());
+  logger->info("Select points in radius: {} points selected", selected_point_ids.size());
 
-  guik::viewer()->update_points("selected", this->selected_points->points, this->selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
+  auto filtered = collect_submap_points(selected_point_ids);
+  guik::viewer()->update_points("selected", filtered->points, filtered->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
 }
 
 void PointsSelector::select_points_segmentation() {
-  if (selected_point_ids.empty()) {
-    logger->warn("No points selected");
+  selected_point_ids.clear();
+
+  const auto neighbor_point_ids = collect_neighbor_point_ids(picked_point);
+  const auto neighbor_points = collect_submap_points(neighbor_point_ids);
+
+  if (neighbor_point_ids.empty()) {
+    logger->warn("No neighbor points");
     return;
   }
-
-  std::vector<std::uint64_t> new_selected_point_ids;
 
   if (segmentation_method == 0) {
     std::vector<std::uint64_t> filtered_ids;
     const double sq_dist_thresh = std::pow(min_cut_params.background_mask_radius + 1.0, 2);
-    for (int i = 0; i < selected_point_ids.size(); i++) {
-      const double sq_dist = (selected_points->points[i] - picked_point.homogeneous()).squaredNorm();
+    for (int i = 0; i < neighbor_point_ids.size(); i++) {
+      const double sq_dist = (neighbor_points->points[i] - picked_point.homogeneous()).squaredNorm();
       if (sq_dist < sq_dist_thresh) {
-        filtered_ids.emplace_back(selected_point_ids[i]);
+        filtered_ids.emplace_back(neighbor_point_ids[i]);
       }
     }
 
@@ -518,23 +565,22 @@ void PointsSelector::select_points_segmentation() {
     auto result = gtsam_points::min_cut(*filtered, *filtered_tree, picked_point.homogeneous(), min_cut_params);
 
     for (int i = 0; i < result.cluster_indices.size(); i++) {
-      new_selected_point_ids.emplace_back(filtered_ids[result.cluster_indices[i]]);
+      selected_point_ids.emplace_back(filtered_ids[result.cluster_indices[i]]);
     }
 
   } else {
-    auto filtered = collect_submap_points(selected_point_ids);
+    auto filtered = collect_submap_points(neighbor_point_ids);
     auto kdtree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(filtered);
     auto rg = gtsam_points::region_growing_init(*filtered, *kdtree, picked_point.homogeneous(), region_growing_params);
     gtsam_points::region_growing_update(rg, *filtered, *kdtree, region_growing_params);
 
     for (int i = 0; i < rg.cluster_indices.size(); i++) {
-      new_selected_point_ids.emplace_back(selected_point_ids[rg.cluster_indices[i]]);
+      selected_point_ids.emplace_back(neighbor_point_ids[rg.cluster_indices[i]]);
     }
   }
 
-  selected_points = collect_submap_points(new_selected_point_ids);
-  selected_point_ids = std::move(new_selected_point_ids);
-  guik::viewer()->update_points("selected", this->selected_points->points, this->selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
+  auto selected_points = collect_submap_points(selected_point_ids);
+  guik::viewer()->update_points("selected", selected_points->points, selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
   logger->info("Select points by segmentation: {} points selected", selected_points->size());
 }
 

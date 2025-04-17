@@ -25,10 +25,11 @@ public:
   void draw_ui();
 
 private:
+  std::vector<std::uint64_t> collect_neighbor_point_ids(const Eigen::Vector3d& point);
   gtsam_points::PointCloudCPU::Ptr collect_submap_points(const std::vector<std::uint64_t>& point_ids);
 
   void update_cells();
-  void remove_points();
+  void remove_selected_points();
 
   void select_points_tool();
   void select_points_radius();
@@ -43,8 +44,7 @@ private:
   std::unordered_map<Eigen::Vector3i, MapCell::Ptr, gtsam_points::Vector3iHash> map_cells;
 
   // Selection data
-  std::vector<std::uint64_t> selected_point_ids;     // (submap_id << 32bit) | point_id
-  gtsam_points::PointCloudCPU::Ptr selected_points;  // all points in the selected cells
+  std::vector<std::uint64_t> selected_point_ids;  // (submap_id << 32bit) | point_id
 
   Eigen::Vector3d picked_point;
   std::unique_ptr<guik::ModelControl> model_control;
@@ -55,6 +55,7 @@ private:
   bool show_picked_point;
   bool show_selection_radius;
 
+  bool show_cells;
   bool show_gizmo;
   int selected_tool;
   float select_radius;
