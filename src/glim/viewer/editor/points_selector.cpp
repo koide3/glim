@@ -157,7 +157,7 @@ void PointsSelector::update_cells() {
       if (!cell) {
         cell = std::make_shared<MapCell>(map_cell_resolution, coord);
       }
-      cell->add_point(submap, i);
+      cell->add_point(submap->id, i);
       map.insert(cell);
     }
   }
@@ -546,7 +546,7 @@ void PointsSelector::remove_selected_points() {
 #pragma omp critical
     {
       for (const auto& cell_points : cells_points_to_add) {
-        cell_points.first->add_points(submap, cell_points.second);
+        cell_points.first->add_points(submap->id, cell_points.second);
       }
     }
   }
