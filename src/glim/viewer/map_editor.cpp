@@ -55,6 +55,7 @@ void MapEditor::main_menu() {
 
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
+      // open map
       if (ImGui::MenuItem("Open New Map")) {
         if (!submaps.empty()) {
           if (pfd::message("Warning", "Close the current map?").result() == pfd::button::ok) {
@@ -67,6 +68,7 @@ void MapEditor::main_menu() {
         }
       }
 
+      // save map
       if (ImGui::MenuItem("Save map")) {
         if (submaps.empty()) {
           logger->warn("No map to save");
@@ -75,6 +77,7 @@ void MapEditor::main_menu() {
         }
       }
 
+      // close map
       if (ImGui::MenuItem("Close map")) {
         if (submaps.empty()) {
           logger->warn("No map to close");
@@ -94,8 +97,10 @@ void MapEditor::main_menu() {
   if (start_open_map || !init_map_path.empty()) {
     guik::RecentFiles recent_files("offline_viewer_open");
     if (init_map_path.empty()) {
+      // Open a dialog to select a map path
       map_path = pfd::select_folder("Select a dump directory", recent_files.most_recent()).result();
     } else {
+      // If the map path is given as a command line argument, use it
       map_path = init_map_path;
       init_map_path.clear();
     }
@@ -104,10 +109,12 @@ void MapEditor::main_menu() {
       logger->info("Load map from {}", map_path);
       recent_files.push(map_path);
 
+      // Start map loading
       progress_modal->open<std::vector<glim::SubMap::Ptr>>("open", [this](guik::ProgressInterface& progress) { return load_submaps(progress, map_path); });
     }
   }
 
+  // Catch the loaded submaps
   const auto loaded_submaps = progress_modal->run<std::vector<glim::SubMap::Ptr>>("open");
   if (loaded_submaps && !loaded_submaps->empty()) {
     submaps = *loaded_submaps;

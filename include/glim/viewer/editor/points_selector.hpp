@@ -14,6 +14,7 @@ class ModelControl;
 
 namespace glim {
 
+/// @brief Interactive point selection
 struct PointsSelector {
 public:
   PointsSelector(std::shared_ptr<spdlog::logger> logger);
@@ -37,21 +38,21 @@ private:
 
 private:
   // Map data
-  std::vector<SubMap::Ptr> submaps;
-  std::vector<glk::PointCloudBuffer::Ptr> submap_drawables;
+  std::vector<SubMap::Ptr> submaps;                          ///< Submaps
+  std::vector<glk::PointCloudBuffer::Ptr> submap_drawables;  ///< Submap cloud buffers
 
-  std::unordered_map<SubMap::ConstPtr, std::unordered_set<MapCell::Ptr>> cell_map;
-  std::unordered_map<Eigen::Vector3i, MapCell::Ptr, gtsam_points::Vector3iHash> map_cells;
+  std::unordered_map<SubMap::ConstPtr, std::unordered_set<MapCell::Ptr>> cell_map;          ///< submap -> cell indices
+  std::unordered_map<Eigen::Vector3i, MapCell::Ptr, gtsam_points::Vector3iHash> map_cells;  ///< Map cells for fast neighbor query
 
   // Selection data
-  std::vector<std::uint64_t> selected_point_ids;  // (submap_id << 32bit) | point_id
+  std::vector<std::uint64_t> selected_point_ids;  ///< Selected points (submap_id << 32bit) | point_id
 
-  Eigen::Vector3d picked_point;
-  std::unique_ptr<guik::ModelControl> model_control;
+  Eigen::Vector3d picked_point;                       ///< 3D point picked by a right click
+  std::unique_ptr<guik::ModelControl> model_control;  ///< Gizmo for manipulating the selection tools
 
-  int num_threads;
-  float map_cell_resolution;
-  int cell_selection_window;
+  int num_threads;            ///< Number of threads
+  float map_cell_resolution;  ///< Map cell resolution [m]
+  int cell_selection_window;  ///< Cell selection window size [m]
 
   bool show_preferences_window;
 

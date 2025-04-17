@@ -12,6 +12,7 @@
 
 namespace glim {
 
+/// @brief Interactive map editor
 class MapEditor {
 public:
   MapEditor(const std::string& init_map_path);
@@ -32,11 +33,11 @@ private:
   std::shared_ptr<spdlog::logger> logger;
   std::unique_ptr<guik::ProgressModal> progress_modal;
 
-  std::string map_path;
-  std::string init_map_path;
+  std::string map_path;       ///< Input map path
+  std::string init_map_path;  ///< Map path for initial auto loading (if path is given as a command line argument)
 
-  std::vector<glim::SubMap::Ptr> submaps;  // Points are transformed to world coordinates
-  std::unique_ptr<PointsSelector> selector;
+  std::vector<glim::SubMap::Ptr> submaps;    ///< Submaps
+  std::unique_ptr<PointsSelector> selector;  ///< Points selector
 };
 
 }  // namespace glim

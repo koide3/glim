@@ -46,7 +46,9 @@ PointsSelector::PointsSelector(std::shared_ptr<spdlog::logger> logger) : picked_
   });
 }
 
-PointsSelector::~PointsSelector() {}
+PointsSelector::~PointsSelector() {
+  guik::viewer()->remove_drawable_filter("filter");
+}
 
 void PointsSelector::clear() {
   this->submaps.clear();
@@ -68,9 +70,14 @@ void PointsSelector::set_submaps(const std::vector<glim::SubMap::Ptr>& submaps) 
   update_cells();
 }
 
+/// @brief Collect points within the voxel grid search window
+/// @param point Query point
+/// @return Point ids within the search window. Point ID = (submap_id << 32bit) | point_id
 std::vector<std::uint64_t> PointsSelector::collect_neighbor_point_ids(const Eigen::Vector3d& point) {
+  // Center of the voxel grid search window
   const Eigen::Vector3i center = (point.array() / map_cell_resolution).floor().cast<int>();
 
+  // Find cells within the search window
   std::vector<MapCell::Ptr> selected_cells;
   const int w = cell_selection_window;
   for (int i = -w; i <= w; i++) {
@@ -85,6 +92,7 @@ std::vector<std::uint64_t> PointsSelector::collect_neighbor_point_ids(const Eige
     }
   }
 
+  // Collect point ids from the selected cells
   std::vector<std::uint64_t> selected_point_ids;
   for (const auto& cell : selected_cells) {
     selected_point_ids.insert(selected_point_ids.end(), cell->point_ids.begin(), cell->point_ids.end());
@@ -94,10 +102,15 @@ std::vector<std::uint64_t> PointsSelector::collect_neighbor_point_ids(const Eige
   return selected_point_ids;
 }
 
+/// @brief Collect points associated with point ids
+/// @param point_ids  Point IDs (submap_id << 32bit) | point_id
+/// @return Collected points
 gtsam_points::PointCloudCPU::Ptr PointsSelector::collect_submap_points(const std::vector<std::uint64_t>& point_ids) {
   const bool has_normals = submaps[0]->frame->has_normals();
   const bool has_covs = submaps[0]->frame->has_covs();
   const bool has_intensities = submaps[0]->frame->has_intensities();
+
+  // NOTE : All submaps should have the same point attributes
 
   auto points = std::make_shared<gtsam_points::PointCloudCPU>();
   points->points_storage.resize(point_ids.size());
@@ -107,9 +120,9 @@ gtsam_points::PointCloudCPU::Ptr PointsSelector::collect_submap_points(const std
   if (has_covs) {
     points->covs_storage.resize(point_ids.size());
   }
-  if (has_intensities) {
-    points->intensities_storage.resize(point_ids.size());
-  }
+  // if (has_intensities) {
+  //   points->intensities_storage.resize(point_ids.size());
+  // }
 
 #pragma omp parallel for num_threads(num_threads) schedule(guided, 32)
   for (int i = 0; i < point_ids.size(); i++) {
@@ -126,20 +139,21 @@ gtsam_points::PointCloudCPU::Ptr PointsSelector::collect_submap_points(const std
     if (has_covs) {
       points->covs_storage[i] = submap->T_world_origin.matrix() * submap->frame->covs[point_id] * submap->T_world_origin.matrix().transpose();
     }
-    if (has_intensities) {
-      points->intensities_storage[i] = (submaps[submap_id]->frame->intensities[point_id]);
-    }
+    // if (has_intensities) {
+    //   points->intensities_storage[i] = (submaps[submap_id]->frame->intensities[point_id]);
+    // }
   }
 
   points->num_points = points->points_storage.size();
   points->points = points->points_storage.data();
   points->normals = points->normals_storage.data();
   points->covs = points->covs_storage.data();
-  points->intensities = points->intensities_storage.data();
+  // points->intensities = points->intensities_storage.data();
 
   return points;
 }
 
+/// @brief Update map cells
 void PointsSelector::update_cells() {
   cell_map.clear();
   map_cells.clear();
@@ -162,6 +176,7 @@ void PointsSelector::update_cells() {
     }
   }
 
+  // Visualize cells
   auto container = std::make_shared<glk::DrawableContainer>(false);
   for (const auto& cell : map_cells) {
     const auto& coord = cell.first;
@@ -197,15 +212,19 @@ void PointsSelector::draw_ui() {
     ImGui::EndMainMenuBar();
   }
 
+  // Preferences window
   if (show_preferences_window && ImGui::Begin("Preferenecs", &show_preferences_window, ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::DragInt("Num threads", &num_threads, 1, 1, std::thread::hardware_concurrency()) || show_note("Number of threads for processing");
+    // TODO : point rendering mode
     ImGui::End();
   }
 
+  // Editor main window
   if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::Text("Submaps: %ld  Cells: %ld", submaps.size(), map_cells.size());
     ImGui::Text("Selected points: %ld", selected_point_ids.size());
 
+    // Map cells config
     ImGui::Separator();
     if (ImGui::BeginMenu("Map cells config")) {
       show_note("Config of map cells for rough neighbor points extraction");
@@ -264,16 +283,12 @@ void PointsSelector::draw_ui() {
     ImGui::End();
   }
 
-  // Clear selection by left clicking
-  if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
-    // selected_point_ids.clear();
-    // viewer->remove_drawable("selected");
-  }
-
-  // Select cells based on the picked point position
+  // Right click to pick a 3D point and open the context menu
   auto pick = viewer->pick_point(1, 3);
   if (pick) {
     this->picked_point = pick->cast<double>();
+
+    // Show cells in the search window
     auto neighbor_point_ids = collect_neighbor_point_ids(pick->cast<double>());
     auto selected_points = collect_submap_points(neighbor_point_ids);
     viewer->update_points("selected_cells", selected_points->points, selected_points->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
@@ -452,12 +467,14 @@ void PointsSelector::draw_ui() {
   }
 }
 
+/// @brief Remove selected points from the submaps
+/// @note  Parallelism is limited to the number of submaps in the current implementation
 void PointsSelector::remove_selected_points() {
   std::sort(selected_point_ids.begin(), selected_point_ids.end());
 
   std::vector<std::tuple<SubMap::Ptr, const std::uint64_t*, const std::uint64_t*>> updated_submaps;  // (submap, begin, end)
 
-  // partition selected points by submap
+  // Partition selected points by submap IDs
   auto point_id_itr = selected_point_ids.begin();
   while (point_id_itr != selected_point_ids.end()) {
     const std::uint64_t submap_id = *point_id_itr >> 32;
@@ -469,14 +486,14 @@ void PointsSelector::remove_selected_points() {
     });
     point_id_itr = end;
 
-    // find points to be removed in the submap
+    // Find points to be removed in the submap
     const auto& submap = submaps[submap_id];
     updated_submaps.emplace_back(submap, &(*begin), &(*end));
   }
 
   logger->info("updated submaps: {}", updated_submaps.size());
 
-  // remove points from the submaps
+  // Remove points from the submaps
 #pragma omp parallel for num_threads(num_threads) schedule(dynamic)
   for (int i = 0; i < updated_submaps.size(); i++) {
     const auto& submap = std::get<0>(updated_submaps[i]);
@@ -496,7 +513,7 @@ void PointsSelector::remove_selected_points() {
       point_indices[point_id] = -1;
     });
 
-    // remove points from the submap
+    // Remove points from the submap
     const auto remove_loc = std::remove_if(point_indices.begin(), point_indices.end(), [](int id) { return id == -1; });
     point_indices.erase(remove_loc, point_indices.end());
 
@@ -561,6 +578,7 @@ void PointsSelector::remove_selected_points() {
   selected_point_ids.clear();
 }
 
+/// @brief Select points using the gizmo
 void PointsSelector::select_points_tool() {
   if (!show_gizmo) {
     show_gizmo = true;
@@ -577,16 +595,21 @@ void PointsSelector::select_points_tool() {
     const auto& submap = submaps[submap_idx];
     const Eigen::Matrix4d T_local_world = inv_model_matrix * submap->T_world_origin.matrix();
 
-    std::vector<std::uint64_t> local_selected_point_ids;
+    std::vector<std::uint64_t> local_selected_point_ids;  // Thread-local selected point ids
     local_selected_point_ids.reserve(submap->frame->size() / 4);
 
     for (int i = 0; i < submap->frame->size(); i++) {
+      // Transform point to the local frame of the gizmo
       const Eigen::Vector4d pt = T_local_world * submap->frame->points[i];
+
+      // Cube
       if (selected_tool == 0) {
         if ((pt.array() > Eigen::Array4d(-0.5, -0.5, -0.5, 0.0)).all() && (pt.array() < Eigen::Array4d(0.5, 0.5, 0.5, 2.0)).all()) {
           local_selected_point_ids.emplace_back((static_cast<std::uint64_t>(submap->id) << 32) | i);
         }
-      } else {
+      }
+      // Sphere
+      else {
         if (pt.head<3>().squaredNorm() < 1.0) {
           local_selected_point_ids.emplace_back((static_cast<std::uint64_t>(submap->id) << 32) | i);
         }
@@ -609,6 +632,7 @@ void PointsSelector::select_points_tool() {
   show_gizmo = false;
 }
 
+/// @brief Select points within the radius
 void PointsSelector::select_points_radius() {
   const auto neighbor_point_ids = collect_neighbor_point_ids(picked_point);
 
@@ -634,6 +658,7 @@ void PointsSelector::select_points_radius() {
   guik::viewer()->update_points("selected", filtered->points, filtered->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
 }
 
+/// @brief Select points using segmentation algorithms
 void PointsSelector::select_points_segmentation() {
   selected_point_ids.clear();
 
@@ -645,7 +670,9 @@ void PointsSelector::select_points_segmentation() {
     return;
   }
 
+  // Mincut
   if (segmentation_method == 0) {
+    // Filter points within the background mask radius + 1m
     std::vector<std::uint64_t> filtered_ids;
     const double sq_dist_thresh = std::pow(min_cut_params.background_mask_radius + 1.0, 2);
     for (int i = 0; i < neighbor_point_ids.size(); i++) {
@@ -655,18 +682,21 @@ void PointsSelector::select_points_segmentation() {
       }
     }
 
+    // Collect points within the background mask radius and estimate their normals
     auto filtered = collect_submap_points(filtered_ids);
-    filtered->add_normals(gtsam_points::estimate_normals(filtered->points, filtered->size(), 10, num_threads));
-
-    min_cut_params.num_threads = num_threads;
+    filtered->add_normals(gtsam_points::estimate_normals(filtered->points, filtered->size(), 20, num_threads));
     auto filtered_tree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(filtered);
-    auto result = gtsam_points::min_cut(*filtered, *filtered_tree, picked_point.homogeneous(), min_cut_params);
+
+    // Run mincut
+    min_cut_params.num_threads = num_threads;
+    const auto result = gtsam_points::min_cut(*filtered, *filtered_tree, picked_point.homogeneous(), min_cut_params);
 
     for (int i = 0; i < result.cluster_indices.size(); i++) {
       selected_point_ids.emplace_back(filtered_ids[result.cluster_indices[i]]);
     }
-
-  } else {
+  }
+  // Region growing
+  else {
     auto filtered = collect_submap_points(neighbor_point_ids);
     auto kdtree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(filtered);
 
