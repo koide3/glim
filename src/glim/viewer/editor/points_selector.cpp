@@ -9,12 +9,11 @@
 #include <gtsam_points/util/fast_floor.hpp>
 #include <gtsam_points/util/normal_estimation.hpp>
 #include <gtsam_points/ann/kdtree2.hpp>
-#include <gtsam_points/util/easy_profiler.hpp>
 
 namespace glim {
 
 PointsSelector::PointsSelector(std::shared_ptr<spdlog::logger> logger) : picked_point(0, 0, 0), logger(logger) {
-  num_threads = std::min<int>(std::thread::hardware_concurrency(), 32);
+  num_threads = std::min<int>(std::thread::hardware_concurrency(), 16);
   logger->info("Num threads: {}", num_threads);
 
   model_control.reset(new guik::ModelControl("model_control"));
@@ -31,19 +30,29 @@ PointsSelector::PointsSelector(std::shared_ptr<spdlog::logger> logger) : picked_
   show_cells = false;
   show_gizmo = false;
   selected_tool = 0;
-  select_radius = 0.5f;
+
+  select_radius = 2.0f;
+  outlier_radius_offset = 1.0f;
+  outliner_num_neighbors = 10;
+  outlier_stddev_thresh = 2.0f;
 
   show_segmentation_radius = false;
   segmentation_method = 0;
 
   min_cut_params.foreground_weight = 10.0;
+  min_cut_params.foreground_mask_radius = 0.5f;
+  min_cut_params.background_mask_radius = 5.0f;
 
-  guik::viewer()->register_drawable_filter("filter", [this](const std::string& name) {
+  auto viewer = guik::viewer();
+  viewer->register_drawable_filter("filter", [this](const std::string& name) {
     if (!show_cells && name == "cells") {
       return false;
     }
     return true;
   });
+  viewer->shader_setting().set_point_shape_circle();
+  viewer->shader_setting().set_point_scale_metric();
+  viewer->shader_setting().set_point_size(0.05f);
 }
 
 PointsSelector::~PointsSelector() {
@@ -215,6 +224,24 @@ void PointsSelector::draw_ui() {
   // Preferences window
   if (show_preferences_window && ImGui::Begin("Preferenecs", &show_preferences_window, ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::DragInt("Num threads", &num_threads, 1, 1, std::thread::hardware_concurrency()) || show_note("Number of threads for processing");
+
+    ImGui::Separator();
+
+    auto& settings = viewer->shader_setting();
+    auto point_size_ = settings.get<float>("point_size");
+    float point_size = point_size_ ? *point_size_ : 10.0f;
+    if (ImGui::DragFloat("Point size", &point_size, 0.01f, 0.01f, 100.0f)) {
+      settings.set_point_size(point_size);
+    }
+
+    if (ImGui::Button("Rectangle") || show_note("Set point shape to rectangle")) {
+      settings.set_point_shape_rectangle();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Circle") || show_note("Set point shape to circle")) {
+      settings.set_point_shape_circle();
+    }
+
     // TODO : point rendering mode
     ImGui::End();
   }
@@ -345,20 +372,34 @@ void PointsSelector::draw_ui() {
     }
 
     // Radius
-    const bool radius_menu_open = ImGui::BeginMenu("Select in radius");
-    bool radius_selection_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+    const bool radius_menu_open = ImGui::BeginMenu("Radius tools");
 
     if (radius_menu_open) {
       show_selection_radius = true;
       ImGui::DragFloat("Radius", &select_radius, 0.01f, 0.01f, 100.0f);
-      radius_selection_clicked |= ImGui::MenuItem("Select");
+
+      if (ImGui::BeginMenu("Outlier selection")) {
+        ImGui::DragFloat("Radius offset", &outlier_radius_offset, 0.01f, 0.01f, 100.0f);
+        show_note("Radius offset for statistics computation");
+        ImGui::DragInt("Num neighbors", &outliner_num_neighbors, 1, 1, 100);
+        show_note("Number of neighbors for statistics computation");
+        ImGui::DragFloat("Stddev threshold", &outlier_stddev_thresh, 0.01f, 0.01f, 10.0f);
+        show_note("Threshold for outlier detection");
+
+        ImGui::EndMenu();
+      }
+
+      if (ImGui::MenuItem("Select outliers within radius")) {
+        logger->info("Select outliers in radius clicked");
+        select_outlier_points_radius();
+      }
+
+      if (ImGui::MenuItem("Select within radius")) {
+        logger->info("Select in radius clicked");
+        select_points_radius();
+      }
       show_note("Select points within the radius");
       ImGui::EndMenu();
-    }
-    if (radius_selection_clicked) {
-      logger->info("Select in radius clicked");
-      select_points_radius();
-      ImGui::CloseCurrentPopup();
     }
 
     // Segmentation
@@ -652,6 +693,65 @@ void PointsSelector::select_points_radius() {
     }
   }
 
+  logger->info("Select points in radius: {} points selected", selected_point_ids.size());
+
+  auto filtered = collect_submap_points(selected_point_ids);
+  guik::viewer()->update_points("selected", filtered->points, filtered->size(), guik::FlatOrange().set_alpha(0.8).set_point_scale(2.0f));
+}
+
+/// @brief Select outlier points within the radius
+void PointsSelector::select_outlier_points_radius() {
+  const auto neighbor_point_ids = collect_neighbor_point_ids(picked_point);
+  const auto neighbor_points = collect_submap_points(neighbor_point_ids);
+
+  if (neighbor_point_ids.empty()) {
+    logger->warn("No points selected");
+    return;
+  }
+
+  constexpr std::uint64_t INLIER = std::numeric_limits<std::uint64_t>::max();
+
+  std::vector<std::uint64_t> point_ids_in_radius;
+  auto points_in_radius = std::make_shared<gtsam_points::PointCloudCPU>();
+
+  const double sq_thresh = std::pow(select_radius, 2);
+  const double offset_sq_thresh = std::pow(select_radius + outlier_radius_offset, 2);
+  for (int i = 0; i < neighbor_points->size(); i++) {
+    const double dist_sq = (neighbor_points->points[i] - picked_point.homogeneous()).squaredNorm();
+    if (dist_sq < offset_sq_thresh) {
+      point_ids_in_radius.emplace_back(dist_sq < sq_thresh ? neighbor_point_ids[i] : INLIER);
+      points_in_radius->points_storage.emplace_back(neighbor_points->points[i]);
+    }
+  }
+
+  points_in_radius->num_points = points_in_radius->points_storage.size();
+  points_in_radius->points = points_in_radius->points_storage.data();
+
+  if (points_in_radius->size() < outliner_num_neighbors) {
+    logger->warn("Not enough points in radius");
+    return;
+  }
+
+  const int k = outliner_num_neighbors;
+  auto tree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(points_in_radius);
+  std::vector<int> neighbors(k * points_in_radius->size());
+
+  for (int i = 0; i < points_in_radius->size(); i++) {
+    std::vector<size_t> k_indices(k);
+    std::vector<double> k_sq_dists(k);
+    tree->knn_search(points_in_radius->points[i].data(), k, k_indices.data(), k_sq_dists.data());
+    std::copy(k_indices.begin(), k_indices.end(), neighbors.begin() + i * k);
+  }
+
+  auto inliers = gtsam_points::find_inlier_points(points_in_radius, neighbors, k, outlier_stddev_thresh);
+  for (int idx : inliers) {
+    point_ids_in_radius[idx] = INLIER;
+  }
+
+  auto remove_loc = std::remove_if(point_ids_in_radius.begin(), point_ids_in_radius.end(), [](std::uint64_t id) { return id == INLIER; });
+  point_ids_in_radius.erase(remove_loc, point_ids_in_radius.end());
+
+  selected_point_ids = point_ids_in_radius;
   logger->info("Select points in radius: {} points selected", selected_point_ids.size());
 
   auto filtered = collect_submap_points(selected_point_ids);

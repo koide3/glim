@@ -34,6 +34,7 @@ private:
 
   void select_points_tool();
   void select_points_radius();
+  void select_outlier_points_radius();
   void select_points_segmentation();
 
 private:
@@ -62,7 +63,11 @@ private:
   bool show_cells;
   bool show_gizmo;
   int selected_tool;
+
   float select_radius;
+  float outlier_radius_offset;
+  int outliner_num_neighbors;
+  float outlier_stddev_thresh;
 
   bool show_segmentation_radius;
   int segmentation_method;
