@@ -9,15 +9,21 @@
 #include <gtsam_points/util/fast_floor.hpp>
 #include <gtsam_points/util/normal_estimation.hpp>
 #include <gtsam_points/ann/kdtree2.hpp>
+#include <gtsam_points/util/easy_profiler.hpp>
 
 namespace glim {
 
 PointsSelector::PointsSelector(std::shared_ptr<spdlog::logger> logger) : picked_point(0, 0, 0), logger(logger) {
+  num_threads = std::min<int>(std::thread::hardware_concurrency(), 32);
+  logger->info("Num threads: {}", num_threads);
+
   model_control.reset(new guik::ModelControl("model_control"));
   model_control->set_gizmo_operation("UNIVERSAL");
 
   map_cell_resolution = 2.0f;
   cell_selection_window = 5;
+
+  show_preferences_window = false;
 
   show_picked_point = false;
   show_selection_radius = false;
@@ -85,27 +91,39 @@ std::vector<std::uint64_t> PointsSelector::collect_neighbor_point_ids(const Eige
 }
 
 gtsam_points::PointCloudCPU::Ptr PointsSelector::collect_submap_points(const std::vector<std::uint64_t>& point_ids) {
-  auto points = std::make_shared<gtsam_points::PointCloudCPU>();
-  points->points_storage.reserve(point_ids.size());
-  points->normals_storage.reserve(point_ids.size());
-  points->covs_storage.reserve(point_ids.size());
-  points->intensities_storage.reserve(point_ids.size());
+  const bool has_normals = submaps[0]->frame->has_normals();
+  const bool has_covs = submaps[0]->frame->has_covs();
+  const bool has_intensities = submaps[0]->frame->has_intensities();
 
-  for (std::uint64_t x : point_ids) {
+  auto points = std::make_shared<gtsam_points::PointCloudCPU>();
+  points->points_storage.resize(point_ids.size());
+  if (has_normals) {
+    points->normals_storage.resize(point_ids.size());
+  }
+  if (has_covs) {
+    points->covs_storage.resize(point_ids.size());
+  }
+  if (has_intensities) {
+    points->intensities_storage.resize(point_ids.size());
+  }
+
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 32)
+  for (int i = 0; i < point_ids.size(); i++) {
+    const auto x = point_ids[i];
     const std::uint64_t submap_id = x >> 32;
     const std::uint64_t point_id = x & ((1ull << 32) - 1);
 
-    const auto submap = submaps[submap_id];
+    const auto& submap = submaps[submap_id];
 
-    points->points_storage.emplace_back(submap->T_world_origin * submap->frame->points[point_id]);
-    if (submaps[submap_id]->frame->has_normals()) {
-      points->normals_storage.emplace_back(submap->T_world_origin.matrix() * submap->frame->normals[point_id]);
+    points->points_storage[i] = submap->T_world_origin * submap->frame->points[point_id];
+    if (has_normals) {
+      points->normals_storage[i] = submap->T_world_origin.matrix() * submap->frame->normals[point_id];
     }
-    if (submaps[submap_id]->frame->has_covs()) {
-      points->covs_storage.emplace_back(submap->T_world_origin.matrix() * submap->frame->covs[point_id] * submap->T_world_origin.matrix().transpose());
+    if (has_covs) {
+      points->covs_storage[i] = submap->T_world_origin.matrix() * submap->frame->covs[point_id] * submap->T_world_origin.matrix().transpose();
     }
-    if (submaps[submap_id]->frame->has_intensities()) {
-      points->intensities_storage.emplace_back(submaps[submap_id]->frame->intensities[point_id]);
+    if (has_intensities) {
+      points->intensities_storage[i] = (submaps[submap_id]->frame->intensities[point_id]);
     }
   }
 
@@ -165,7 +183,22 @@ void PointsSelector::draw_ui() {
     return false;
   };
 
-  if (ImGui::Begin("editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+  if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("Preferences")) {
+        show_preferences_window = true;
+      }
+      ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+  }
+
+  if (show_preferences_window && ImGui::Begin("Preferenecs", &show_preferences_window, ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::DragInt("Num threads", &num_threads, 1, 1, std::thread::hardware_concurrency()) || show_note("Number of threads for processing");
+    ImGui::End();
+  }
+
+  if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::Text("Submaps: %ld  Cells: %ld", submaps.size(), map_cells.size());
     ImGui::Text("Selected points: %ld", selected_point_ids.size());
 
@@ -418,9 +451,9 @@ void PointsSelector::draw_ui() {
 void PointsSelector::remove_selected_points() {
   std::sort(selected_point_ids.begin(), selected_point_ids.end());
 
-  std::vector<SubMap::Ptr> updated_submaps;
-  std::unordered_set<MapCell::Ptr> cells_to_update;
+  std::vector<std::tuple<SubMap::Ptr, const std::uint64_t*, const std::uint64_t*>> updated_submaps;  // (submap, begin, end)
 
+  // partition selected points by submap
   auto point_id_itr = selected_point_ids.begin();
   while (point_id_itr != selected_point_ids.end()) {
     const std::uint64_t submap_id = *point_id_itr >> 32;
@@ -433,8 +466,18 @@ void PointsSelector::remove_selected_points() {
     point_id_itr = end;
 
     // find points to be removed in the submap
-    auto submap = submaps[submap_id];
-    updated_submaps.emplace_back(submap);
+    const auto& submap = submaps[submap_id];
+    updated_submaps.emplace_back(submap, &(*begin), &(*end));
+  }
+
+  logger->info("updated submaps: {}", updated_submaps.size());
+
+  // remove points from the submaps
+#pragma omp parallel for num_threads(num_threads) schedule(dynamic)
+  for (int i = 0; i < updated_submaps.size(); i++) {
+    const auto& submap = std::get<0>(updated_submaps[i]);
+    const auto begin = std::get<1>(updated_submaps[i]);
+    const auto end = std::get<2>(updated_submaps[i]);
 
     std::vector<int> point_indices(submap->frame->size());
     std::iota(point_indices.begin(), point_indices.end(), 0);
@@ -442,7 +485,7 @@ void PointsSelector::remove_selected_points() {
     std::for_each(begin, end, [&](std::uint64_t id) {
       const int point_id = id & ((1UL << 32) - 1);
       if (point_id > submap->frame->size()) {
-        logger->warn("Invalid point id {} in submap {}", point_id, submap_id);
+        logger->warn("Invalid point id {} in submap {}", point_id, submap->id);
         return;
       }
 
@@ -454,23 +497,61 @@ void PointsSelector::remove_selected_points() {
     point_indices.erase(remove_loc, point_indices.end());
 
     submap->frame = gtsam_points::sample(submap->frame, point_indices);
+  }
 
+  // List points to be removed from the cells
+  std::unordered_map<MapCell*, std::vector<int>> cells_submaps;
+  for (int i = 0; i < updated_submaps.size(); i++) {
+    const auto& submap = std::get<0>(updated_submaps[i]);
     for (auto& cell : cell_map[submap]) {
-      cell->remove_submap(submap_id);
+      cells_submaps[cell.get()].emplace_back(submap->id);
     }
   }
 
-  // Update cells
+  // Remove submaps from the cells
+  std::vector<std::pair<MapCell*, std::vector<int>>> cells_submaps_vec(cells_submaps.begin(), cells_submaps.end());
+#pragma omp parallel for num_threads(num_threads) schedule(guided, 8)
+  for (int i = 0; i < cells_submaps_vec.size(); i++) {
+    const auto& cell_submap = cells_submaps_vec[i];
+    cell_submap.first->remove_submaps(cell_submap.second);
+  }
+
+  // Re-add points to the cells
   const double inv_resolution = 1.0 / map_cell_resolution;
-  for (const auto& submap : updated_submaps) {
-    submap_drawables[submap->id] =
-      guik::viewer()->update_points("submap_" + std::to_string(submap->id), submap->frame->points, submap->frame->size(), guik::Rainbow(submap->T_world_origin));
+
+#pragma omp parallel for num_threads(num_threads) schedule(dynamic)
+  for (int i = 0; i < updated_submaps.size(); i++) {
+    const auto& submap = std::get<0>(updated_submaps[i]);
+    std::vector<Eigen::Vector3i> coords(submap->frame->size());
+
+    std::unordered_map<MapCell*, std::vector<int>> cells_points_to_add;
 
     for (int i = 0; i < submap->frame->size(); i++) {
       const Eigen::Vector4d pt = submap->T_world_origin * submap->frame->points[i];
       const Eigen::Vector3i coord = gtsam_points::fast_floor(pt * inv_resolution).head<3>();
-      map_cells[coord]->add_point(submap, i);
+      coords[i] = coord;
+
+      const auto found = map_cells.find(coord);
+      if (found == map_cells.end()) {
+        std::cerr << "Cell not found: " << coord.transpose() << std::endl;
+        continue;
+      }
+      cells_points_to_add[found->second.get()].emplace_back(i);
     }
+
+#pragma omp critical
+    {
+      for (const auto& cell_points : cells_points_to_add) {
+        cell_points.first->add_points(submap, cell_points.second);
+      }
+    }
+  }
+
+  // Update cells
+  for (const auto& submap_ : updated_submaps) {
+    const auto& submap = std::get<0>(submap_);
+    submap_drawables[submap->id] =
+      guik::viewer()->update_points("submap_" + std::to_string(submap->id), submap->frame->points, submap->frame->size(), guik::Rainbow(submap->T_world_origin));
   }
 
   selected_point_ids.clear();
@@ -486,19 +567,31 @@ void PointsSelector::select_points_tool() {
   const Eigen::Matrix4d inv_model_matrix = model_control->model_matrix().cast<double>().inverse();
 
   selected_point_ids.clear();
-  for (const auto& submap : submaps) {
+
+#pragma omp parallel for num_threads(num_threads) schedule(dynamic)
+  for (int submap_idx = 0; submap_idx < submaps.size(); submap_idx++) {
+    const auto& submap = submaps[submap_idx];
+    const Eigen::Matrix4d T_local_world = inv_model_matrix * submap->T_world_origin.matrix();
+
+    std::vector<std::uint64_t> local_selected_point_ids;
+    local_selected_point_ids.reserve(submap->frame->size() / 4);
+
     for (int i = 0; i < submap->frame->size(); i++) {
-      const Eigen::Vector4d pt_ = submap->T_world_origin * submap->frame->points[i];
-      const Eigen::Vector3d pt = (inv_model_matrix * pt_).head<3>();
+      const Eigen::Vector4d pt = T_local_world * submap->frame->points[i];
       if (selected_tool == 0) {
-        if ((pt.array() > Eigen::Array3d::Constant(-0.5)).all() && (pt.array() < Eigen::Array3d::Constant(0.5)).all()) {
-          selected_point_ids.emplace_back((static_cast<std::uint64_t>(submap->id) << 32) | i);
+        if ((pt.array() > Eigen::Array4d(-0.5, -0.5, -0.5, 0.0)).all() && (pt.array() < Eigen::Array4d(0.5, 0.5, 0.5, 2.0)).all()) {
+          local_selected_point_ids.emplace_back((static_cast<std::uint64_t>(submap->id) << 32) | i);
         }
       } else {
-        if (pt.norm() < 1.0) {
-          selected_point_ids.emplace_back((static_cast<std::uint64_t>(submap->id) << 32) | i);
+        if (pt.head<3>().squaredNorm() < 1.0) {
+          local_selected_point_ids.emplace_back((static_cast<std::uint64_t>(submap->id) << 32) | i);
         }
       }
+    }
+
+#pragma omp critical
+    {
+      selected_point_ids.insert(selected_point_ids.end(), local_selected_point_ids.begin(), local_selected_point_ids.end());
     }
   }
 
@@ -559,8 +652,9 @@ void PointsSelector::select_points_segmentation() {
     }
 
     auto filtered = collect_submap_points(filtered_ids);
-    filtered->add_normals(gtsam_points::estimate_normals(filtered->points, filtered->size(), 20, 4));
+    filtered->add_normals(gtsam_points::estimate_normals(filtered->points, filtered->size(), 10, num_threads));
 
+    min_cut_params.num_threads = num_threads;
     auto filtered_tree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(filtered);
     auto result = gtsam_points::min_cut(*filtered, *filtered_tree, picked_point.homogeneous(), min_cut_params);
 
@@ -571,6 +665,8 @@ void PointsSelector::select_points_segmentation() {
   } else {
     auto filtered = collect_submap_points(neighbor_point_ids);
     auto kdtree = std::make_shared<gtsam_points::KdTree2<gtsam_points::PointCloud>>(filtered);
+
+    region_growing_params.num_threads = num_threads;
     auto rg = gtsam_points::region_growing_init(*filtered, *kdtree, picked_point.homogeneous(), region_growing_params);
     gtsam_points::region_growing_update(rg, *filtered, *kdtree, region_growing_params);
 

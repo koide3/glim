@@ -17,13 +17,16 @@ public:
 
   void clear();
   void add_point(const SubMap::Ptr& submap, int point_id);
+  void add_points(const SubMap::Ptr& submap, const std::vector<int>& point_ids);
+
   void remove_submap(int submap_id);
+  void remove_submaps(const std::vector<int>& submap_ids);
 
 public:
   const double resolution;
   const Eigen::Vector3i coord;
 
-  std::vector<glim::SubMap::Ptr> submaps;
+  std::vector<glim::SubMap*> submaps;
 
   std::vector<std::uint64_t> point_ids;  // (submap_id << 32bit) | point_id
 };

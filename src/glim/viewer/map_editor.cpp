@@ -41,9 +41,6 @@ MapEditor::MapEditor(const std::string& init_map_path) : init_map_path(init_map_
   progress_modal.reset(new guik::ProgressModal("progress"));
 
   selector.reset(new PointsSelector(logger));
-
-  const int num_threads = std::thread::hardware_concurrency();
-  logger->info("Using {} threads", num_threads);
 }
 
 MapEditor::~MapEditor() {}

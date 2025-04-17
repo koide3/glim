@@ -49,8 +49,11 @@ private:
   Eigen::Vector3d picked_point;
   std::unique_ptr<guik::ModelControl> model_control;
 
+  int num_threads;
   float map_cell_resolution;
   int cell_selection_window;
+
+  bool show_preferences_window;
 
   bool show_picked_point;
   bool show_selection_radius;
