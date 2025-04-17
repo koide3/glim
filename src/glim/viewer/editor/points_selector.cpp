@@ -50,8 +50,12 @@ PointsSelector::~PointsSelector() {}
 
 void PointsSelector::clear() {
   this->submaps.clear();
+  this->cell_map.clear();
   this->map_cells.clear();
+  this->selected_point_ids.clear();
   this->picked_point.setZero();
+
+  guik::viewer()->clear_drawables();
 }
 
 void PointsSelector::set_submaps(const std::vector<glim::SubMap::Ptr>& submaps) {
