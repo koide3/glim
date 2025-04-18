@@ -1,6 +1,11 @@
 # Manual Object Removal
 
-## Video
+## About
+
+Interactive map editor allows users to manually annotate and remove object points from the map.
+This is useful for removing objects that are not relevant to the mapping task, such as trees, cars, and pedestrians.
+
+Note that while editing the map, the submap poses (i.e., factor graph) are frozen and not updated. If you need to update the submap poses, please use the offline viewer.
 
 <div class="youtube">
 <iframe width="560" height="315" src="https://www.youtube.com/embed/FSkNsVNoCU4?si=MbCYOm-z9gbB_bbd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -32,7 +37,7 @@ ros2 run glim_ros map_editor
 
 | Context menu  | Selected points | After removal |
 |---|---|---|
-|![Image](https://github.com/user-attachments/assets/c7322108-f704-46ce-94e4-1b8c16a8b1a5)|![Image](https://github.com/user-attachments/assets/d1fb6f53-dd23-4dbe-a47a-6778f037221d)|![Image](https://github.com/user-attachments/assets/31597ecc-ec93-44ed-8a55-9c62d74dff5d)|
+|[![Image](https://github.com/user-attachments/assets/96352a2d-7d86-46c5-9dd8-916366fd0867)](https://github.com/user-attachments/assets/96352a2d-7d86-46c5-9dd8-916366fd0867)|[![Image](https://github.com/user-attachments/assets/648ec8ae-fc4d-45ff-8209-81da6837b188)](https://github.com/user-attachments/assets/648ec8ae-fc4d-45ff-8209-81da6837b188)|[![Image](https://github.com/user-attachments/assets/3b722598-a622-49a0-872d-5a714a291d85)](https://github.com/user-attachments/assets/3b722598-a622-49a0-872d-5a714a291d85)|
 
 
 ### Plane selection and removal (Region growing segmentation)
@@ -44,7 +49,8 @@ ros2 run glim_ros map_editor
 
 | Context menu  | Selected points |
 |---|---|
-|![Image](https://github.com/user-attachments/assets/3b7b0d86-e771-422e-b77d-578ff7ecc7e9)|![Image](https://github.com/user-attachments/assets/fc6815fb-de56-479e-9fa0-b1d6dc2b1c7a)|
+| [![Image](https://github.com/user-attachments/assets/3e4ebcaf-f9bc-40dd-8b03-b2f7a138e5cf)](https://github.com/user-attachments/assets/3e4ebcaf-f9bc-40dd-8b03-b2f7a138e5cf) | [![Image](https://github.com/user-attachments/assets/f12cd4ca-78ef-48f9-a1ab-c33d712b4545)](https://github.com/user-attachments/assets/f12cd4ca-78ef-48f9-a1ab-c33d712b4545) |
+
 
 
 ### Manual points selection and removal (Gizmo UI)
@@ -57,7 +63,7 @@ ros2 run glim_ros map_editor
 
 | Gizmo UI  | Selected points |
 |---|---|
-|![Image](https://github.com/user-attachments/assets/8754d4c4-856d-43fd-95f6-3443af5ce142)|![Image](https://github.com/user-attachments/assets/cefabf73-986e-4bc4-aba7-3e8bb53a4cf9)|
+| [![Image](https://github.com/user-attachments/assets/3906c3cd-0db9-4fbc-9aa1-3a2ab81b8ce6)](https://github.com/user-attachments/assets/3906c3cd-0db9-4fbc-9aa1-3a2ab81b8ce6) | [![Image](https://github.com/user-attachments/assets/7e55d910-2f9e-4991-9ae5-7c5c5e28a6a0)](https://github.com/user-attachments/assets/7e55d910-2f9e-4991-9ae5-7c5c5e28a6a0) |
 
 ### Radius selection and removal
 
@@ -72,10 +78,8 @@ ros2 run glim_ros map_editor
 2. `Radius tools` -> Adjust `Radius` so that it covers the outlier points to be removed -> Click `Select points outside radius`.
 3. Click `Remove selected points` to remove the selected points from the map
 
-
 | Context menu  | Selected points | After removal |
 |---|---|---|
-|![Image](https://github.com/user-attachments/assets/8c8561e7-7ecc-4f8f-ba16-2642dcf6899d)|![Image](https://github.com/user-attachments/assets/73c729b3-111a-469b-a02f-2623d8269534)|![Image](https://github.com/user-attachments/assets/e394e75f-09bb-4a9e-b509-90d1789069eb)|
-
+| [![Image](https://github.com/user-attachments/assets/856b4113-9f17-40db-9eb7-3b9e08fb6408)](https://github.com/user-attachments/assets/856b4113-9f17-40db-9eb7-3b9e08fb6408) | [![Image](https://github.com/user-attachments/assets/89375d06-5f41-4ea2-bc0d-71e591be91bb)](https://github.com/user-attachments/assets/89375d06-5f41-4ea2-bc0d-71e591be91bb) | [![Image](https://github.com/user-attachments/assets/814b846b-4225-4653-b519-1501a653761c)](https://github.com/user-attachments/assets/814b846b-4225-4653-b519-1501a653761c) |
 
 
