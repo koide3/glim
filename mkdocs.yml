@@ -49,6 +49,8 @@ nav:
     - 'installation.md'
     - 'docker.md'
     - 'quickstart.md'
+    - 'merge.md'
+    - 'edit.md'
     - 'parameters.md'
     - 'demo.md'
     - 'extend.md'

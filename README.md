@@ -17,7 +17,7 @@
 **Docker hub:** [koide3/glim_ros1](https://hub.docker.com/repository/docker/koide3/glim_ros1/tags), [koide3/glim_ros2](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags), [ROS1 on Jetpack 5.1.4](https://hub.docker.com/r/junekyoopark/arm64v8_glim_ros1_cuda12.2) (made by [junekyoopark](https://github.com/junekyoopark))  
 **Related packages:** [gtsam_points](https://github.com/koide3/gtsam_points), [glim](https://github.com/koide3/glim), [glim_ros1](https://github.com/koide3/glim_ros1), [glim_ros2](https://github.com/koide3/glim_ros2), [glim_ext](https://github.com/koide3/glim_ext)
 
-Tested on Ubuntu 22.04 /24.04 with CUDA 12.2 / 12.5, and NVIDIA Jetson Orin (Jetpack 6.0).
+Tested on Ubuntu 22.04 /24.04 with CUDA 12.2 / 12.5 / 12.6, and NVIDIA Jetson Orin (Jetpack 6.1).
 
 If you find this package useful for your project, please consider leaving a comment [here](https://github.com/koide3/glim/issues/19). It would help the author receive recognition in his organization and keep working on this project.
 
@@ -52,6 +52,10 @@ See more at [Video Gallery](https://github.com/koide3/glim/wiki/Video-Gallery).
 |---|---|
 |![Image](https://github.com/user-attachments/assets/0f02950a-6b7b-437c-a100-21d6575f7c93)|![Image](https://github.com/user-attachments/assets/c77cca29-921b-4e1c-9583-2b962ccda2cb)|
 
+| Object segmentation and removal |  |
+|---|---|
+|![Image](https://github.com/user-attachments/assets/fd1038e7-c33d-44b1-86f9-8e6474c04210)| |
+
 ## Estimation modules
 
 GLIM provides several estimation modules to cover use scenarios, from robust and accurate mapping with a GPU to lightweight real-time mapping with a low-specification PC like Raspberry Pi.
@@ -64,9 +68,9 @@ GLIM provides several estimation modules to cover use scenarios, from robust and
 
 ## License
 
-If you find this package useful for your project, please consider leaving a comment [here](https://github.com/koide3/glim/issues/19). It would help the author receive recognition in his organization and keep working on this project. Please also cite the following paper if you use this package in your academic work.
-
 This package is released under the MIT license. For commercial support, please contact ```k.koide@aist.go.jp```.
+
+If you find this package useful for your project, please consider leaving a comment [here](https://github.com/koide3/glim/issues/19). It would help the author receive recognition in his organization and keep working on this project. Please also cite the following paper if you use this package in your academic work.
 
 ## Related work
 
