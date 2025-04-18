@@ -1,0 +1,7 @@
+<map id="glim::SubMappingBase" name="glim::SubMappingBase">
+<area shape="rect" id="Node000001" title="Sub mapping base class." alt="" coords="91,5,261,31"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1SubMapping.html" title="Sub mapping." alt="" coords="5,79,144,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="150,41,93,81,90,76,147,36"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1SubMappingPassthrough.html" title="Sub mapping based on voxel&#45;based simple frame merging. No optimization, no re&#45;deskewing." alt="" coords="168,79,387,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="205,36,262,76,259,81,202,41"/>
+</map>
