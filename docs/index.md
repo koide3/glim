@@ -15,7 +15,7 @@
     - RGB-D camera (e.g., Microsoft Azure Kinect)
 - ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/koide3/glim_ext) that offers example implementations of several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial odometry estimation).
 
-Tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5, and NVIDIA Jetson Orin (Jetpack 6.0).
+Tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5 / 12.6, and NVIDIA Jetson Orin (Jetpack 6.1).
 
 [![Build test status](assets/build.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
 [![ROS1](assets/ros1.svg)](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml)
@@ -38,6 +38,18 @@ Tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5, and NVIDIA Jetson Orin (Je
 
 <div class="youtube">
 <iframe width="560" height="315" src="https://www.youtube.com/embed/CIfRqeV0irE?si=WT-knUxMuGWjYcxQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+### Merging Multiple Mapping Sessions
+
+<div class="youtube">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/aMq3qbAgTeI?si=QRZqp0DjSK79NcQk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+### Manual Object Removal
+
+<div class="youtube">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/FSkNsVNoCU4?si=MbCYOm-z9gbB_bbd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
 
 See more in [Extension modules](extensions.md) and [Demo](demo.md) pages.
