@@ -168,6 +168,16 @@ if(BUILD_WITH_VIEWER)
     glim
   )
 
+  # Map editor
+  add_library(map_editor SHARED
+    src/glim/viewer/editor/map_cell.cpp
+    src/glim/viewer/editor/points_selector.cpp
+    src/glim/viewer/map_editor.cpp
+  )
+  target_link_libraries(map_editor
+    glim
+  )
+  
   # Memory monitor
   add_library(memory_monitor SHARED
     src/glim/viewer/memory_monitor.cpp
@@ -176,7 +186,7 @@ if(BUILD_WITH_VIEWER)
     glim
   )
 
-  list(APPEND glim_LIBRARIES standard_viewer interactive_viewer memory_monitor)
+  list(APPEND glim_LIBRARIES standard_viewer interactive_viewer memory_monitor map_editor)
 endif()
 
 #############
