@@ -29,6 +29,20 @@
   // imu_topic              : IMU topic
   // points_topic           : Points topic
   // image_topic            : Image topic (required for only extension modules)
+  //
+  // --- QoS options ---
+  // imu_qos                : QoS options for IMU topic subscription.
+  //   profile              : Builtin QoS profile name. Could be one of the following:
+  //                          default, system_default, sensor_data, services_default, parameters, parameter_events
+  //   depth                : Size of the message queue.
+  //   durability           : Durability QoS policy setting. Could be one of the following:
+  //                          system_default, transient_local, volatile
+  //   reliability          : Reliabiilty QoS policy setting. Could be one of the following:
+  //                          system_default, reliable, best_effort
+  //   history              : History QoS policy setting. Could be one of the following:
+  //                          system_default, keep_last, keep_all
+  // points_qos             : QoS options for points topic subscription. See imu_qos for details.
+  // image_qos              : QoS options for image topic subscription. See imu_qos for details.
   "glim_ros": {
     // Backend modules
     "enable_local_mapping": true,
@@ -57,6 +71,17 @@
     // Topics
     "imu_topic": "/os_cloud_node/imu",
     "points_topic": "/os_cloud_node/points",
-    "image_topic": "/image"
+    "image_topic": "/image",
+    // QoS options
+    "imu_qos": {
+      "profile": "sensor_data",
+      "depth": 1000
+    },
+    "points_qos": {
+      "profile": "sensor_data"
+    },
+    "image_qos": {
+      "profile": "sensor_data"
+    }
   }
 }
