@@ -64,6 +64,8 @@ GLIM provides several estimation modules to cover use scenarios, from robust and
 
 ## Thirdparty works using GLIM
 
+If you are willing to add your work here, feel free to let me know in [this thread](https://github.com/koide3/glim/issues/19) :)
+
 - [kamibukuro5656/MapCleaner_Unofficial](https://github.com/kamibukuro5656/MapCleaner_Unofficial)
 
 ## License
