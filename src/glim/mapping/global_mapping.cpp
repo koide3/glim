@@ -784,9 +784,8 @@ bool GlobalMapping::load(const std::string& path) {
     loaded_graph.erase(remove_loc, loaded_graph.end());
 
     logger->info("removing prior factors");
-    remove_loc = std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) {
-      return boost::dynamic_pointer_cast<gtsam::PriorFactor<gtsam::Pose3>>(factor) != nullptr;
-    });
+    remove_loc =
+      std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) { return boost::dynamic_pointer_cast<gtsam::PriorFactor<gtsam::Pose3>>(factor) != nullptr; });
     logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
     loaded_graph.erase(remove_loc, loaded_graph.end());
 
@@ -849,7 +848,9 @@ bool GlobalMapping::load(const std::string& path) {
 
   if (needs_recover) {
     logger->warn("recovering factor graph");
-    const auto recovered = recover_graph(graph, values);
+    const auto recovered = recover_graph(graph, values, start_from_frame_id);
+    logger->warn("add {} factors and {} values", recovered.first.size(), recovered.second.size());
+
     graph.add(recovered.first);
     values.insert_or_assign(recovered.second);
   }
@@ -875,12 +876,13 @@ bool GlobalMapping::load(const std::string& path) {
 }
 
 void GlobalMapping::recover_graph() {
-  const auto recovered = recover_graph(isam2->getFactorsUnsafe(), isam2->calculateEstimate());
+  const auto recovered = recover_graph(isam2->getFactorsUnsafe(), isam2->calculateEstimate(), 0);
   update_isam2(recovered.first, recovered.second);
 }
 
 // Recover the graph by adding missing values and factors
-std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_graph(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values) const {
+std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_graph(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values, int start_from_frame_id)
+  const {
   logger->info("recovering graph");
   bool enable_imu = false;
   for (const auto& value : values) {
@@ -924,7 +926,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     new_factors.emplace_shared<gtsam_points::LinearDampingFactor>(X(0), 6, params.init_pose_damping_scale);
   }
 
-  for (int i = 0; i < submaps.size(); i++) {
+  for (int i = start_from_frame_id; i < submaps.size(); i++) {
     if (!values.exists(X(i))) {
       logger->warn("X{} is missing", i);
       new_values.insert(X(i), gtsam::Pose3(submaps[i]->T_world_origin.matrix()));
