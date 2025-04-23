@@ -231,6 +231,39 @@ void InteractiveViewer::drawable_selection() {
     do_update_viewer |= ImGui::DragFloat("sphere scale", &sphere_scale, 0.01f, 0.01f, 100.0f);
     show_note("Submap selection sphere maker scale.");
 
+    auto viewer = guik::viewer();
+    if (ImGui::Checkbox("Cumulative rendering", &enable_partial_rendering)) {
+      if (enable_partial_rendering && !viewer->partial_rendering_enabled()) {
+        viewer->enable_partial_rendering(1e-1);
+        viewer->shader_setting().add("dynamic_object", 1);
+      } else {
+        viewer->disable_partial_rendering();
+      }
+
+      // Update existing submap buffers
+      for (int i = 0;; i++) {
+        auto found = viewer->find_drawable("submap_" + std::to_string(i));
+        if (!found.first) {
+          break;
+        }
+
+        auto cb = std::dynamic_pointer_cast<const glk::PointCloudBuffer>(found.second);
+        auto cloud_buffer = std::const_pointer_cast<glk::PointCloudBuffer>(cb);  // !!
+
+        if (enable_partial_rendering) {
+          cloud_buffer->enable_partial_rendering(partial_rendering_budget);
+          found.first->add("dynamic_object", 0).make_transparent();
+        } else {
+          cloud_buffer->disable_partial_rendering();
+          found.first->add("dynamic_object", 1);
+        }
+      }
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::DragInt("Budget", &partial_rendering_budget, 1, 1, 1000000);
+
     ImGui::EndMenu();
 
     if (do_update_viewer) {
@@ -423,8 +456,11 @@ void InteractiveViewer::update_viewer() {
       auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(submap->frame->points, submap->frame->size());
 
       if (submap->frame->has_intensities()) {
-        cloud_buffer
-          ->add_intensity(glk::COLORMAP::TURBO, submap->frame->intensities, submap->frame->size(), 1.0 / *std::max_element(submap->frame->intensities, submap->frame->intensities + submap->frame->size()));
+        cloud_buffer->add_intensity(
+          glk::COLORMAP::TURBO,
+          submap->frame->intensities,
+          submap->frame->size(),
+          1.0 / *std::max_element(submap->frame->intensities, submap->frame->intensities + submap->frame->size()));
       }
 
       auto shader_setting = guik::Rainbow(submap_pose).add("info_values", info).set_color(color).set_alpha(points_alpha);
@@ -598,7 +634,7 @@ void InteractiveViewer::globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isa
     int moved_count = 0;
     for (const auto& value : new_values) {
       const gtsam::Symbol symbol(value.key);
-      if(symbol.chr() != 'x') {
+      if (symbol.chr() != 'x') {
         continue;
       }
 
