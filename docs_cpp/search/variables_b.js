@@ -1,0 +1,27 @@
+var searchData=
+[
+  ['odom_5fframes_0',['odom_frames',['../structglim_1_1SubMap.html#a42834de28d247535643522fb92941552',1,'glim::SubMap']]],
+  ['on_5ffinished_1',['on_finished',['../structglim_1_1IMUStateInitializationCallbacks.html#acca3af2bc8f071f654ed8b351fcc07ca',1,'glim::IMUStateInitializationCallbacks']]],
+  ['on_5finsert_5fframe_2',['on_insert_frame',['../structglim_1_1SubMappingCallbacks.html#accbf63e569c7e9b123b26994341ad4e7',1,'glim::SubMappingCallbacks::on_insert_frame'],['../structglim_1_1OdometryEstimationCallbacks.html#aa67ac707cd7ebcd05a989dc920fa73c8',1,'glim::OdometryEstimationCallbacks::on_insert_frame']]],
+  ['on_5finsert_5fimu_3',['on_insert_imu',['../structglim_1_1SubMappingCallbacks.html#ab04effbfaeb1b3923cd20e906bbd0d92',1,'glim::SubMappingCallbacks::on_insert_imu'],['../structglim_1_1GlobalMappingCallbacks.html#a646a6b7a142abb49111103a36d5d88e9',1,'glim::GlobalMappingCallbacks::on_insert_imu'],['../structglim_1_1OdometryEstimationCallbacks.html#a7f2dc50005c730202792b5d41d4c99e4',1,'glim::OdometryEstimationCallbacks::on_insert_imu']]],
+  ['on_5finsert_5fsubmap_4',['on_insert_submap',['../structglim_1_1GlobalMappingCallbacks.html#a75783dc0727e6c7296f2c6725e665137',1,'glim::GlobalMappingCallbacks']]],
+  ['on_5fmarginalized_5fframes_5',['on_marginalized_frames',['../structglim_1_1OdometryEstimationCallbacks.html#af1ef7d22e2b526ee05431c84bfb0aa4b',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fmarginalized_5fkeyframes_6',['on_marginalized_keyframes',['../structglim_1_1OdometryEstimationCallbacks.html#a7493d49a19455bc400a7af3eb8b894dd',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fnew_5fframe_7',['on_new_frame',['../structglim_1_1OdometryEstimationCallbacks.html#ad0d7e337e8cb9c41f9da99d82029a9ce',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fnew_5fkeyframe_8',['on_new_keyframe',['../structglim_1_1SubMappingCallbacks.html#a6112d553664994216ff25ff7453690df',1,'glim::SubMappingCallbacks']]],
+  ['on_5fnew_5fsubmap_9',['on_new_submap',['../structglim_1_1SubMappingCallbacks.html#a93926abff765daf75df3bc78d24e1802',1,'glim::SubMappingCallbacks']]],
+  ['on_5foptimization_5fstatus_10',['on_optimization_status',['../structglim_1_1SubMappingCallbacks.html#a85ea291b73028aeec1164c64001edd22',1,'glim::SubMappingCallbacks']]],
+  ['on_5foptimize_5fsubmap_11',['on_optimize_submap',['../structglim_1_1SubMappingCallbacks.html#a15cfcfbaedb86fbaf0c02b9b2d99fc52',1,'glim::SubMappingCallbacks']]],
+  ['on_5fraw_5fpoints_5freceived_12',['on_raw_points_received',['../structglim_1_1PreprocessCallbacks.html#aefeea8688df4d7c6aafa41d2e5db3781',1,'glim::PreprocessCallbacks']]],
+  ['on_5fsmoother_5fcorruption_13',['on_smoother_corruption',['../structglim_1_1OdometryEstimationCallbacks.html#af7918f3e557a59cced2751e9bf887e43',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fsmoother_5fupdate_14',['on_smoother_update',['../structglim_1_1GlobalMappingCallbacks.html#ad149b95b9e1971b06624b247742e22c7',1,'glim::GlobalMappingCallbacks::on_smoother_update'],['../structglim_1_1OdometryEstimationCallbacks.html#a921bf5e735e52fb7d50ef839f59b9270',1,'glim::OdometryEstimationCallbacks::on_smoother_update']]],
+  ['on_5fsmoother_5fupdate_5ffinish_15',['on_smoother_update_finish',['../structglim_1_1OdometryEstimationCallbacks.html#a02829af0dbb62ca84cd8818c9f7bbecb',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fsmoother_5fupdate_5fresult_16',['on_smoother_update_result',['../structglim_1_1GlobalMappingCallbacks.html#ada61fbca5a3063c660d92464a289322a',1,'glim::GlobalMappingCallbacks']]],
+  ['on_5fupdate_5fframes_17',['on_update_frames',['../structglim_1_1OdometryEstimationCallbacks.html#af286bc6f3aeffa5c6ec48eb0feb92297',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fupdate_5fkeyframes_18',['on_update_keyframes',['../structglim_1_1OdometryEstimationCallbacks.html#a67303b7693ec6936338f63e6e4cab44b',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fupdate_5fnew_5fframe_19',['on_update_new_frame',['../structglim_1_1OdometryEstimationCallbacks.html#a56ed0d1deffd3a04b03807e0e86995be',1,'glim::OdometryEstimationCallbacks']]],
+  ['on_5fupdate_5fsubmaps_20',['on_update_submaps',['../structglim_1_1GlobalMappingCallbacks.html#a70eac5c780785a0b3b8f39c5e0e0875c',1,'glim::GlobalMappingCallbacks']]],
+  ['on_5fupdated_21',['on_updated',['../structglim_1_1IMUStateInitializationCallbacks.html#a885c64129703a0dd55b6d3f28d25d545',1,'glim::IMUStateInitializationCallbacks']]],
+  ['outlier_5fremoval_5fk_22',['outlier_removal_k',['../structglim_1_1CloudPreprocessorParams.html#aca409b14631e1acf603b3294e99aeab6',1,'glim::CloudPreprocessorParams']]],
+  ['outlier_5fstd_5fmul_5ffactor_23',['outlier_std_mul_factor',['../structglim_1_1CloudPreprocessorParams.html#ad7ad25488d7ca42df2b413d861eccc53',1,'glim::CloudPreprocessorParams']]]
+];

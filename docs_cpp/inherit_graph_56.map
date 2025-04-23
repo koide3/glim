@@ -1,0 +1,11 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classglim_1_1OdometryEstimationBase.html" title="Odometry estimation base class." alt="" coords="5,31,232,56"/>
+<area shape="rect" id="Node000001" href="$classglim_1_1OdometryEstimationCT.html" title="LiDAR&#45;only odometry estimation based on CT&#45;GICP scan&#45;to&#45;model matching." alt="" coords="285,5,495,31"/>
+<area shape="poly" id="edge12_Node000000_Node000001" title=" " alt="" coords="246,29,284,25,285,30,246,34"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1OdometryEstimationIMU.html" title="Base class for LiDAR&#45;IMU odometry estimation." alt="" coords="280,55,500,80"/>
+<area shape="poly" id="edge13_Node000000_Node000002" title=" " alt="" coords="246,52,280,55,280,60,245,57"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1OdometryEstimationCPU.html" title="CPU&#45;based semi&#45;tightly coupled LiDAR&#45;IMU odometry." alt="" coords="549,29,770,55"/>
+<area shape="poly" id="edge14_Node000002_Node000003" title=" " alt="" coords="514,53,548,50,549,55,514,58"/>
+<area shape="rect" id="Node000004" href="$classglim_1_1OdometryEstimationGPU.html" title="GPU&#45;based tightly coupled LiDAR&#45;IMU odometry." alt="" coords="548,79,771,104"/>
+<area shape="poly" id="edge15_Node000002_Node000004" title=" " alt="" coords="514,76,548,79,548,84,513,81"/>
+</map>
