@@ -141,11 +141,15 @@ void OfflineViewer::main_menu() {
 
   // save map
   if (start_save_map) {
-    guik::RecentFiles recent_files("offline_viewer_save");
-    const std::string path = pfd::select_folder("Select a directory to save the map", recent_files.most_recent()).result();
-    if (!path.empty()) {
-      recent_files.push(path);
-      progress_modal->open<bool>("save", [this, path](guik::ProgressInterface& progress) { return save_map(progress, path); });
+    if (!async_global_mapping) {
+      logger->warn("No map data to save");
+    } else {
+      guik::RecentFiles recent_files("offline_viewer_save");
+      const std::string path = pfd::select_folder("Select a directory to save the map", recent_files.most_recent()).result();
+      if (!path.empty()) {
+        recent_files.push(path);
+        progress_modal->open<bool>("save", [this, path](guik::ProgressInterface& progress) { return save_map(progress, path); });
+      }
     }
   }
   auto save_result = progress_modal->run<bool>("save");
