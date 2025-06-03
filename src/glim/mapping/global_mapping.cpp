@@ -376,7 +376,7 @@ void GlobalMapping::optimize() {
   Callbacks::on_update_submaps(submaps);
 }
 
-boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_factors(int current) const {
+std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_factors(int current) const {
   auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
   if (current == 0 || !params.enable_between_factors) {
     return factors;
@@ -427,7 +427,7 @@ boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_fac
   return factors;
 }
 
-boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost_factors(int current) const {
+std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost_factors(int current) const {
   auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
   if (current == 0) {
     return factors;
@@ -552,9 +552,9 @@ void GlobalMapping::save(const std::string& path) {
   std::unordered_map<std::string, gtsam::NonlinearFactor::shared_ptr> matching_cost_factors;
 
   for (const auto& factor : isam2->getFactorsUnsafe()) {
-    bool serializable = !boost::dynamic_pointer_cast<gtsam_points::IntegratedMatchingCostFactor>(factor)
+    bool serializable = !dynamic_cast<gtsam_points::IntegratedMatchingCostFactor*>(factor.get())
 #ifdef GTSAM_POINTS_USE_CUDA
-                        && !boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor)
+                        && !dynamic_cast<gtsam_points::IntegratedVGICPFactorGPU*>(factor.get())
 #endif
       ;
 
@@ -581,13 +581,13 @@ void GlobalMapping::save(const std::string& path) {
   for (const auto& factor : matching_cost_factors) {
     std::string type;
 
-    if (boost::dynamic_pointer_cast<gtsam_points::IntegratedGICPFactor>(factor.second)) {
+    if (dynamic_cast<gtsam_points::IntegratedGICPFactor*>(factor.second.get())) {
       type = "gicp";
-    } else if (boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactor>(factor.second)) {
+    } else if (dynamic_cast<gtsam_points::IntegratedVGICPFactor*>(factor.second.get())) {
       type = "vgicp";
     }
 #ifdef GTSAM_POINTS_USE_CUDA
-    else if (boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor.second)) {
+    else if (dynamic_cast<gtsam_points::IntegratedVGICPFactorGPU*>(factor.second.get())) {
       type = "vgicp_gpu";
     }
 #endif
@@ -771,21 +771,20 @@ bool GlobalMapping::load(const std::string& path) {
 
     logger->info("removing translation prior factors");
     auto remove_loc = std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) {
-      return boost::dynamic_pointer_cast<gtsam::PoseTranslationPrior<gtsam::Pose3>>(factor) != nullptr;
+      return dynamic_cast<gtsam::PoseTranslationPrior<gtsam::Pose3>*>(factor.get()) != nullptr;
     });
     logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
     loaded_graph.erase(remove_loc, loaded_graph.end());
 
     logger->info("removing damping factors");
-    remove_loc = std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) {
-      return boost::dynamic_pointer_cast<gtsam_points::LinearDampingFactor>(factor) != nullptr;
-    });
+    remove_loc =
+      std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) { return dynamic_cast<gtsam_points::LinearDampingFactor*>(factor.get()) != nullptr; });
     logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
     loaded_graph.erase(remove_loc, loaded_graph.end());
 
     logger->info("removing prior factors");
     remove_loc =
-      std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) { return boost::dynamic_pointer_cast<gtsam::PriorFactor<gtsam::Pose3>>(factor) != nullptr; });
+      std::remove_if(loaded_graph.begin(), loaded_graph.end(), [](const auto& factor) { return dynamic_cast<gtsam::PriorFactor<gtsam::Pose3>*>(factor.get()) != nullptr; });
     logger->info("removed {} prior factors", std::distance(remove_loc, loaded_graph.end()));
     loaded_graph.erase(remove_loc, loaded_graph.end());
 
@@ -890,7 +889,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     enable_imu |= (chr == 'e' || chr == 'v' || chr == 'b');
   }
   for (const auto& factor : graph) {
-    enable_imu |= boost::dynamic_pointer_cast<gtsam::ImuFactor>(factor) != nullptr;
+    enable_imu |= dynamic_cast<gtsam::ImuFactor*>(factor.get()) != nullptr;
   }
 
   logger->info("enable_imu={}", enable_imu);
@@ -910,7 +909,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     }
 
     if (factor->keys().size() == 1 && factor->keys()[0] == X(0)) {
-      prior_exists |= boost::dynamic_pointer_cast<gtsam_points::LinearDampingFactor>(factor) != nullptr;
+      prior_exists |= dynamic_cast<gtsam_points::LinearDampingFactor*>(factor.get()) != nullptr;
     }
   }
 
