@@ -4,7 +4,6 @@
 #include <memory>
 #include <random>
 
-#include <boost/shared_ptr.hpp>
 #include <glim/odometry/odometry_estimation_base.hpp>
 
 namespace gtsam {
@@ -79,7 +78,7 @@ public:
 
 protected:
   virtual void create_frame(EstimationFrame::Ptr& frame) {}
-  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) = 0;
+  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const std::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) = 0;
 
   virtual void fallback_smoother() {}
   virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors);

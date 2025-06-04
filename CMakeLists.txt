@@ -24,8 +24,8 @@ endif()
 
 find_package(Boost REQUIRED serialization)
 find_package(Eigen3 REQUIRED)
-find_package(GTSAM REQUIRED)
-find_package(gtsam_points REQUIRED)
+find_package(GTSAM 4.3 REQUIRED)
+find_package(gtsam_points 1.2.0 REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
 

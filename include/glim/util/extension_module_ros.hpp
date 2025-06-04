@@ -62,7 +62,7 @@ public:
     callback(msg);
   }
 
-  const std::function<void(const boost::shared_ptr<const Msg>&)> callback;
+  const std::function<void(const std::shared_ptr<const Msg>&)> callback;
   ros::Subscriber sub;
 };
 

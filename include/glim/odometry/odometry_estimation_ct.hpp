@@ -4,7 +4,6 @@
 #include <memory>
 #include <future>
 
-#include <boost/shared_ptr.hpp>
 #include <glim/odometry/odometry_estimation_base.hpp>
 
 namespace gtsam {

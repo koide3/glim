@@ -288,7 +288,7 @@ void GlobalMappingPoseGraph::insert_submap(int current, const SubMap::Ptr& subma
   submap_targets.push_back(target);
 }
 
-boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingPoseGraph::create_odometry_factors(int current) const {
+std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingPoseGraph::create_odometry_factors(int current) const {
   auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
   if (current == 0) {
     return factors;
@@ -334,7 +334,7 @@ void GlobalMappingPoseGraph::find_loop_candidates(int current) {
   loop_candidates.insert(new_candidates);
 }
 
-boost::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingPoseGraph::collect_detected_loops() {
+std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMappingPoseGraph::collect_detected_loops() {
   auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
 
   factors->add(detected_loops.get_all_and_clear());
