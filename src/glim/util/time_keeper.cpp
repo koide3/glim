@@ -57,7 +57,7 @@ bool TimeKeeper::validate_imu_stamp(const double imu_stamp) {
   return true;
 }
 
-void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
+bool TimeKeeper::process(const glim::RawPoints::Ptr& points) {
   replace_points_stamp(points);
 
   if (points->points.size() != points->times.size()) {
@@ -85,12 +85,15 @@ void TimeKeeper::process(const glim::RawPoints::Ptr& points) {
   } else if (time_diff < 0.0) {
     spdlog::warn("point timestamp rewind detected!!");
     spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", points->stamp, last_points_stamp, time_diff);
+    return false;
   } else if (time_diff > 0.5) {
     spdlog::warn("large time gap between consecutive LiDAR frames!!");
     spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", points->stamp, last_points_stamp, time_diff);
   }
 
   last_points_stamp = points->stamp;
+
+  return true;
 }
 
 void TimeKeeper::replace_points_stamp(const glim::RawPoints::Ptr& points) {
