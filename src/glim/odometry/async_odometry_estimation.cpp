@@ -95,8 +95,13 @@ void AsyncOdometryEstimation::run() {
 #ifdef GLIM_USE_OPENCV
     while (!images.empty()) {
       if (!end_of_sequence && images.front().first > last_imu_time) {
-        logger->debug("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f})", images.front().first, last_imu_time);
+        logger->debug("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f} |images|={})", images.front().first, last_imu_time, images.size());
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        if (images.size() > 10) {
+          logger->warn("waiting for IMU data (image_time={:.6f}, last_imu_time={:.6f} |images|={})", images.front().first, last_imu_time, images.size());
+        }
+
         break;
       }
 
@@ -108,8 +113,13 @@ void AsyncOdometryEstimation::run() {
 
     while (!raw_frames.empty()) {
       if (!end_of_sequence && raw_frames.front()->scan_end_time > last_imu_time) {
-        logger->debug("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f})", raw_frames.front()->scan_end_time, last_imu_time);
+        logger->debug("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f} |frames|={})", raw_frames.front()->scan_end_time, last_imu_time, raw_frames.size());
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        if (raw_frames.size() > 10) {
+          logger->warn("waiting for IMU data (scan_end_time={:.6f}, last_imu_time={:.6f} |frames|={})", raw_frames.front()->scan_end_time, last_imu_time, raw_frames.size());
+        }
+
         break;
       }
 
