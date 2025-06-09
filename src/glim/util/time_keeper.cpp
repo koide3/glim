@@ -39,7 +39,7 @@ bool TimeKeeper::validate_imu_stamp(const double imu_stamp) {
   if (last_imu_stamp < 0.0) {
     // First IMU frame
   } else if (imu_stamp < last_imu_stamp) {
-    spdlog::warn("IMU IMU timestamp rewind detected!!");
+    spdlog::warn("IMU timestamp rewind detected!!");
     spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", imu_stamp, last_imu_stamp, imu_diff);
     return false;
   } else if (imu_stamp - last_imu_stamp > 0.1) {

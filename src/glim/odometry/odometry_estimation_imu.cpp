@@ -234,8 +234,15 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   // IMU state prediction
   const gtsam::NavState predicted_nav_world_imu = imu_integration->integrated_measurements().predict(last_nav_world_imu, last_imu_bias);
-  const gtsam::Pose3 predicted_T_world_imu = predicted_nav_world_imu.pose();
-  const gtsam::Vector3 predicted_v_world_imu = predicted_nav_world_imu.velocity();
+  gtsam::Pose3 predicted_T_world_imu = predicted_nav_world_imu.pose();
+  gtsam::Vector3 predicted_v_world_imu = predicted_nav_world_imu.velocity();
+
+  // Overwrite the predicted state with the last states if no IMU data is available
+  if (num_imu_integrated < 2 && last > 1) {
+    const Eigen::Isometry3d T_delta = frames[last - 1]->T_lidar_imu.inverse() * frames[last]->T_lidar_imu;
+    predicted_T_world_imu = gtsam::Pose3((frames[last]->T_world_imu * T_delta).matrix());
+    predicted_v_world_imu = frames[last]->v_world_imu;
+  }
 
   new_stamps[X(current)] = raw_frame->stamp;
   new_stamps[V(current)] = raw_frame->stamp;
