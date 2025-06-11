@@ -36,13 +36,18 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   outlier_std_mul_factor = config.param<double>("preprocess", "outlier_std_mul_factor", 2.0);
 
   enable_cropbox_filter = config.param<bool>("preprocess", "enable_cropbox_filter", false);
-  crop_bbox_frame = config.param<std::string>("preprocess", "crop_bbox_frame", "lidar");
-  crop_bbox_min = config.param<Eigen::Vector3d>("preprocess", "crop_bbox_min", {});
-  crop_bbox_max = config.param<Eigen::Vector3d>("preprocess", "crop_bbox_max", {});
-  Eigen::Isometry3d T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
-  T_imu_lidar = T_lidar_imu.inverse();
+  crop_bbox_frame = "lidar";
+  crop_bbox_min.setZero();
+  crop_bbox_max.setZero();
 
   if (enable_cropbox_filter) {
+    Eigen::Isometry3d T_lidar_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_lidar_imu", Eigen::Isometry3d::Identity());
+    T_imu_lidar = T_lidar_imu.inverse();
+
+    crop_bbox_frame = config.param<std::string>("preprocess", "crop_bbox_frame", "lidar");
+    crop_bbox_min = config.param<Eigen::Vector3d>("preprocess", "crop_bbox_min", Eigen::Vector3d(0.0, 0.0, 0.0));
+    crop_bbox_max = config.param<Eigen::Vector3d>("preprocess", "crop_bbox_max", Eigen::Vector3d(0.0, 0.0, 0.0));
+
     if (crop_bbox_frame != "lidar" && crop_bbox_frame != "imu") {
       throw std::runtime_error(fmt::format("Unsupported crop bbox frame: {}", crop_bbox_frame));
     } else if ((crop_bbox_min.array() > crop_bbox_max.array()).any()) {
@@ -111,7 +116,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   std::vector<int> indices;
   indices.reserve(frame->size());
   double squared_distance_near_thresh = params.distance_near_thresh * params.distance_near_thresh;
-  double squared_distance_far_thresh  = params.distance_far_thresh  * params.distance_far_thresh;
+  double squared_distance_far_thresh = params.distance_far_thresh * params.distance_far_thresh;
 
   for (int i = 0; i < frame->size(); i++) {
     const bool is_finite = frame->points[i].allFinite();
@@ -137,24 +142,18 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   if (params.enable_cropbox_filter) {
     if (params.crop_bbox_frame == "lidar") {
       auto is_inside_bbox = [&](const Eigen::Vector3d& p_lidar) {
-        return (p_lidar.array() >= params.crop_bbox_min.array()).all()
-            && (p_lidar.array() <= params.crop_bbox_max.array()).all();
+        return (p_lidar.array() >= params.crop_bbox_min.array()).all() && (p_lidar.array() <= params.crop_bbox_max.array()).all();
       };
 
-      frame = gtsam_points::filter(frame, [&](const auto& pt) {
-        return !is_inside_bbox(pt.template head<3>());
-      });
+      frame = gtsam_points::filter(frame, [&](const auto& pt) { return !is_inside_bbox(pt.template head<3>()); });
 
     } else if (params.crop_bbox_frame == "imu") {
       auto is_inside_bbox = [&](const Eigen::Vector3d& p_lidar) {
         const auto p_imu = params.T_imu_lidar * p_lidar;
-        return (p_imu.array() >= params.crop_bbox_min.array()).all()
-            && (p_imu.array() <= params.crop_bbox_max.array()).all();
+        return (p_imu.array() >= params.crop_bbox_min.array()).all() && (p_imu.array() <= params.crop_bbox_max.array()).all();
       };
 
-      frame = gtsam_points::filter(frame, [&](const auto& pt) {
-        return !is_inside_bbox(pt.template head<3>());
-      });
+      frame = gtsam_points::filter(frame, [&](const auto& pt) { return !is_inside_bbox(pt.template head<3>()); });
 
     } else {
       throw std::runtime_error(fmt::format("Unsupported crop bbox frame: {}", params.crop_bbox_frame));
