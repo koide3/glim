@@ -73,6 +73,8 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
 
   show_memory_stats = false;
   submap_memstats_count = 0;
+  global_factor_stats_count = 0;
+  total_gl_bytes = 0;
 
   points_alpha = config.param("standard_viewer", "points_alpha", 1.0);
   factors_alpha = config.param("standard_viewer", "factors_alpha", 1.0);
@@ -541,6 +543,7 @@ void StandardViewer::set_callbacks() {
         shader_setting.add("dynamic_object", 0).make_transparent();
       }
 
+      total_gl_bytes += cloud_buffer->memory_usage();
       viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, shader_setting);
     });
   });
@@ -931,7 +934,7 @@ void StandardViewer::drawable_selection() {
 
     constexpr double mb = 1.0 / (1024.0 * 1024.0);
     const size_t total_cpu = points_cpu + voxelmap_cpu + odom_cpu + factors_cpu;
-    const size_t total_gpu = points_gpu + voxelmap_gpu + odom_gpu + factors_gpu;
+    const size_t total_gpu = points_gpu + voxelmap_gpu + odom_gpu + factors_gpu + total_gl_bytes;
     const double total_cpu_mb = total_cpu * mb;
     const double total_gpu_mb = total_gpu * mb;
 
@@ -960,6 +963,7 @@ void StandardViewer::drawable_selection() {
       show_item("Voxelmap", voxelmap_cpu, voxelmap_gpu);
       show_item("Odom frames", odom_cpu, odom_gpu);
       show_item("Factors", factors_cpu, factors_gpu);
+      show_item("OpenGL", 0, total_gl_bytes);
 
       ImGui::EndTable();
     }

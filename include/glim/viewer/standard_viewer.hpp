@@ -95,6 +95,8 @@ private:
   int global_factor_stats_count;
   std::vector<FactorMemoryStats> global_factor_memstats;
 
+  size_t total_gl_bytes;
+
   double point_size;
   bool point_size_metric;
   bool point_shape_circle;
