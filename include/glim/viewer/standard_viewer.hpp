@@ -27,6 +27,9 @@ namespace glim {
 class TrajectoryManager;
 struct EstimationFrame;
 
+struct SubMapMemoryStats;
+struct FactorMemoryStats;
+
 class StandardViewer : public ExtensionModule {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -84,6 +87,13 @@ private:
 
   bool show_mapping_tools;
   float min_overlap;
+
+  bool show_memory_stats;
+  int submap_memstats_count;
+  std::vector<SubMapMemoryStats> submap_memstats;
+
+  int global_factor_stats_count;
+  std::vector<FactorMemoryStats> global_factor_memstats;
 
   double point_size;
   bool point_size_metric;
