@@ -904,7 +904,7 @@ void StandardViewer::main_menu() {
     // It's better to call pfd from the main thread via invoke if there are any potential threading issues with UI libraries.
     // However, pfd is often okay to call directly. For now, direct call for simplicity as per task.
     // If issues arise, this can be wrapped in invoke().
-    auto selection = pfd::select_folder("Select GLIM dump directory", ".", pfd::opt::none).result();
+    auto selection = pfd::select_folder("Select GLIM dump directory", ".").result(); // Removed explicit pfd::opt::none
     if (!selection.empty()) {
       std::lock_guard<std::mutex> lock(selected_map_path_mutex);
       selected_map_path_for_gui = selection;
