@@ -33,6 +33,8 @@
 #include <glk/primitives/primitives.hpp>
 #include <guik/spdlog_sink.hpp>
 #include <guik/viewer/light_viewer.hpp>
+#include <imgui.h> // Required for ImGui calls
+#include <portable-file-dialogs.h> // For Quit confirmation
 
 namespace glim {
 
@@ -649,6 +651,7 @@ void StandardViewer::viewer_loop() {
   viewer->register_drawable_filter("selection", [this](const std::string& name) { return drawable_filter(name); });
   viewer->register_ui_callback("selection", [this] { drawable_selection(); });
   viewer->register_ui_callback("logging", guik::create_logger_ui(glim::get_ringbuffer_sink(), 0.5));
+  viewer->register_ui_callback("main_menu_bar", [this] { main_menu(); }); // Register main_menu
 
   while (!kill_switch) {
     if (!viewer->spin_once()) {
@@ -867,6 +870,56 @@ void StandardViewer::drawable_selection() {
     ImGui::End();
   }
 }
+
+void StandardViewer::main_menu() {
+  bool load_map_triggered = false;
+  bool close_map_triggered = false;
+
+  if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("Load Map...")) {
+        // Action is now handled after EndMainMenuBar to avoid issues with dialogs
+        load_map_triggered = true;
+      }
+      if (ImGui::MenuItem("Close Map")) {
+        // Placeholder for actual close map logic
+        logger->info("Close Map selected (not implemented yet)");
+        close_map_triggered = true;
+      }
+      ImGui::Separator();
+      if (ImGui::MenuItem("Quit")) {
+        // Using pfd for confirmation dialog, similar to OfflineViewer
+        if (pfd::message("Confirm", "Quit?", pfd::choice::ok_cancel, pfd::icon::warning).result() == pfd::button::ok) {
+          request_to_terminate = true;
+        }
+      }
+      ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+  }
+
+  // Handle actions outside ImGui rendering block
+  if (load_map_triggered) {
+    // Invoke the file dialog logic.
+    // It's better to call pfd from the main thread via invoke if there are any potential threading issues with UI libraries.
+    // However, pfd is often okay to call directly. For now, direct call for simplicity as per task.
+    // If issues arise, this can be wrapped in invoke().
+    auto selection = pfd::select_folder("Select GLIM dump directory", ".", pfd::opt::none).result();
+    if (!selection.empty()) {
+      std::lock_guard<std::mutex> lock(selected_map_path_mutex);
+      selected_map_path_for_gui = selection;
+      logger->info("Selected map path: {}", selected_map_path_for_gui);
+      // Further processing (like triggering map load) would happen here or be flagged
+    } else {
+      logger->info("Map selection cancelled.");
+    }
+  }
+
+  if (close_map_triggered) {
+    // Actual map closing logic will be called here in a future step
+  }
+}
+
 }  // namespace glim
 
 extern "C" glim::ExtensionModule* create_extension_module() {

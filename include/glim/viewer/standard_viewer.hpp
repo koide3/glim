@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string> // Required for std::string
 #include <mutex>
 #include <atomic>
 #include <thread>
@@ -13,6 +14,9 @@
 #include <Eigen/Geometry>
 
 #include <glim/util/extension_module.hpp>
+
+// Forward declare ImGui
+struct ImGuiContext;
 
 namespace spdlog {
 class logger;
@@ -46,6 +50,7 @@ private:
 
   bool drawable_filter(const std::string& name);
   void drawable_selection();
+  void main_menu(); // Added main_menu declaration
 
 private:
   std::atomic_bool viewer_started;
@@ -106,5 +111,9 @@ private:
 
   // Logging
   std::shared_ptr<spdlog::logger> logger;
+
+  // For Load Map dialog
+  std::string selected_map_path_for_gui;
+  std::mutex selected_map_path_mutex;
 };
 }  // namespace glim
