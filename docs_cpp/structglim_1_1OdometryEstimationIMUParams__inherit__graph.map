@@ -1,0 +1,7 @@
+<map id="glim::OdometryEstimationIMUParams" name="glim::OdometryEstimationIMUParams">
+<area shape="rect" id="Node000001" title="Parameters for OdometryEstimationIMU." alt="" coords="115,5,309,45"/>
+<area shape="rect" id="Node000002" href="$structglim_1_1OdometryEstimationCPUParams.html" title="Parameters for OdometryEstimationCPU." alt="" coords="5,93,200,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="179,56,129,95,125,91,175,52"/>
+<area shape="rect" id="Node000003" href="$structglim_1_1OdometryEstimationGPUParams.html" title="Parameters for OdometryEstimationGPU." alt="" coords="224,93,419,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="249,52,299,91,295,95,245,56"/>
+</map>
