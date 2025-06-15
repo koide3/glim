@@ -63,7 +63,11 @@ void print_system_info(std::shared_ptr<spdlog::logger> logger) {
   PRINT_IF_DEFINED(logger, GTSAM_ALLOCATOR_TBB);
   PRINT_IF_DEFINED(logger, GTSAM_USE_SYSTEM_EIGEN);
   PRINT_IF_DEFINED(logger, GTSAM_USE_SYSTEM_METIS);
+#ifdef GTSAM_EIGEN_VERSION_WORLD
   logger->debug("GTSAM_EIGEN_VERSION={}.{}", GTSAM_EIGEN_VERSION_WORLD, GTSAM_EIGEN_VERSION_MAJOR);
+#else
+  logger->debug("GTSAM_EIGEN_VERSION is not defined");
+#endif
 
   logger->debug("*** GTSAM_POINTS ***");
   logger->debug("GTSAM_POINTS_VERSION={}.{}.{} ({})", GTSAM_POINTS_VERSION_MAJOR, GTSAM_POINTS_VERSION_MINOR, GTSAM_POINTS_VERSION_PATCH, GTSAM_POINTS_VERSION_STRING);
