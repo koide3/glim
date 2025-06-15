@@ -3,7 +3,6 @@
 #include <any>
 #include <memory>
 #include <random>
-#include <boost/shared_ptr.hpp>
 #include <glim/mapping/global_mapping_base.hpp>
 
 namespace gtsam {
@@ -81,8 +80,8 @@ public:
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);
 
-  boost::shared_ptr<gtsam::NonlinearFactorGraph> create_between_factors(int current) const;
-  boost::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
+  std::shared_ptr<gtsam::NonlinearFactorGraph> create_between_factors(int current) const;
+  std::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
 
   void update_submaps();
   gtsam_points::ISAM2ResultExt update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values);

@@ -19,12 +19,12 @@ jobs:
     strategy:
       matrix:
         DISTRO: [
-          { "ubuntu": "noble_gtsam4.2a9", "suffix": "gcc" },
-          { "ubuntu": "noble_gtsam4.2a9", "suffix": "llvm" },
-          { "ubuntu": "jammy_gtsam4.2a9", "suffix": "gcc" },
-          { "ubuntu": "jammy_gtsam4.2a9", "suffix": "llvm" },
-          { "ubuntu": "jammy_cuda12.2_gtsam4.2a9", "suffix": "gcc.cuda" },
-          { "ubuntu": "jammy_cuda12.2_gtsam4.2a9", "suffix": "llvm.cuda" }
+          { "ubuntu": "noble_gtsam4.3a0", "suffix": "gcc" },
+          { "ubuntu": "noble_gtsam4.3a0", "suffix": "llvm" },
+          { "ubuntu": "jammy_gtsam4.3a0", "suffix": "gcc" },
+          { "ubuntu": "jammy_gtsam4.3a0", "suffix": "llvm" },
+          { "ubuntu": "jammy_cuda12.2_gtsam4.3a0", "suffix": "gcc.cuda" },
+          { "ubuntu": "jammy_cuda12.2_gtsam4.3a0", "suffix": "llvm.cuda" }
         ]
 
     steps:

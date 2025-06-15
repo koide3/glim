@@ -13,7 +13,7 @@ sudo apt install libomp-dev libboost-all-dev libmetis-dev \
 
 # Install GTSAM
 git clone https://github.com/borglab/gtsam
-cd gtsam && git checkout 4.2a9
+cd gtsam && git checkout 4.3a0
 mkdir build && cd build
 cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
          -DGTSAM_BUILD_TESTS=OFF \

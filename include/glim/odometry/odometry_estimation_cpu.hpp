@@ -49,7 +49,7 @@ public:
   virtual ~OdometryEstimationCPU() override;
 
 private:
-  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const boost::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) override;
+  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const std::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) override;
 
   virtual void fallback_smoother() override;
 

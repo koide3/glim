@@ -283,7 +283,7 @@ void StandardViewer::set_callbacks() {
                                                         gtsam::Values& new_values,
                                                         std::map<std::uint64_t, double>& new_stamps) {
     //
-    std::vector<std::pair<boost::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> new_factor_lines;
+    std::vector<std::pair<std::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> new_factor_lines;
     new_factor_lines.reserve(new_factors.size());
 
     for (const auto& factor : new_factors) {
@@ -298,7 +298,7 @@ void StandardViewer::set_callbacks() {
         }
         const int idx0 = symbol0.index();
 
-        const auto matching_factor = boost::dynamic_pointer_cast<gtsam_points::IntegratedMatchingCostFactor>(factor);
+        const auto matching_factor = dynamic_cast<gtsam_points::IntegratedMatchingCostFactor*>(factor.get());
         if (matching_factor) {
           const auto l = [this, idx0](const gtsam::NonlinearFactor* factor) -> std::optional<FactorLine> {
             const auto found0 = odometry_poses.find(idx0);
@@ -319,7 +319,7 @@ void StandardViewer::set_callbacks() {
         }
 
 #ifdef GTSAM_POINTS_USE_CUDA
-        const auto gpu_factor = boost::dynamic_pointer_cast<gtsam_points::IntegratedVGICPFactorGPU>(factor);
+        const auto gpu_factor = dynamic_cast<gtsam_points::IntegratedVGICPFactorGPU*>(factor.get());
         if (gpu_factor) {
           const auto l = [this, idx0](const gtsam::NonlinearFactor* factor) -> std::optional<FactorLine> {
             const auto found0 = odometry_poses.find(idx0);
