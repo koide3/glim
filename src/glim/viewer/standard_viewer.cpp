@@ -34,6 +34,8 @@
 #include <guik/spdlog_sink.hpp>
 #include <guik/viewer/light_viewer.hpp>
 
+#include <glim/viewer/standard_viewer_mem.hpp>
+
 namespace glim {
 
 StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
@@ -68,6 +70,11 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
 
   show_mapping_tools = false;
   min_overlap = 0.2f;
+
+  show_memory_stats = false;
+  submap_memstats_count = 0;
+  global_factor_stats_count = 0;
+  total_gl_bytes = 0;
 
   points_alpha = config.param("standard_viewer", "points_alpha", 1.0);
   factors_alpha = config.param("standard_viewer", "factors_alpha", 1.0);
@@ -536,6 +543,7 @@ void StandardViewer::set_callbacks() {
         shader_setting.add("dynamic_object", 0).make_transparent();
       }
 
+      total_gl_bytes += cloud_buffer->memory_usage();
       viewer->update_drawable("submap_" + std::to_string(submap->id), cloud_buffer, shader_setting);
     });
   });
@@ -551,8 +559,19 @@ void StandardViewer::set_callbacks() {
       submap_poses[i] = submaps[i]->T_world_origin.cast<float>();
     }
 
-    invoke([this, latest_submap, submap_ids, submap_poses] {
+    std::vector<SubMapMemoryStats> mem_stats;
+    if (show_memory_stats) {
+      mem_stats.reserve(submaps.size() - submap_memstats_count);
+      for (int i = submap_memstats_count; i < submaps.size(); i++) {
+        mem_stats.emplace_back(*submaps[i]);
+      }
+      submap_memstats_count = submaps.size();
+    }
+
+    invoke([this, latest_submap, submap_ids, submap_poses, mem_stats] {
       auto viewer = guik::LightViewer::instance();
+
+      submap_memstats.insert(submap_memstats.end(), mem_stats.begin(), mem_stats.end());
 
       std::vector<Eigen::Vector3f> submap_positions(submap_ids.size());
       last_submap_z = submap_poses.back().translation().z();
@@ -615,6 +634,20 @@ void StandardViewer::set_callbacks() {
   GlobalMappingCallbacks::on_smoother_update_result.add([this](gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
     logger->debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
     logger->debug(result.to_string());
+
+    if (show_memory_stats) {
+      std::vector<FactorMemoryStats> mem_stats;
+
+      for (int i = global_factor_stats_count; i < isam2.getFactorsUnsafe().size(); i++) {
+        FactorMemoryStats stats(isam2.getFactorsUnsafe()[i]);
+        if (stats.cpu_bytes || stats.gpu_bytes) {
+          mem_stats.emplace_back(stats);
+        }
+      }
+      global_factor_stats_count = isam2.getFactorsUnsafe().size();
+
+      invoke([this, mem_stats] { global_factor_memstats.insert(global_factor_memstats.end(), mem_stats.begin(), mem_stats.end()); });
+    }
   });
 }
 
@@ -772,6 +805,11 @@ void StandardViewer::drawable_selection() {
     show_mapping_tools = true;
   }
 
+  ImGui::SameLine();
+  if (ImGui::Button("Mem stats")) {
+    show_memory_stats = true;
+  }
+
   ImGui::Checkbox("submaps", &show_submaps);
   ImGui::SameLine();
   ImGui::Checkbox("factors", &show_factors);
@@ -866,7 +904,74 @@ void StandardViewer::drawable_selection() {
     }
     ImGui::End();
   }
+
+  if (show_memory_stats) {
+    ImGui::Begin("memory stats", &show_memory_stats, ImGuiWindowFlags_AlwaysAutoResize);
+
+    size_t points_cpu = 0;
+    size_t points_gpu = 0;
+    size_t voxelmap_cpu = 0;
+    size_t voxelmap_gpu = 0;
+    size_t odom_cpu = 0;
+    size_t odom_gpu = 0;
+
+    for (const auto& m : submap_memstats) {
+      points_cpu += m.frame_cpu_bytes;
+      points_gpu += m.frame_gpu_bytes;
+      voxelmap_cpu += m.voxelmap_cpu_bytes;
+      voxelmap_gpu += m.voxelmap_gpu_bytes;
+      odom_cpu += m.odom_cpu_bytes;
+      odom_gpu += m.odom_gpu_bytes;
+    }
+
+    size_t factors_cpu = 0;
+    size_t factors_gpu = 0;
+
+    for (const auto& m : global_factor_memstats) {
+      factors_cpu += m.cpu_bytes;
+      factors_gpu += m.gpu_bytes;
+    }
+
+    constexpr double mb = 1.0 / (1024.0 * 1024.0);
+    const size_t total_cpu = points_cpu + voxelmap_cpu + odom_cpu + factors_cpu;
+    const size_t total_gpu = points_gpu + voxelmap_gpu + odom_gpu + factors_gpu + total_gl_bytes;
+    const double total_cpu_mb = total_cpu * mb;
+    const double total_gpu_mb = total_gpu * mb;
+
+    ImGui::Text("Global mapping memory usage");
+    if (ImGui::BeginTable("Global mapping memory usage", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+      const auto show_item = [=](const char* name, size_t cpu, size_t gpu) {
+        const double cpu_mb = cpu * mb;
+        const double gpu_mb = gpu * mb;
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", name);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.2f MB / %.1f %%", cpu_mb, cpu_mb / total_cpu_mb * 100.0);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.2f MB / %.1f %%", gpu * mb, gpu_mb / total_gpu_mb * 100.0);
+      };
+
+      ImGui::TableSetupColumn("Item");
+      ImGui::TableSetupColumn("CPU");
+      ImGui::TableSetupColumn("GPU");
+      ImGui::TableHeadersRow();
+
+      show_item("Total", total_cpu, total_gpu);
+      show_item("Points", points_cpu, points_gpu);
+      show_item("Voxelmap", voxelmap_cpu, voxelmap_gpu);
+      show_item("Odom frames", odom_cpu, odom_gpu);
+      show_item("Factors", factors_cpu, factors_gpu);
+      show_item("OpenGL", 0, total_gl_bytes);
+
+      ImGui::EndTable();
+    }
+
+    ImGui::End();
+  }
 }
+
 }  // namespace glim
 
 extern "C" glim::ExtensionModule* create_extension_module() {

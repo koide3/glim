@@ -225,7 +225,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
       canvas->mouse_control();
     }
     draw_canvas();
-    ImGui::Image((void*)canvas->frame_buffer->color().id(), ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image(reinterpret_cast<void*>(canvas->frame_buffer->color().id()), ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
 
     ImVec2 canvas_rect_min = ImGui::GetItemRectMin();
     ImVec2 canvas_rect_max = ImGui::GetItemRectMax();

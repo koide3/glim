@@ -92,8 +92,12 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
     return nullptr;
   }
 
-  logger->info("estimate initial IMU state");
+  if (imu_integration->imu_data_in_queue().empty()) {
+    logger->warn("no IMU data for initial state estimation");
+    return nullptr;
+  }
 
+  logger->info("estimate initial IMU state");
   using gtsam::symbol_shorthand::B;
   using gtsam::symbol_shorthand::V;
   using gtsam::symbol_shorthand::X;
@@ -121,8 +125,20 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
   graph.emplace_shared<gtsam::PoseTranslationPrior<gtsam::Pose3>>(X(0), gtsam::Vector3::Zero(), gtsam::noiseModel::Isotropic::Precision(3, 1e3));
 
   const auto& imu_data = imu_integration->imu_data_in_queue();
-  int imu_cursor = 0;
 
+  if (imu_data.back()[0] < T_odom_lidar.front().first + 0.1) {
+    logger->warn(
+      "no IMU data for initial state estimation (|imu|={}, imu_first={:.6f}, imu_last={:.6f}, |lidar|={} lidar_first={:.6f}, lidar_last={:.6f})",
+      imu_data.size(),
+      imu_data.size() ? imu_data.front()[0] : 0.0,
+      imu_data.size() ? imu_data.back()[0] : 0.0,
+      T_odom_lidar.size(),
+      T_odom_lidar.size() ? T_odom_lidar.front().first : 0.0,
+      T_odom_lidar.size() ? T_odom_lidar.back().first : 0.0);
+    return nullptr;
+  }
+
+  int imu_cursor = 0;
   Eigen::Vector3d sum_acc_odom = Eigen::Vector3d::Zero();
   std::vector<Eigen::Vector3d> acc_odom(T_odom_lidar.size());
   for (int i = 0; i < T_odom_lidar.size(); i++) {

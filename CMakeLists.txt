@@ -152,6 +152,7 @@ if(BUILD_WITH_VIEWER)
   # Standard viewer
   add_library(standard_viewer SHARED
     src/glim/viewer/standard_viewer.cpp
+    src/glim/viewer/standard_viewer_mem.cpp
   )
   target_link_libraries(standard_viewer
     glim

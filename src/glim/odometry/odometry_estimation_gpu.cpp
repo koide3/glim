@@ -72,7 +72,6 @@ OdometryEstimationGPUParams::~OdometryEstimationGPUParams() {}
 OdometryEstimationGPU::OdometryEstimationGPU(const OdometryEstimationGPUParams& params) : OdometryEstimationIMU(std::make_unique<OdometryEstimationGPUParams>(params)) {
   entropy_num_frames = 0;
   entropy_running_average = 0.0;
-  marginalized_cursor = 0;
 
   stream.reset(new gtsam_points::CUDAStream());
   stream_buffer_roundrobin.reset(new gtsam_points::StreamTempBufferRoundRobin());
@@ -192,7 +191,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int curr
     const auto& buffer = stream_buffer.second;
 
     double span = frames[current]->stamp - keyframe->stamp;
-    if (span > params->smoother_lag - 0.1) {
+    if (span > params->smoother_lag - 0.1 || !frames[keyframe->id]) {
       // Create unary factor
       const gtsam::Pose3 key_T_world_imu(keyframe->T_world_imu.matrix());
       create_unary_factor(factors, key_T_world_imu, X(current), keyframe, frames[current]);

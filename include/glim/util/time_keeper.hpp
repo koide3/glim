@@ -30,11 +30,12 @@ public:
   ~TimeKeeper();
 
   /**
-   * @brief Replace frame and point timestamps
-   * @note  Frame timestamp must be the one at the moment when the first point is acquired
-   * @note  Point timestamps must be relative with respect to the first point
+   * @brief  Replace frame and point timestamps
+   * @note   Frame timestamp must be the one at the moment when the first point is acquired
+   * @note   Point timestamps must be relative with respect to the first point
+   * @return If the timestamp of the point cloud is valid
    */
-  void process(const glim::RawPoints::Ptr& points);
+  bool process(const glim::RawPoints::Ptr& points);
 
   /**
    * @brief Check if IMU and LiDAR data are (very roughly) synchronized
