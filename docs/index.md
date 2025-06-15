@@ -18,7 +18,6 @@
 Tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5 / 12.6, and NVIDIA Jetson Orin (Jetpack 6.1).
 
 [![Build test status](assets/build.svg)](https://github.com/koide3/glim/actions/workflows/build.yml)
-[![ROS1](assets/ros1.svg)](https://github.com/koide3/glim_ros1/actions/workflows/docker_push.yml)
 [![ROS2](assets/ros2.svg)](https://github.com/koide3/glim_ros2/actions/workflows/docker_push.yml)
 
 ## Video
