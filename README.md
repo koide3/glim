@@ -26,6 +26,10 @@ If you find this package useful for your project, please consider leaving a comm
 [![ROS2](https://github.com/koide3/glim_ros2/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim_ros2/actions/workflows/build.yml)
 [![EXT](https://github.com/koide3/glim_ext/actions/workflows/build.yml/badge.svg)](https://github.com/koide3/glim_ext/actions/workflows/build.yml)
 
+## Updates
+
+- 2025/06/15 : The base GTSAM version has been changed. Make sure you have rebuilt and installed **GTSAM 4.3a0** and **gtsam_points 1.2.0**.
+
 ## Dependencies
 ### Mandatory
 - [Eigen](https://eigen.tuxfamily.org/index.php)
