@@ -46,31 +46,6 @@ GLIM provides two ROS executables: ***glim_rosnode*** and ***glim_rosbag***.
 ***glim_rosnode*** launches GLIM as a standard ROS node that subscribes to points, imu, and image topics. 
 
 <details>
-<summary>ROS1 command</summary>
-
-```bash
-# Start roscore
-roscore
-```
-
-```bash
-# Enable use_sim_time and launch GLIM as a standard ROS node on another terminal
-rosparam set use_sim_time true
-rosrun glim_ros glim_rosnode
-```
-
-```bash
-# Play rosbag on yet another terminal
-rosbag play --clock os1_128_01.bag
-```
-
-```bash
-# Visualize on rviz (optional)
-rviz -d glim_ros1/rviz/glim_ros.rviz
-```
-</details>
-
-<details>
 <summary>ROS2 command</summary>
 
 ```bash
@@ -97,22 +72,6 @@ rviz2 -d glim_ros2/rviz/glim_ros.rviz
 ***glim_rosbag*** launches a mapping instance that directly reads data from rosbag. It automatically adjusts the playback speed while avoiding data drop to perform mapping in a minimum time.
 
 <details>
-<summary>ROS1 command</summary>
-
-```bash
-roscore
-```
-
-```bash
-rosparam set use_sim_time true
-```
-
-```bash
-rosrun glim_ros glim_rosbag os1_128_01.bag
-```
-</details>
-
-<details>
 <summary>ROS2 command</summary>
 
 ```bash
@@ -137,21 +96,6 @@ GLIM reads parameter settings from JSON files in a config root directory, which 
     See [Important parameters](parameters.md) to understand parameters that should be fine-tuned.
 
 **Example**
-
-<details>
-<summary>ROS1 command</summary>
-
-```bash
-# Load parameters from "glim/config/presets/gpu/config.json"
-rosrun glim_ros glim_rosnode _config_path:=config/presets/gpu
-
-# Load parameters from "/tmp/config/config.json"
-rosrun glim_ros glim_rosnode _config_path:=/tmp/config
-
-# Load parameters from "./config/config.json"
-rosrun glim_ros glim_rosnode _config_path:=$(realpath ./config)
-```
-</details>
 
 <details>
 <summary>ROS2 command</summary>
@@ -190,9 +134,6 @@ Estimated trajectory files (TUM format : Each row is [t x y z qx qy qz qw]):
 </div>
 
 ```bash
-# ROS1
-rosrun glim_ros offline_viewer
-
 # ROS2
 ros2 run glim_ros offline_viewer
 ```

@@ -2,17 +2,11 @@
 
 ## Prebuilt docker images
 
-We provide the following docker images for ROS1 and ROS2 environments on docker hub.
+We provide the following docker images forROS2 on docker hub.
 
-- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros1/noetic) koide3/glim_ros1:noetic](https://hub.docker.com/repository/docker/koide3/glim_ros1/tags)
-- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros1/noetic_cuda12.2) koide3/glim_ros1:noetic_cuda12.2](https://hub.docker.com/repository/docker/koide3/glim_ros1/tags)
 - [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/jazzy) koide3/glim_ros2:jazzy](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
 - [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/humble) koide3/glim_ros2:humble](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
 - [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/humble_cuda12.2) koide3/glim_ros2:humble_cuda12.2](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
-
-Thirdparty images:
-- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/junekyoopark/arm64v8_glim_ros1_cuda12.2/latest) ROS1 on Jetpack 5.1.4 (Jetson Orin NX)](https://hub.docker.com/r/junekyoopark/arm64v8_glim_ros1_cuda12.2) (made by [junekyoopark](https://github.com/junekyoopark))
-
 
 !!! note
     ROS2 sometimes requires additional configurations for communication on docker. See [https://github.com/eProsima/Fast-DDS/issues/2956](https://github.com/eProsima/Fast-DDS/issues/2956). Do not ask us about how to use ROS2 with docker.
