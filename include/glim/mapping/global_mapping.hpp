@@ -35,6 +35,8 @@ public:
   bool enable_between_factors;
   std::string between_registration_type;
 
+  size_t gpu_memory_offload_mb;  // in MB
+
   std::string registration_error_factor_type;
   double submap_voxel_resolution;
   double submap_voxel_resolution_max;
@@ -84,6 +86,7 @@ private:
   std::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
 
   void update_submaps();
+  void offload_gpu_memory();
   gtsam_points::ISAM2ResultExt update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values);
 
   void recover_graph() override;
@@ -96,9 +99,11 @@ private:
   std::mt19937 mt;
   int session_id;
 
+  std::uint64_t point_bytes_gpu;
+
   std::unique_ptr<IMUIntegration> imu_integration;
   std::any stream_buffer_roundrobin;
-
+  
   std::vector<SubMap::Ptr> submaps;
   std::vector<gtsam_points::PointCloud::ConstPtr> subsampled_submaps;
 

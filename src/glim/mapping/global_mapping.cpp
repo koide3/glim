@@ -55,6 +55,8 @@ GlobalMappingParams::GlobalMappingParams() {
 
   enable_between_factors = config.param<bool>("global_mapping", "create_between_factors", false);
   between_registration_type = config.param<std::string>("global_mapping", "between_registration_type", "GICP");
+  gpu_memory_offload_mb = config.param<int>("global_mapping", "gpu_memory_offload_mb", 64);
+
   registration_error_factor_type = config.param<std::string>("global_mapping", "registration_error_factor_type", "VGICP");
   submap_voxel_resolution = config.param<double>("global_mapping", "submap_voxel_resolution", 1.0);
   submap_voxel_resolution_max = config.param<double>("global_mapping", "submap_voxel_resolution_max", submap_voxel_resolution);
@@ -87,6 +89,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 #endif
 
   session_id = 0;
+  point_bytes_gpu = 0;
   imu_integration.reset(new IMUIntegration);
 
   new_values.reset(new gtsam::Values);
@@ -229,6 +232,8 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
   update_submaps();
   Callbacks::on_update_submaps(submaps);
+
+  offload_gpu_memory();
 }
 
 void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
@@ -280,6 +285,9 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
 
   submaps.push_back(submap);
   subsampled_submaps.push_back(subsampled_submap);
+
+  point_bytes_gpu += subsampled_submap->memory_usage_gpu();
+  logger->info("Points={:.1f}MB", point_bytes_gpu / (1024.0 * 1024.0));
 }
 
 void GlobalMapping::find_overlapping_submaps(double min_overlap) {
@@ -332,7 +340,9 @@ void GlobalMapping::find_overlapping_submaps(double min_overlap) {
         const auto& stream = stream_buffer.first;
         const auto& buffer = stream_buffer.second;
         for (const auto& voxelmap : submaps[i]->voxelmaps) {
-          new_factors->emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
+          auto f = gtsam::make_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(j), voxelmap, subsampled_submaps[j], stream, buffer);
+          f->set_enable_offloading(params.gpu_memory_offload_mb > 0);
+          new_factors->add(f);
         }
       }
 #endif
@@ -463,7 +473,9 @@ std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost
       const auto& stream = stream_buffer.first;
       const auto& buffer = stream_buffer.second;
       for (const auto& voxelmap : submaps[i]->voxelmaps) {
-        factors->emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(current), voxelmap, subsampled_submaps[current], stream, buffer);
+        auto f = gtsam::make_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(i), X(current), voxelmap, subsampled_submaps[current], stream, buffer);
+        f->set_enable_offloading(params.gpu_memory_offload_mb > 0);
+        factors->add(f);
       }
     }
 #endif
@@ -486,6 +498,45 @@ std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost
 void GlobalMapping::update_submaps() {
   for (int i = 0; i < submaps.size(); i++) {
     submaps[i]->T_world_origin = Eigen::Isometry3d(isam2->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
+  }
+}
+
+void GlobalMapping::offload_gpu_memory(){
+  const size_t thresh = params.gpu_memory_offload_mb * (1024ull * 1024ull);
+
+  if (point_bytes_gpu < thresh) {
+    return;
+  }
+
+  logger->info("offload GPU memory ({}MB)", point_bytes_gpu / (1024.0 * 1024.0));
+
+  std::vector<gtsam_points::PointCloudGPU::Ptr> points_on_gpu;
+  for (const auto& points : subsampled_submaps) {
+    if (points->memory_usage_gpu() == 0) {
+      continue;
+    }
+
+    auto points_gpu = std::dynamic_pointer_cast<const gtsam_points::PointCloudGPU>(points);
+    if (!points_gpu) {
+      logger->warn("subsampled submap is not a PointCloudGPU!!");
+      continue;
+    }
+
+    points_on_gpu.push_back(std::const_pointer_cast<gtsam_points::PointCloudGPU>(points_gpu));
+  }
+
+  std::sort(points_on_gpu.begin(), points_on_gpu.end(), [](const gtsam_points::PointCloudGPU::Ptr& a, const gtsam_points::PointCloudGPU::Ptr& b) {
+    return a->last_accessed_time() > b->last_accessed_time();
+  });
+
+  for (auto& points_gpu : points_on_gpu) {
+    if (point_bytes_gpu < thresh) {
+      break;
+    }
+
+    size_t bytes = points_gpu->memory_usage_gpu();
+    points_gpu->offload_gpu();
+    point_bytes_gpu -= bytes;
   }
 }
 
@@ -822,7 +873,8 @@ bool GlobalMapping::load(const std::string& path) {
         const auto& buffer = stream_buffer.second;
 
         for (const auto& voxelmap : submaps[first]->voxelmaps) {
-          graph.emplace_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(first), X(second), voxelmap, subsampled_submaps[second], stream, buffer);
+          auto f = gtsam::make_shared<gtsam_points::IntegratedVGICPFactorGPU>(X(first), X(second), voxelmap, subsampled_submaps[second], stream, buffer);
+          graph.add(f);
         }
 #else
         logger->warn("GPU is enabled but gtsam_points was built without CUDA!!");
