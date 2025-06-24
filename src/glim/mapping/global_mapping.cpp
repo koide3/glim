@@ -89,7 +89,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 #endif
 
   session_id = 0;
-  point_bytes_gpu = 0;
+  submap_bytes_gpu = 0;
   imu_integration.reset(new IMUIntegration);
 
   new_values.reset(new gtsam::Values);
@@ -270,6 +270,8 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
       auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapGPU>(resolution);
       voxelmap->insert(*submap->frame);
       submap->voxelmaps.push_back(voxelmap);
+
+      submap_bytes_gpu += voxelmap->memory_usage_gpu();
     }
   }
 #endif
@@ -283,11 +285,15 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
     }
   }
 
+#ifdef GTSAM_POINTS_USE_CUDA
+  auto points_gpu = std::dynamic_pointer_cast<const gtsam_points::PointCloudGPU>(submap->frame);
+  if (points_gpu) {
+    submap_bytes_gpu += points_gpu->memory_usage_gpu();
+  }
+#endif
+
   submaps.push_back(submap);
   subsampled_submaps.push_back(subsampled_submap);
-
-  point_bytes_gpu += subsampled_submap->memory_usage_gpu();
-  logger->info("Points={:.1f}MB", point_bytes_gpu / (1024.0 * 1024.0));
 }
 
 void GlobalMapping::find_overlapping_submaps(double min_overlap) {
@@ -501,42 +507,47 @@ void GlobalMapping::update_submaps() {
   }
 }
 
-void GlobalMapping::offload_gpu_memory(){
+void GlobalMapping::offload_gpu_memory() {
   const size_t thresh = params.gpu_memory_offload_mb * (1024ull * 1024ull);
 
-  if (point_bytes_gpu < thresh) {
+  if (submap_bytes_gpu < thresh) {
     return;
   }
 
-  logger->info("offload GPU memory ({}MB)", point_bytes_gpu / (1024.0 * 1024.0));
+  logger->info("offload GPU memory ({:.2f}MB)", submap_bytes_gpu / (1024.0 * 1024.0));
 
-  std::vector<gtsam_points::PointCloudGPU::Ptr> points_on_gpu;
-  for (const auto& points : subsampled_submaps) {
-    if (points->memory_usage_gpu() == 0) {
-      continue;
+  std::vector<gtsam_points::OffloadableGPU::Ptr> offloadables;
+  for (auto& submap : submaps) {
+    auto points_gpu = std::dynamic_pointer_cast<gtsam_points::PointCloudGPU>(submap->frame);
+    if (points_gpu && points_gpu->loaded_on_gpu()) {
+      offloadables.emplace_back(points_gpu);
     }
 
-    auto points_gpu = std::dynamic_pointer_cast<const gtsam_points::PointCloudGPU>(points);
-    if (!points_gpu) {
-      logger->warn("subsampled submap is not a PointCloudGPU!!");
-      continue;
+    for (auto& voxelmap : submap->voxelmaps) {
+      auto voxelmap_gpu = std::dynamic_pointer_cast<gtsam_points::GaussianVoxelMapGPU>(voxelmap);
+      if (voxelmap_gpu && voxelmap_gpu->loaded_on_gpu()) {
+        offloadables.emplace_back(voxelmap_gpu);
+      }
     }
-
-    points_on_gpu.push_back(std::const_pointer_cast<gtsam_points::PointCloudGPU>(points_gpu));
   }
 
-  std::sort(points_on_gpu.begin(), points_on_gpu.end(), [](const gtsam_points::PointCloudGPU::Ptr& a, const gtsam_points::PointCloudGPU::Ptr& b) {
-    return a->last_accessed_time() > b->last_accessed_time();
+  for (int i = 0; i < offloadables.size(); i++) {
+    logger->info("{} : {} bytes, last accessed at {}", i, offloadables[i]->memory_usage_gpu(), offloadables[i]->last_accessed_time());
+  }
+
+  std::sort(offloadables.begin(), offloadables.end(), [](const gtsam_points::OffloadableGPU::Ptr& a, const gtsam_points::OffloadableGPU::Ptr& b) {
+    return a->last_accessed_time() < b->last_accessed_time();
   });
 
-  for (auto& points_gpu : points_on_gpu) {
-    if (point_bytes_gpu < thresh) {
+  for (auto& offloadable : offloadables) {
+    if (submap_bytes_gpu < thresh) {
       break;
     }
 
-    size_t bytes = points_gpu->memory_usage_gpu();
-    points_gpu->offload_gpu();
-    point_bytes_gpu -= bytes;
+    size_t bytes = offloadable->memory_usage_gpu();
+    offloadable->offload_gpu();
+    submap_bytes_gpu -= bytes;
+    logger->info("offloaded {} bytes", bytes);
   }
 }
 

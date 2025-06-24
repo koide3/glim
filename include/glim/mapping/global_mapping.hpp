@@ -99,11 +99,11 @@ private:
   std::mt19937 mt;
   int session_id;
 
-  std::uint64_t point_bytes_gpu;
+  size_t submap_bytes_gpu;
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::any stream_buffer_roundrobin;
-  
+
   std::vector<SubMap::Ptr> submaps;
   std::vector<gtsam_points::PointCloud::ConstPtr> subsampled_submaps;
 
