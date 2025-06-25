@@ -102,6 +102,7 @@ private:
   size_t submap_bytes_gpu;
 
   std::unique_ptr<IMUIntegration> imu_integration;
+  std::any main_stream;
   std::any stream_buffer_roundrobin;
 
   std::vector<SubMap::Ptr> submaps;
