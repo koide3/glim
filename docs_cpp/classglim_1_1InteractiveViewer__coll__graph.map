@@ -1,0 +1,7 @@
+<map id="glim::InteractiveViewer" name="glim::InteractiveViewer">
+<area shape="rect" id="Node000001" title=" " alt="" coords="328,37,503,63"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1ExtensionModule.html" title="Extension module to be dynamically loaded via dynamic linking." alt="" coords="15,5,186,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,25,328,38,327,44,199,31"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1ConcurrentVector.html" title=" " alt="" coords="5,55,196,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="209,68,327,56,328,62,210,74"/>
+</map>
