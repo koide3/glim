@@ -27,7 +27,7 @@ namespace glim {
 class TrajectoryManager;
 struct EstimationFrame;
 
-struct SubMapMemoryStats;
+struct SubMap;
 struct FactorMemoryStats;
 
 class StandardViewer : public ExtensionModule {
@@ -89,8 +89,7 @@ private:
   float min_overlap;
 
   bool show_memory_stats;
-  int submap_memstats_count;
-  std::vector<SubMapMemoryStats> submap_memstats;
+  std::vector<std::shared_ptr<const SubMap>> submaps;
 
   int global_factor_stats_count;
   std::vector<FactorMemoryStats> global_factor_memstats;
