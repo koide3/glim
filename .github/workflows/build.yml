@@ -52,7 +52,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        repo: ['koide3/glim_ros1', 'koide3/glim_ros2']
+        repo: ['koide3/glim_ros2']
     runs-on: ubuntu-latest
     steps:
       - name: Repository Dispatch
