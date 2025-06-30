@@ -215,12 +215,11 @@ bool OfflineViewer::export_map(guik::ProgressInterface& progress, const std::str
   progress.set_text("Concatenating submaps");
   progress.set_maximum(3);
   progress.increment();
-  const auto points = async_global_mapping->export_points();
+  const glk::PLYData points = async_global_mapping->export_points();
 
   progress.set_text("Writing to file");
   progress.increment();
-  glk::save_ply_binary(path, points.data(), points.size());
-
+  glk::save_ply_binary(path, points);
   return true;
 }
 

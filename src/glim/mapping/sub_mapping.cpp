@@ -337,7 +337,6 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
 void SubMapping::insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame) {
   gtsam_points::PointCloud::ConstPtr deskewed_frame = odom_frame->frame;
-
   // Re-perform deskewing with smoothed IMU poses
   if (params.enable_imu && odom_frame->raw_frame && odom_frame->imu_rate_trajectory.cols() >= 2) {
     if (std::abs(odom_frame->stamp - odom_frame->imu_rate_trajectory(0, 0)) > 1e-3) {
@@ -369,7 +368,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
       frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
     }
     frame->add_covs(covariance_estimation->estimate(frame->points_storage, odom_frame->raw_frame->neighbors));
-
+    frame->add_intensities(odom_frame->raw_frame->intensities);
     deskewed_frame = frame;
   }
 

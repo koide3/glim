@@ -243,7 +243,7 @@ void GlobalMappingPoseGraph::save(const std::string& path) {
   }
 }
 
-std::vector<Eigen::Vector4d> GlobalMappingPoseGraph::export_points() {
+glk::PLYData GlobalMappingPoseGraph::export_points() {
   return {};
 }
 

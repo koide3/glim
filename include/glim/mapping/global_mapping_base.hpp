@@ -7,6 +7,7 @@
 #endif
 
 #include <glim/mapping/sub_map.hpp>
+#include <glk/io/ply_io.hpp>
 
 namespace spdlog {
 class logger;
@@ -70,7 +71,7 @@ public:
   /**
    * @brief Export all the submap points
    */
-  virtual std::vector<Eigen::Vector4d> export_points() { return std::vector<Eigen::Vector4d>(); }
+  virtual glk::PLYData export_points() { return glk::PLYData(); }
 
   /**
    * @brief Load a global mapping module from a shared library

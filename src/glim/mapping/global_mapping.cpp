@@ -634,22 +634,20 @@ void GlobalMapping::save(const std::string& path) {
   GlobalConfig::instance()->dump(path + "/config");
 }
 
-std::vector<Eigen::Vector4d> GlobalMapping::export_points() {
-  int num_all_points = 0;
+
+glk::PLYData GlobalMapping::export_points() {
+  glk::PLYData ply_data;
   for (const auto& submap : submaps) {
-    num_all_points += submap->frame->size();
+    for (int i = 0; i < submap->frame->size(); i++) {
+      Eigen::Vector3f point = (submap->T_world_origin * submap->frame->points[i]).head<3>().cast<float>();
+      ply_data.vertices.push_back(point);
+
+      if (submap->frame->has_intensities()) { 
+        ply_data.intensities.push_back(submap->frame->intensities[i]);
+      }
+    }
   }
-
-  std::vector<Eigen::Vector4d> all_points;
-  all_points.reserve(num_all_points);
-
-  for (const auto& submap : submaps) {
-    std::transform(submap->frame->points, submap->frame->points + submap->frame->size(), std::back_inserter(all_points), [&](const Eigen::Vector4d& p) {
-      return submap->T_world_origin * p;
-    });
-  }
-
-  return all_points;
+  return ply_data;
 }
 
 bool GlobalMapping::load(const std::string& path) {
