@@ -22,6 +22,10 @@ namespace gtsam {
 class NonlinearFactor;
 }
 
+namespace gtsam_points {
+class OffloadableGPU;
+}
+
 namespace glim {
 
 class TrajectoryManager;
@@ -90,9 +94,7 @@ private:
 
   bool show_memory_stats;
   std::vector<std::shared_ptr<const SubMap>> submaps;
-
-  int global_factor_stats_count;
-  std::vector<FactorMemoryStats> global_factor_memstats;
+  std::vector<std::shared_ptr<const gtsam_points::OffloadableGPU>> gpu_factors;
 
   size_t total_gl_bytes;
 

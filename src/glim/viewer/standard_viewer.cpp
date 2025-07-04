@@ -72,7 +72,6 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   min_overlap = 0.2f;
 
   show_memory_stats = false;
-  global_factor_stats_count = 0;
   total_gl_bytes = 0;
 
   points_alpha = config.param("standard_viewer", "points_alpha", 1.0);
@@ -616,27 +615,27 @@ void StandardViewer::set_callbacks() {
       between_factors.push_back(std::make_pair(symbol0.index(), symbol1.index()));
     }
 
-    invoke([this, between_factors] { global_between_factors.insert(global_between_factors.end(), between_factors.begin(), between_factors.end()); });
+    std::vector<gtsam_points::OffloadableGPU::ConstPtr> new_gpu_factors;
+    for (const auto& factor : new_factors) {
+      if (!factor) {
+        continue;
+      }
+      const auto gpu_factor = std::dynamic_pointer_cast<gtsam_points::OffloadableGPU>(factor);
+      if (gpu_factor) {
+        new_gpu_factors.emplace_back(gpu_factor);
+      }
+    }
+
+    invoke([this, between_factors, new_gpu_factors] {
+      global_between_factors.insert(global_between_factors.end(), between_factors.begin(), between_factors.end());
+      gpu_factors.insert(gpu_factors.end(), new_gpu_factors.begin(), new_gpu_factors.end());
+    });
   });
 
   // Smoother update result callback
   GlobalMappingCallbacks::on_smoother_update_result.add([this](gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result) {
     logger->debug("--- iSAM2 update ({} values / {} factors) ---", result.num_values, result.num_factors);
     logger->debug(result.to_string());
-
-    if (show_memory_stats) {
-      std::vector<FactorMemoryStats> mem_stats;
-
-      for (int i = global_factor_stats_count; i < isam2.getFactorsUnsafe().size(); i++) {
-        FactorMemoryStats stats(isam2.getFactorsUnsafe()[i]);
-        if (stats.cpu_bytes || stats.gpu_bytes) {
-          mem_stats.emplace_back(stats);
-        }
-      }
-      global_factor_stats_count = isam2.getFactorsUnsafe().size();
-
-      invoke([this, mem_stats] { global_factor_memstats.insert(global_factor_memstats.end(), mem_stats.begin(), mem_stats.end()); });
-    }
   });
 }
 
@@ -924,9 +923,8 @@ void StandardViewer::drawable_selection() {
     size_t factors_cpu = 0;
     size_t factors_gpu = 0;
 
-    for (const auto& m : global_factor_memstats) {
-      factors_cpu += m.cpu_bytes;
-      factors_gpu += m.gpu_bytes;
+    for (const auto& f : gpu_factors) {
+      factors_gpu += f->loaded_on_gpu() ? f->memory_usage_gpu() : 0;
     }
 
     constexpr double mb = 1.0 / (1024.0 * 1024.0);

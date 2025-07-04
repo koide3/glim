@@ -90,7 +90,7 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 #endif
 
   session_id = 0;
-  submap_bytes_gpu = 0;
+  bytes_gpu = 0;
   imu_integration.reset(new IMUIntegration);
 
   new_values.reset(new gtsam::Values);
@@ -273,7 +273,8 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
       voxelmap->insert(*submap->frame);
       submap->voxelmaps.push_back(voxelmap);
 
-      submap_bytes_gpu += voxelmap->memory_usage_gpu();
+      offloadables.emplace_back(voxelmap);
+      bytes_gpu += voxelmap->memory_usage_gpu();
     }
   }
 #endif
@@ -288,9 +289,10 @@ void GlobalMapping::insert_submap(int current, const SubMap::Ptr& submap) {
   }
 
 #ifdef GTSAM_POINTS_USE_CUDA
-  auto points_gpu = std::dynamic_pointer_cast<const gtsam_points::PointCloudGPU>(submap->frame);
+  auto points_gpu = std::dynamic_pointer_cast<gtsam_points::PointCloudGPU>(submap->frame);
   if (points_gpu) {
-    submap_bytes_gpu += points_gpu->memory_usage_gpu();
+    offloadables.emplace_back(points_gpu);
+    bytes_gpu += points_gpu->memory_usage_gpu();
   }
 #endif
 
@@ -511,28 +513,22 @@ void GlobalMapping::update_submaps() {
 
 void GlobalMapping::offload_gpu_memory() {
 #ifdef GTSAM_POINTS_USE_CUDA
-  const size_t thresh = params.gpu_memory_offload_mb * (1024ull * 1024ull);
+  const size_t thresh_hi = params.gpu_memory_offload_mb * (1024ull * 1024ull);
+  const size_t thresh_lo = thresh_hi * 0.9;
 
-  if (params.gpu_memory_offload_mb == 0 || submap_bytes_gpu < thresh) {
+  if (params.gpu_memory_offload_mb == 0 || bytes_gpu < thresh_hi) {
     return;
   }
 
-  logger->debug("offload GPU memory ({:.2f}MB)", submap_bytes_gpu / (1024.0 * 1024.0));
+  logger->info("offload GPU memory ({:.2f}MB)", bytes_gpu / (1024.0 * 1024.0));
 
-  std::vector<gtsam_points::OffloadableGPU::Ptr> offloadables;
-  for (auto& submap : submaps) {
-    auto points_gpu = std::dynamic_pointer_cast<gtsam_points::PointCloudGPU>(submap->frame);
-    if (points_gpu && points_gpu->loaded_on_gpu()) {
-      offloadables.emplace_back(points_gpu);
-    }
-
-    for (auto& voxelmap : submap->voxelmaps) {
-      auto voxelmap_gpu = std::dynamic_pointer_cast<gtsam_points::GaussianVoxelMapGPU>(voxelmap);
-      if (voxelmap_gpu && voxelmap_gpu->loaded_on_gpu()) {
-        offloadables.emplace_back(voxelmap_gpu);
-      }
+  size_t new_bytes_gpu = 0;
+  for (const auto& offloadable : offloadables) {
+    if (offloadable->loaded_on_gpu()) {
+      new_bytes_gpu += offloadable->memory_usage_gpu();
     }
   }
+  logger->info("total GPU memory usage: {:.2f}MB", new_bytes_gpu / (1024.0 * 1024.0));
 
   std::sort(offloadables.begin(), offloadables.end(), [](const gtsam_points::OffloadableGPU::Ptr& a, const gtsam_points::OffloadableGPU::Ptr& b) {
     return a->last_accessed_time() < b->last_accessed_time();
@@ -540,16 +536,23 @@ void GlobalMapping::offload_gpu_memory() {
 
   auto stream = std::any_cast<std::shared_ptr<gtsam_points::CUDAStream>>(main_stream);
   for (auto& offloadable : offloadables) {
-    if (submap_bytes_gpu < thresh) {
+    if (!offloadable->loaded_on_gpu()) {
+      continue;
+    }
+
+    if (new_bytes_gpu < thresh_lo) {
       break;
     }
 
     size_t bytes = offloadable->memory_usage_gpu();
     offloadable->offload_gpu(*stream);
-    submap_bytes_gpu -= bytes;
+    new_bytes_gpu -= bytes;
     logger->debug("offloaded {} bytes", bytes);
   }
   stream->sync();
+
+  logger->info("offloaded GPU memory ({:.2f}MB)", new_bytes_gpu / (1024.0 * 1024.0));
+  bytes_gpu = new_bytes_gpu;
 
 #endif
 }
@@ -603,6 +606,18 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
 
     logger->warn("reset isam2");
     return update_isam2(factors, values);
+  }
+
+  for (auto& factor : new_factors) {
+    if (!factor) {
+      continue;
+    }
+
+    auto offloadable = std::dynamic_pointer_cast<gtsam_points::OffloadableGPU>(factor);
+    if (offloadable) {
+      offloadables.emplace_back(offloadable);
+      bytes_gpu += offloadable->memory_usage_gpu();
+    }
   }
 
   return result;

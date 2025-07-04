@@ -12,8 +12,9 @@ class NonlinearFactorGraph;
 
 namespace gtsam_points {
 class ISAM2Ext;
-class StreamTempBufferRoundRobin;
 struct ISAM2ResultExt;
+class StreamTempBufferRoundRobin;
+class OffloadableGPU;
 }  // namespace gtsam_points
 
 namespace glim {
@@ -99,7 +100,8 @@ private:
   std::mt19937 mt;
   int session_id;
 
-  size_t submap_bytes_gpu;
+  size_t bytes_gpu;
+  std::vector<std::shared_ptr<gtsam_points::OffloadableGPU>> offloadables;
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::any main_stream;
