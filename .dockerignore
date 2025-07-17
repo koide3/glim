@@ -1,3 +1,4 @@
 .git/*
 docs/*
 docker/*
+ros_bags

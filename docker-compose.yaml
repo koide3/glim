@@ -1,0 +1,15 @@
+services:
+  glim:
+    build: .
+    gpus: all
+    container_name: glim_container
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /dev/bus/usb:/dev/bus/usb
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/dri:/dev/dri
+      - ./ros_bags:/app/build/ros_bags
+      - ./config:/usr/local/share/glim/config
+    network_mode: host

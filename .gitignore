@@ -1,3 +1,5 @@
 docs/html/*
 site/*
 imgui.ini
+ros_bags/*
+!.gitkeep
