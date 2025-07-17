@@ -2,3 +2,4 @@
 docs/*
 docker/*
 ros_bags
+config

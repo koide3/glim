@@ -47,6 +47,8 @@
     // Backend modules
     "enable_local_mapping": true,
     "enable_global_mapping": true,
+    // Playback settings
+    "playback_speed": 10,
     // Points config
     "keep_raw_points": false,
     // IMU config
@@ -69,8 +71,8 @@
       // "libimu_validator.so"
     ],
     // Topics
-    "imu_topic": "/os_cloud_node/imu",
-    "points_topic": "/os_cloud_node/points",
+    "imu_topic": "/livox/imu",
+    "points_topic": "/livox/lidar",
     "image_topic": "/image",
     // QoS options
     "imu_qos": {
