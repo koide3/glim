@@ -12,4 +12,5 @@ services:
       - /dev/dri:/dev/dri
       - ./ros_bags:/app/build/ros_bags
       - ./config:/usr/local/share/glim/config
+      - ./logs:/tmp/dump
     network_mode: host
