@@ -5,6 +5,7 @@
 #include <random>
 
 #include <glim/odometry/odometry_estimation_base.hpp>
+#include <gtsam_points/util/indexed_sliding_window.hpp>
 
 namespace gtsam {
 class Pose3;
@@ -96,7 +97,7 @@ protected:
 
   // Frames & keyframes
   int marginalized_cursor;
-  std::vector<EstimationFrame::Ptr> frames;
+  gtsam_points::IndexedSlidingWindow<EstimationFrame::Ptr> frames;
 
   // Utility classes
   std::unique_ptr<InitialStateEstimation> init_estimation;
