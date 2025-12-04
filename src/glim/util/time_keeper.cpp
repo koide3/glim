@@ -10,14 +10,13 @@ namespace glim {
 PerPointTimeSettings::PerPointTimeSettings() {
   const Config config(GlobalConfig::get_config_path("config_sensors"));
   autoconf = config.param<bool>("sensors", "autoconf_perpoint_times", true);
+  prefer_frame_time = config.param<bool>("sensors", "autoconf_prefer_frame_time", false);
 
   if (autoconf) {
     relative_time = true;
-    prefer_frame_time = false;
     point_time_scale = 1.0;
   } else {
     relative_time = config.param<bool>("sensors", "perpoint_relative_time", true);
-    prefer_frame_time = config.param<bool>("sensors", "autoconf_prefer_frame_time", false);
     point_time_scale = config.param<double>("sensors", "perpoint_time_scale", 1.0);
   }
 }
