@@ -95,6 +95,7 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
   if (params->use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
   }
+  isam2_params.findUnusedFactorSlots = true;
   isam2_params.relinearizeSkip = params->isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params->isam2_relinearize_thresh);
   smoother.reset(new FixedLagSmootherExt(params->smoother_lag, isam2_params));
