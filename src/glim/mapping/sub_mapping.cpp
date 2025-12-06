@@ -154,8 +154,9 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
 
     odom_frame->imu_rate_trajectory.resize(8, imu_stamps.size());
     for (int i = 0; i < imu_stamps.size(); i++) {
-      const Eigen::Vector3d trans(imu_poses[i].translation());
-      const Eigen::Quaterniond quat(imu_poses[i].linear());
+      const gtsam::Pose3 imu_pose = values.at<gtsam::Pose3>(X(i));
+      const Eigen::Vector3d trans(imu_pose.translation());
+      const Eigen::Quaterniond quat(imu_pose.rotation().toQuaternion());
       odom_frame->imu_rate_trajectory.col(i) << imu_stamps[i], trans, quat.x(), quat.y(), quat.z(), quat.w();
     }
   }
