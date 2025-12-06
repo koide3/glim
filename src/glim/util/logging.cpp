@@ -1,7 +1,10 @@
+#include <filesystem>
+#include <glim/util/config.hpp>
 #include <glim/util/logging.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 
 namespace glim {
 
@@ -30,14 +33,34 @@ std::shared_ptr<spdlog::logger> create_module_logger(const std::string& module_n
     return logger;
   }
 
+  const Config config(glim::GlobalConfig::get_config_path("config_logging"));
+  const std::string log_dir = config.param<std::string>("logging", "log_dir", std::string("/tmp"));
+  const std::string log_filename = module_name == "glim" ? "main" : module_name;
+
+  if (!std::filesystem::exists(log_dir)) {
+    std::filesystem::create_directories(log_dir);
+  }
+
   logger = spdlog::stdout_color_mt(module_name);
   logger->sinks().push_back(get_ringbuffer_sink());
 
-  if (get_default_logger()->level() < spdlog::level::info) {
-    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("/tmp/glim_" + module_name + ".log", true);
-    logger->sinks().push_back(file_sink);
-    logger->set_level(get_default_logger()->level());
+  if (!config.param<bool>("logging", "save_logs", true)) {
+    return logger;
   }
+
+  if (config.param<bool>("logging", "rotate_logs", true)) {
+    const size_t max_file_size_kb = config.param<int>("logging", "max_file_size_kb", 8192);
+    const size_t max_file_size_bytes = max_file_size_kb * 1024;
+    const size_t max_files = config.param<int>("logging", "max_files", 10);
+
+    auto rotating_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_dir + "/glim_" + log_filename + ".log", max_file_size_bytes, max_files);
+    logger->sinks().push_back(rotating_sink);
+  } else {
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_dir + "/glim_" + log_filename + ".log", true);
+    logger->sinks().push_back(file_sink);
+  }
+
+  logger->set_level(get_default_logger()->level());
 
   return logger;
 }
