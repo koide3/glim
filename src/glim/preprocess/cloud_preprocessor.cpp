@@ -190,10 +190,10 @@ std::vector<int> CloudPreprocessor::find_neighbors(const Eigen::Vector4d* points
   std::vector<int> neighbors(num_points * k);
 
   const auto perpoint_task = [&](int i) {
-    std::vector<size_t> k_indices(k);
+    std::vector<size_t> k_indices(k, i);
     std::vector<double> k_sq_dists(k);
-    tree.knn_search(points[i].data(), k, k_indices.data(), k_sq_dists.data());
-    std::copy(k_indices.begin(), k_indices.end(), neighbors.begin() + i * k);
+    size_t num_found = tree.knn_search(points[i].data(), k, k_indices.data(), k_sq_dists.data());
+    std::copy(k_indices.begin(), k_indices.begin() + num_found, neighbors.begin() + i * k);
   };
 
   if (gtsam_points::is_omp_default()) {
