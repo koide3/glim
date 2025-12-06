@@ -95,6 +95,7 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
   if (params->use_isam2_dogleg) {
     isam2_params.setOptimizationParams(gtsam::ISAM2DoglegParams());
   }
+  isam2_params.findUnusedFactorSlots = true;
   isam2_params.relinearizeSkip = params->isam2_relinearize_skip;
   isam2_params.setRelinearizeThreshold(params->isam2_relinearize_thresh);
   smoother.reset(new FixedLagSmootherExt(params->smoother_lag, isam2_params));
@@ -338,12 +339,13 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     frames[marginalized_cursor].reset();
     marginalized_cursor++;
   }
+  logger->debug("|frames|={} |active|={} |marginalized|={}", frames.size(), frames.inner_size(), marginalized_frames.size());
   Callbacks::on_marginalized_frames(marginalized_frames);
 
   // Update frames
   update_frames(current, new_factors);
 
-  std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());
+  std::vector<EstimationFrame::ConstPtr> active_frames(frames.inner_begin(), frames.inner_end());
   Callbacks::on_update_new_frame(active_frames.back());
   Callbacks::on_update_frames(active_frames);
   logger->trace("frames updated");
