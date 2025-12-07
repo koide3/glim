@@ -7,7 +7,7 @@
 #endif
 
 #include <glim/mapping/sub_map.hpp>
-#include <glk/io/ply_io.hpp>
+#include <gtsam_points/types/point_cloud.hpp>
 
 namespace spdlog {
 class logger;
@@ -71,7 +71,7 @@ public:
   /**
    * @brief Export all the submap points
    */
-  virtual glk::PLYData export_points() { return glk::PLYData(); }
+  virtual gtsam_points::PointCloud::Ptr export_points() { return nullptr; }
 
   /**
    * @brief Load a global mapping module from a shared library

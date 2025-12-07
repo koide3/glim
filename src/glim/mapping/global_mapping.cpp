@@ -635,19 +635,58 @@ void GlobalMapping::save(const std::string& path) {
 }
 
 
-glk::PLYData GlobalMapping::export_points() {
-  glk::PLYData ply_data;
-  for (const auto& submap : submaps) {
-    for (int i = 0; i < submap->frame->size(); i++) {
-      Eigen::Vector3f point = (submap->T_world_origin * submap->frame->points[i]).head<3>().cast<float>();
-      ply_data.vertices.push_back(point);
+gtsam_points::PointCloud::Ptr GlobalMapping::export_points() {
+  auto merged = std::make_shared<gtsam_points::PointCloudCPU>();
 
-      if (submap->frame->has_intensities()) { 
-        ply_data.intensities.push_back(submap->frame->intensities[i]);
+  size_t total_points = 0;
+  for (const auto& submap : submaps) {
+    if (!submap || !submap->frame) {
+      continue;
+    }
+    total_points += submap->frame->size();
+  }
+
+  std::vector<Eigen::Vector4d> points;
+  points.reserve(total_points);
+
+  bool export_intensities = true;
+  for (const auto& submap : submaps) {
+    if (!submap || !submap->frame || !submap->frame->has_intensities()) {
+      export_intensities = false;
+      break;
+    }
+  }
+
+  std::vector<double> intensities;
+  if (export_intensities) {
+    intensities.reserve(total_points);
+  }
+
+  for (const auto& submap : submaps) {
+    if (!submap || !submap->frame) {
+      continue;
+    }
+
+    for (int i = 0; i < submap->frame->size(); i++) {
+      Eigen::Vector4d point = Eigen::Vector4d::Ones();
+      const Eigen::Vector3d local_point = submap->frame->points[i].head<3>();
+      point.head<3>() = submap->T_world_origin * local_point;
+      points.push_back(point);
+
+      if (export_intensities) {
+        intensities.push_back(submap->frame->intensities[i]);
       }
     }
   }
-  return ply_data;
+
+  if (!points.empty()) {
+    merged->add_points(points);
+    if (export_intensities) {
+      merged->add_intensities(intensities);
+    }
+  }
+
+  return merged;
 }
 
 bool GlobalMapping::load(const std::string& path) {
