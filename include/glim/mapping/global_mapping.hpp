@@ -69,7 +69,7 @@ public:
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;
-  virtual glk::PLYData export_points() override;
+  virtual gtsam_points::PointCloud::Ptr export_points() override;
 
   /**
    * @brief Load a mapping result from a dumped directory
