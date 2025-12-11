@@ -668,9 +668,7 @@ gtsam_points::PointCloud::Ptr GlobalMapping::export_points() {
     }
 
     for (int i = 0; i < submap->frame->size(); i++) {
-      Eigen::Vector4d point = Eigen::Vector4d::Ones();
-      const Eigen::Vector3d local_point = submap->frame->points[i].head<3>();
-      point.head<3>() = submap->T_world_origin * local_point;
+      const Eigen::Vector4d point = submap->T_world_origin * submap->frame->points[i];
       points.push_back(point);
 
       if (export_intensities) {
