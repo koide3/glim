@@ -7,6 +7,7 @@
 #endif
 
 #include <glim/mapping/sub_map.hpp>
+#include <gtsam_points/types/point_cloud.hpp>
 
 namespace spdlog {
 class logger;
@@ -70,7 +71,7 @@ public:
   /**
    * @brief Export all the submap points
    */
-  virtual std::vector<Eigen::Vector4d> export_points() { return std::vector<Eigen::Vector4d>(); }
+  virtual gtsam_points::PointCloud::Ptr export_points() { return nullptr; }
 
   /**
    * @brief Load a global mapping module from a shared library

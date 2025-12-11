@@ -97,7 +97,7 @@ public:
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;
-  virtual std::vector<Eigen::Vector4d> export_points() override;
+  virtual gtsam_points::PointCloud::Ptr export_points() override;
 
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);

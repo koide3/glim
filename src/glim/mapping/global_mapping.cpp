@@ -634,22 +634,57 @@ void GlobalMapping::save(const std::string& path) {
   GlobalConfig::instance()->dump(path + "/config");
 }
 
-std::vector<Eigen::Vector4d> GlobalMapping::export_points() {
-  int num_all_points = 0;
+
+gtsam_points::PointCloud::Ptr GlobalMapping::export_points() {
+  auto merged = std::make_shared<gtsam_points::PointCloudCPU>();
+
+  size_t total_points = 0;
   for (const auto& submap : submaps) {
-    num_all_points += submap->frame->size();
+    if (!submap || !submap->frame) {
+      continue;
+    }
+    total_points += submap->frame->size();
   }
 
-  std::vector<Eigen::Vector4d> all_points;
-  all_points.reserve(num_all_points);
+  std::vector<Eigen::Vector4d> points;
+  points.reserve(total_points);
 
+  bool export_intensities = true;
   for (const auto& submap : submaps) {
-    std::transform(submap->frame->points, submap->frame->points + submap->frame->size(), std::back_inserter(all_points), [&](const Eigen::Vector4d& p) {
-      return submap->T_world_origin * p;
-    });
+    if (!submap || !submap->frame || !submap->frame->has_intensities()) {
+      export_intensities = false;
+      break;
+    }
   }
 
-  return all_points;
+  std::vector<double> intensities;
+  if (export_intensities) {
+    intensities.reserve(total_points);
+  }
+
+  for (const auto& submap : submaps) {
+    if (!submap || !submap->frame) {
+      continue;
+    }
+
+    for (int i = 0; i < submap->frame->size(); i++) {
+      const Eigen::Vector4d point = submap->T_world_origin * submap->frame->points[i];
+      points.push_back(point);
+
+      if (export_intensities) {
+        intensities.push_back(submap->frame->intensities[i]);
+      }
+    }
+  }
+
+  if (!points.empty()) {
+    merged->add_points(points);
+    if (export_intensities) {
+      merged->add_intensities(intensities);
+    }
+  }
+
+  return merged;
 }
 
 bool GlobalMapping::load(const std::string& path) {

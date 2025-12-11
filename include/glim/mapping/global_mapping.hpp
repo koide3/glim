@@ -69,7 +69,7 @@ public:
   virtual void optimize() override;
 
   virtual void save(const std::string& path) override;
-  virtual std::vector<Eigen::Vector4d> export_points() override;
+  virtual gtsam_points::PointCloud::Ptr export_points() override;
 
   /**
    * @brief Load a mapping result from a dumped directory

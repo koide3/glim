@@ -8,6 +8,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 
 #include <gtsam_points/ann/kdtree.hpp>
+#include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/types/gaussian_voxelmap_cpu.hpp>
 #include <gtsam_points/factors/integrated_gicp_factor.hpp>
 #include <gtsam_points/factors/integrated_vgicp_factor.hpp>
@@ -243,8 +244,8 @@ void GlobalMappingPoseGraph::save(const std::string& path) {
   }
 }
 
-std::vector<Eigen::Vector4d> GlobalMappingPoseGraph::export_points() {
-  return {};
+gtsam_points::PointCloud::Ptr GlobalMappingPoseGraph::export_points() {
+  return std::make_shared<gtsam_points::PointCloudCPU>();
 }
 
 void GlobalMappingPoseGraph::insert_submap(int current, const SubMap::Ptr& submap) {

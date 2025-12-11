@@ -67,7 +67,7 @@ void AsyncGlobalMapping::save(const std::string& path) {
   logger->info("saved");
 }
 
-std::vector<Eigen::Vector4d> AsyncGlobalMapping::export_points() {
+gtsam_points::PointCloud::Ptr AsyncGlobalMapping::export_points() {
   std::lock_guard<std::mutex> lock(global_mapping_mutex);
   logger->info("exporting points");
   auto points = global_mapping->export_points();
