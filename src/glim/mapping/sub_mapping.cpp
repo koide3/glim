@@ -368,7 +368,9 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
       frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
     }
     frame->add_covs(covariance_estimation->estimate(frame->points_storage, odom_frame->raw_frame->neighbors));
-    frame->add_intensities(odom_frame->raw_frame->intensities);
+    if (!odom_frame->raw_frame->intensities.empty()) {
+      frame->add_intensities(odom_frame->raw_frame->intensities);
+    }
     deskewed_frame = frame;
   }
 
