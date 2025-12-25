@@ -92,13 +92,13 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess(const RawPoints::ConstPtr& 
 PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::ConstPtr& raw_points) {
   spdlog::trace("preprocessing input: {} points", raw_points->size());
 
-  gtsam_points::PointCloud::Ptr frame(new gtsam_points::PointCloud);
-  frame->num_points = raw_points->size();
-  frame->times = const_cast<double*>(raw_points->times.data());
-  frame->points = const_cast<Eigen::Vector4d*>(raw_points->points.data());
+  gtsam_points::PointCloudCPU::Ptr frame = std::make_shared<gtsam_points::PointCloudCPU>();
+  frame->add_times(raw_points->times);
+  frame->add_points(raw_points->points);
   if (raw_points->intensities.size()) {
-    frame->intensities = const_cast<double*>(raw_points->intensities.data());
+    frame->add_intensities(raw_points->intensities);
   }
+  PreprocessCallbacks::on_preprocessing_begin(frame);
 
   // Downsampling
   if (params.use_random_grid_downsampling) {
@@ -107,6 +107,7 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   } else {
     frame = gtsam_points::voxelgrid_sampling(frame, params.downsample_resolution, params.num_threads);
   }
+  PreprocessCallbacks::on_downsampling_finished(frame);
 
   if (frame->size() < 100) {
     spdlog::warn("too few points in the downsampled cloud ({} points)", frame->size());
@@ -164,6 +165,8 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   if (params.enable_outlier_removal) {
     frame = gtsam_points::remove_outliers(frame, params.outlier_removal_k, params.outlier_std_mul_factor, params.num_threads);
   }
+
+  PreprocessCallbacks::on_filtering_finished(frame);
 
   // Create a preprocessed frame
   PreprocessedFrame::Ptr preprocessed(new PreprocessedFrame);
