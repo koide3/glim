@@ -49,6 +49,18 @@ size_t get_mem_stats_cpu(const gtsam_points::PointCloud& points) {
 size_t get_mem_stats_gpu(const gtsam_points::PointCloud& points) {
   size_t bytes = 0;
 
+  bytes += points.has_times() ? sizeof(float) * points.size() : 0;
+  bytes += points.has_points() ? sizeof(Eigen::Vector3f) * points.size() : 0;
+  bytes += points.has_normals() ? sizeof(Eigen::Vector3f) * points.size() : 0;
+  bytes += points.has_covs() ? sizeof(Eigen::Matrix3f) * points.size() : 0;
+  bytes += points.has_intensities() ? sizeof(float) * points.size() : 0;
+
+  return bytes;
+}
+
+size_t get_net_mem_stats_gpu(const gtsam_points::PointCloud& points) {
+  size_t bytes = 0;
+
   bytes += points.has_times_gpu() ? sizeof(float) * points.size() : 0;
   bytes += points.has_points_gpu() ? sizeof(Eigen::Vector3f) * points.size() : 0;
   bytes += points.has_normals_gpu() ? sizeof(Eigen::Vector3f) * points.size() : 0;
@@ -71,6 +83,19 @@ size_t get_mem_stats_gpu(const gtsam_points::GaussianVoxelMap* voxelmap) {
 #ifdef GTSAM_POINTS_USE_CUDA
   const auto v = dynamic_cast<const gtsam_points::GaussianVoxelMapGPU*>(voxelmap);
   if (!v) {
+    return 0;
+  }
+  constexpr size_t voxel_size = sizeof(int) + sizeof(Eigen::Vector3f) + sizeof(Eigen::Matrix3f);
+  return v->voxelmap_info.num_voxels * voxel_size + v->voxelmap_info.num_buckets * sizeof(gtsam_points::VoxelBucket);
+#else
+  return 0;  // GPU voxel maps are not supported without CUDA
+#endif
+}
+
+size_t get_net_mem_stats_gpu(const gtsam_points::GaussianVoxelMap* voxelmap) {
+#ifdef GTSAM_POINTS_USE_CUDA
+  const auto v = dynamic_cast<const gtsam_points::GaussianVoxelMapGPU*>(voxelmap);
+  if (!v || !v->buckets) {
     return 0;
   }
   constexpr size_t voxel_size = sizeof(int) + sizeof(Eigen::Vector3f) + sizeof(Eigen::Matrix3f);
@@ -111,33 +136,51 @@ size_t get_mem_stats_gpu(const EstimationFrame& frame) {
   return bytes;
 }
 
+size_t get_net_mem_stats_gpu(const EstimationFrame& frame) {
+  size_t bytes = 0;
+
+  bytes += frame.frame ? get_net_mem_stats_gpu(*frame.frame) : 0;
+  for (const auto& voxelmap : frame.voxelmaps) {
+    bytes += get_net_mem_stats_gpu(voxelmap.get());
+  }
+
+  return bytes;
+}
+
 SubMapMemoryStats::SubMapMemoryStats()
 : id(0),
   frame_cpu_bytes(0),
   voxelmap_cpu_bytes(0),
   frame_gpu_bytes(0),
   voxelmap_gpu_bytes(0),
+  frame_gpu_net_bytes(0),
+  voxelmap_gpu_net_bytes(0),
   odom_cpu_bytes(0),
   odom_gpu_bytes(0),
+  odom_gpu_net_bytes(0),
   num_custom_data(0) {}
 
 SubMapMemoryStats::SubMapMemoryStats(const SubMap& submap) : SubMapMemoryStats() {
   id = submap.id;
   frame_cpu_bytes = submap.frame ? get_mem_stats_cpu(*submap.frame) : 0;
   frame_gpu_bytes = submap.frame ? get_mem_stats_gpu(*submap.frame) : 0;
+  frame_gpu_net_bytes = submap.frame ? get_net_mem_stats_gpu(*submap.frame) : 0;
   for (const auto& voxelmap : submap.voxelmaps) {
     voxelmap_cpu_bytes += get_mem_stats_cpu(voxelmap.get());
     voxelmap_gpu_bytes += get_mem_stats_gpu(voxelmap.get());
+    voxelmap_gpu_net_bytes += get_net_mem_stats_gpu(voxelmap.get());
   }
 
   for (const auto& frame : submap.frames) {
     odom_cpu_bytes += frame ? get_mem_stats_cpu(*frame) : 0;
     odom_gpu_bytes += frame ? get_mem_stats_gpu(*frame) : 0;
+    odom_gpu_net_bytes += frame ? get_net_mem_stats_gpu(*frame) : 0;
   }
 
   for (const auto& odom : submap.odom_frames) {
     odom_cpu_bytes += odom ? get_mem_stats_cpu(*odom) : 0;
     odom_gpu_bytes += odom ? get_mem_stats_gpu(*odom) : 0;
+    odom_gpu_net_bytes += odom ? get_net_mem_stats_gpu(*odom) : 0;
   }
 
   num_custom_data = submap.custom_data.size();
