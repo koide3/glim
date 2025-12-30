@@ -19,9 +19,12 @@ public:
   size_t voxelmap_cpu_bytes;  ///< CPU memory usage for voxel map
   size_t frame_gpu_bytes;     ///< GPU memory usage
   size_t voxelmap_gpu_bytes;  ///< GPU memory usage for voxel map
+  size_t frame_gpu_net_bytes;     ///< GPU memory usage for the frame
+  size_t voxelmap_gpu_net_bytes;  ///< GPU memory usage for the voxel map
 
-  size_t odom_cpu_bytes;  ///< Total CPU memory usage for all frames
-  size_t odom_gpu_bytes;  ///< Total GPU memory usage for all frames
+  size_t odom_cpu_bytes;      ///< Total CPU memory usage for all frames
+  size_t odom_gpu_bytes;      ///< Total GPU memory usage for all frames
+  size_t odom_gpu_net_bytes;  ///< Total GPU memory usage for all frames (networked)
 
   size_t num_custom_data;  ///< Number of custom data entries in the submap
 };
