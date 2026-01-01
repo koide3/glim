@@ -5,11 +5,11 @@
 #include <random>
 #include <memory>
 #include <glim/mapping/sub_mapping_base.hpp>
+#include <gtsam/navigation/ImuFactor.h>
 
 namespace gtsam {
 class Values;
 class NonlinearFactorGraph;
-class PreintegratedImuMeasurements;
 }  // namespace gtsam
 
 namespace glim {
