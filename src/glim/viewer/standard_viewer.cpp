@@ -79,7 +79,7 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   points_alpha = config.param("standard_viewer", "points_alpha", 1.0);
   factors_alpha = config.param("standard_viewer", "factors_alpha", 1.0);
 
-  point_size = config.param("standard_viewer", "point_size", 0.05);
+  point_size = config.param("standard_viewer", "point_size", 0.025);
   point_size_metric = config.param("standard_viewer", "point_size_metric", true);
   point_shape_circle = config.param("standard_viewer", "point_shape_circle", true);
 
