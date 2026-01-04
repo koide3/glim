@@ -1,6 +1,6 @@
 #include <glim/odometry/callbacks.hpp>
 
-#include <gtsam_unstable/nonlinear/FixedLagSmoother.h>
+#include <gtsam/nonlinear/FixedLagSmoother.h>
 
 namespace glim {
 
