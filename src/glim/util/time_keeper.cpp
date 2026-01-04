@@ -1,5 +1,6 @@
 #include <glim/util/time_keeper.hpp>
 
+#include <chrono>
 #include <optional>
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>
@@ -26,6 +27,8 @@ PerPointTimeSettings::~PerPointTimeSettings() {}
 TimeKeeper::TimeKeeper() {
   last_points_stamp = -1.0;
   last_imu_stamp = -1.0;
+  last_points_imu_diff_warn_stamp = -1.0;
+  last_imu_time_rewind_warn_stamp = -1.0;
 
   estimated_scan_duration = -1.0;
   point_time_offset = 0.0;
@@ -34,12 +37,16 @@ TimeKeeper::TimeKeeper() {
 TimeKeeper::~TimeKeeper() {}
 
 bool TimeKeeper::validate_imu_stamp(const double imu_stamp) {
+  const double steady_stamp = std::chrono::steady_clock::now().time_since_epoch().count() / 1e9;
   const double imu_diff = imu_stamp - last_imu_stamp;
   if (last_imu_stamp < 0.0) {
     // First IMU frame
   } else if (imu_stamp < last_imu_stamp) {
-    spdlog::warn("IMU timestamp rewind detected!!");
-    spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", imu_stamp, last_imu_stamp, imu_diff);
+    if ((steady_stamp - last_imu_time_rewind_warn_stamp) > 1.0) {
+      last_imu_time_rewind_warn_stamp = steady_stamp;
+      spdlog::warn("IMU timestamp rewind detected!!");
+      spdlog::warn("current={:.6f} last={:.6f} diff={:.6f}", imu_stamp, last_imu_stamp, imu_diff);
+    }
     return false;
   } else if (imu_stamp - last_imu_stamp > 0.1) {
     spdlog::warn("large time gap between consecutive IMU data!!");
@@ -49,8 +56,11 @@ bool TimeKeeper::validate_imu_stamp(const double imu_stamp) {
 
   const double points_diff = imu_stamp - last_points_stamp;
   if (last_points_stamp > 0.0 && std::abs(points_diff) > 1.0) {
-    spdlog::warn("large time difference between points and imu!!");
-    spdlog::warn("points={:.6f} imu={:.6f} diff={:.6f}", last_points_stamp, imu_stamp, points_diff);
+    if ((steady_stamp - last_points_imu_diff_warn_stamp) > 1.0) {
+      last_points_imu_diff_warn_stamp = steady_stamp;
+      spdlog::warn("large time difference between points and imu!!");
+      spdlog::warn("points={:.6f} imu={:.6f} diff={:.6f}", last_points_stamp, imu_stamp, points_diff);
+    }
   }
 
   return true;

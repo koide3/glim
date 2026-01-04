@@ -53,6 +53,9 @@ private:
   double last_points_stamp;  ///< Timestamp of the last LiDAR frame
   double last_imu_stamp;     ///< Timestamp of the last IMU data
 
+  double last_points_imu_diff_warn_stamp;
+  double last_imu_time_rewind_warn_stamp;
+
   // Scan duration estimation
   double estimated_scan_duration;             ///< Estimated scan duration
   std::vector<double> scan_duration_history;  ///< History of scan durations
