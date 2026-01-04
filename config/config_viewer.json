@@ -16,7 +16,7 @@
     "partial_rendering_budget": 1024,
     "point_shape_circle": true,
     "point_size_metric": true,
-    "point_size": 0.05,
+    "point_size": 0.025,
     "points_alpha": 0.5,
     "factors_alpha": 0.5
   },
@@ -31,7 +31,7 @@
     "partial_rendering_budget": 1024,
     "point_shape_circle": true,
     "point_size_metric": true,
-    "point_size": 0.05,
+    "point_size": 0.025,
     "points_alpha": 0.5,
     "factors_alpha": 0.5
   }

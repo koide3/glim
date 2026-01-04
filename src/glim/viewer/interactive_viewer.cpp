@@ -70,7 +70,7 @@ InteractiveViewer::InteractiveViewer() : logger(create_module_logger("viewer")) 
   points_alpha = config.param("interactive_viewer", "points_alpha", 1.0);
   factors_alpha = config.param("interactive_viewer", "factors_alpha", 1.0);
 
-  point_size = config.param("interactive_viewer", "point_size", 0.05);
+  point_size = config.param("interactive_viewer", "point_size", 0.025);
   point_size_metric = config.param("interactive_viewer", "point_size_metric", false);
   point_shape_circle = config.param("interactive_viewer", "point_shape_circle", true);
 

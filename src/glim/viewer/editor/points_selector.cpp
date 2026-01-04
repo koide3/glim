@@ -229,7 +229,7 @@ void PointsSelector::draw_ui() {
 
     auto& settings = viewer->shader_setting();
     auto point_size_ = settings.get<float>("point_size");
-    float point_size = point_size_ ? *point_size_ : 0.05f;
+    float point_size = point_size_ ? *point_size_ : 0.025f;
     if (ImGui::DragFloat("Point size", &point_size, 0.01f, 0.01f, 100.0f)) {
       settings.set_point_size(point_size);
     }

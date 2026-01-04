@@ -85,7 +85,7 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
   intensity_dist.add(0.0);
   intensity_dist.add(1.0);
 
-  point_size = config.param("standard_viewer", "point_size", 0.05);
+  point_size = config.param("standard_viewer", "point_size", 0.025);
   point_size_metric = config.param("standard_viewer", "point_size_metric", true);
   point_shape_circle = config.param("standard_viewer", "point_shape_circle", true);
 
