@@ -152,6 +152,8 @@ if(BUILD_WITH_VIEWER)
   # Standard viewer
   add_library(standard_viewer SHARED
     src/glim/viewer/standard_viewer.cpp
+    src/glim/viewer/standard_viewer_ui.cpp
+    src/glim/viewer/standard_viewer_callbacks.cpp
     src/glim/viewer/standard_viewer_mem.cpp
   )
   target_link_libraries(standard_viewer
@@ -178,7 +180,7 @@ if(BUILD_WITH_VIEWER)
   target_link_libraries(map_editor
     glim
   )
-  
+
   # Memory monitor
   add_library(memory_monitor SHARED
     src/glim/viewer/memory_monitor.cpp
