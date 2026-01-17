@@ -22,6 +22,13 @@
   // use_isam2_dogleg               : If true, use dogleg optimizer (robust but slow)
   // isam2_relinearize_skip         : Relinearization is performed every $isam2_relinearize_skip optimization calls
   // isam2_relinearize_thresh       : Relinearization is performed only when linear delta gets larger than this
+  //
+  // --- Memory settings ---
+  // gpu_memory_offload_mb          : Threshold for GPU memory offloading in MB (0 = disable offloading).
+  //                                : If GPU memory usage exceeds this value, old submap points and voxelmaps are offloaded to CPU memory.
+  //                                : Note that the current implementation doesn't support offloading of factors and graphics data, and thus
+  //                                : the actual GPU memory usage will be much larger than this value.
+  //                                : (Setting this to a half or quarter of the total GPU memory would be a good choice).
   */
   "global_mapping": {
     "so_name": "libglobal_mapping.so",
@@ -46,6 +53,8 @@
     // Optimizer settings
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
-    "isam2_relinearize_thresh": 0.1
+    "isam2_relinearize_thresh": 0.1,
+    // Memory settings
+    "gpu_memory_offload_mb": 2048
   }
 }

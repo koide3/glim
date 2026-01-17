@@ -12,8 +12,9 @@ class NonlinearFactorGraph;
 
 namespace gtsam_points {
 class ISAM2Ext;
-class StreamTempBufferRoundRobin;
 struct ISAM2ResultExt;
+class StreamTempBufferRoundRobin;
+class OffloadableGPU;
 }  // namespace gtsam_points
 
 namespace glim {
@@ -34,6 +35,8 @@ public:
   bool enable_optimization;
   bool enable_between_factors;
   std::string between_registration_type;
+
+  size_t gpu_memory_offload_mb;  // in MB
 
   std::string registration_error_factor_type;
   double submap_voxel_resolution;
@@ -84,6 +87,7 @@ private:
   std::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
 
   void update_submaps();
+  void offload_gpu_memory();
   gtsam_points::ISAM2ResultExt update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values);
 
   void recover_graph() override;
@@ -96,7 +100,11 @@ private:
   std::mt19937 mt;
   int session_id;
 
+  size_t bytes_gpu;
+  std::vector<std::shared_ptr<gtsam_points::OffloadableGPU>> offloadables;
+
   std::unique_ptr<IMUIntegration> imu_integration;
+  std::any main_stream;
   std::any stream_buffer_roundrobin;
 
   std::vector<SubMap::Ptr> submaps;
