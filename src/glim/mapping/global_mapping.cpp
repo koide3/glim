@@ -377,7 +377,7 @@ void GlobalMapping::optimize() {
 }
 
 std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_factors(int current) const {
-  auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
+  auto factors = std::make_shared<gtsam::NonlinearFactorGraph>();
   if (current == 0 || !params.enable_between_factors) {
     return factors;
   }
@@ -428,7 +428,7 @@ std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_between_facto
 }
 
 std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost_factors(int current) const {
-  auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
+  auto factors = std::make_shared<gtsam::NonlinearFactorGraph>();
   if (current == 0) {
     return factors;
   }

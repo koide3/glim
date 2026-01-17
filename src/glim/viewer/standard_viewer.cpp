@@ -5,6 +5,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam_points/config.hpp>
+#include <gtsam_points/util/gtsam_migration.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/factors/integrated_matching_cost_factor.hpp>
 #include <gtsam_points/optimizers/isam2_result_ext.hpp>
@@ -283,7 +284,7 @@ void StandardViewer::set_callbacks() {
                                                         gtsam::Values& new_values,
                                                         std::map<std::uint64_t, double>& new_stamps) {
     //
-    std::vector<std::pair<std::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> new_factor_lines;
+    std::vector<std::pair<gtsam_points::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> new_factor_lines;
     new_factor_lines.reserve(new_factors.size());
 
     for (const auto& factor : new_factors) {

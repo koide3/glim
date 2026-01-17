@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <gtsam_points/util/gtsam_migration.hpp>
 #include <glim/util/extension_module.hpp>
 
 namespace spdlog {
@@ -82,7 +83,7 @@ private:
 
   using FactorLine = std::tuple<Eigen::Vector3f, Eigen::Vector3f, Eigen::Vector4f, Eigen::Vector4f>;
   using FactorLineGetter = std::function<std::optional<FactorLine>(const gtsam::NonlinearFactor*)>;
-  std::vector<std::pair<std::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> odometry_factor_lines;
+  std::vector<std::pair<gtsam_points::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> odometry_factor_lines;
   std::unordered_map<std::uint64_t, Eigen::Isometry3f> odometry_poses;
 
   bool show_mapping_tools;
