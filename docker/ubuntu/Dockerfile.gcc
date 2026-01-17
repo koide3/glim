@@ -1,17 +1,51 @@
-ARG BASE_IMAGE=koide3/gtsam_points:jammy
+ARG BASE_IMAGE=nvidia/cuda:13.1.0-devel-ubuntu24.04
 FROM $BASE_IMAGE
 
+ARG WITH_CUDA=OFF
+ENV WITH_CUDA=${WITH_CUDA}
+
+ARG ROS_DISTRO=jazzy
+ENV ROS_DISTRO=${ROS_DISTRO}
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+# install ROS
 RUN apt-get update \
+  && apt-get install --no-install-recommends -y curl ca-certificates gpg-agent \
+  && update-ca-certificates \
+  && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null \
+  && apt-get update \
   && apt-get install --no-install-recommends -y \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    ros-${ROS_DISTRO}-ros-base \
     libfmt-dev libspdlog-dev libopencv-dev \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+    software-properties-common ca-certificates \
+    git cmake build-essential wget unzip libboost-all-dev \
+    libmetis-dev libomp-dev \
+    libpng-dev libjpeg-dev libeigen3-dev libglm-dev libglfw3-dev
+
+RUN add-apt-repository ppa:koide3/iridescence && \
+    add-apt-repository ppa:koide3/gtsam && \
+    apt-get update && \
+    apt-get install -y libiridescence-dev libgtsam-no-tbb-dev
+
+WORKDIR /root
+RUN git clone https://github.com/koide3/gtsam_points
+WORKDIR /root/gtsam_points/build
+RUN cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_WITH_CUDA=${WITH_CUDA}
+RUN make -j$(nproc)
+RUN make install
 
 # without viewer and CUDA
 COPY . /root/glim
 WORKDIR /root/glim/build
 RUN cmake .. \
-  -DBUILD_WITH_CUDA=OFF \
+  -DBUILD_WITH_CUDA=${WITH_CUDA} \
   -DBUILD_WITH_VIEWER=OFF \
   -DBUILD_WITH_MARCH_NATIVE=OFF \
   -DCMAKE_BUILD_TYPE=Release
@@ -20,7 +54,7 @@ RUN  make -j$(nproc)
 # with viewer
 WORKDIR /root/glim/build
 RUN cmake .. \
-  -DBUILD_WITH_CUDA=OFF \
+  -DBUILD_WITH_CUDA=${WITH_CUDA} \
   -DBUILD_WITH_VIEWER=ON \
   -DBUILD_WITH_MARCH_NATIVE=OFF \
   -DCMAKE_BUILD_TYPE=Release
