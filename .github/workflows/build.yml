@@ -19,12 +19,16 @@ jobs:
     strategy:
       matrix:
         DISTRO: [
-          { "ubuntu": "noble_gtsam4.3a0", "suffix": "gcc" },
-          { "ubuntu": "noble_gtsam4.3a0", "suffix": "llvm" },
-          { "ubuntu": "jammy_gtsam4.3a0", "suffix": "gcc" },
-          { "ubuntu": "jammy_gtsam4.3a0", "suffix": "llvm" },
-          { "ubuntu": "jammy_cuda12.2_gtsam4.3a0", "suffix": "gcc.cuda" },
-          { "ubuntu": "jammy_cuda12.2_gtsam4.3a0", "suffix": "llvm.cuda" }
+          { "base_image": "ubuntu:jammy", "ros_distro": "humble", "cuda":"OFF", "suffix": "gcc" },
+          { "base_image": "ubuntu:jammy", "ros_distro": "humble", "cuda":"OFF", "suffix": "llvm" },
+          { "base_image": "ubuntu:noble", "ros_distro": "jazzy", "cuda":"OFF", "suffix": "gcc" },
+          { "base_image": "ubuntu:noble", "ros_distro": "jazzy", "cuda":"OFF", "suffix": "llvm" },
+          { "base_image": "nvidia/cuda:13.1.0-devel-ubuntu24.04", "ros_distro": "jazzy", "cuda":"ON", "suffix": "llvm" },
+          # { "ubuntu": "noble_gtsam4.3a0", "suffix": "llvm" },
+          # { "ubuntu": "jammy_gtsam4.3a0", "suffix": "gcc" },
+          # { "ubuntu": "jammy_gtsam4.3a0", "suffix": "llvm" },
+          # { "ubuntu": "jammy_cuda12.2_gtsam4.3a0", "suffix": "gcc.cuda" },
+          # { "ubuntu": "jammy_cuda12.2_gtsam4.3a0", "suffix": "llvm.cuda" }
         ]
 
     steps:
@@ -42,10 +46,11 @@ jobs:
       - name: Docker build
         uses: docker/build-push-action@v6
         with:
-          tags: koide3/glim:${{ matrix.DISTRO.ubuntu }}
           file: ${{github.workspace}}/docker/ubuntu/Dockerfile.${{ matrix.DISTRO.suffix }}
           build-args: |
-            BASE_IMAGE=koide3/gtsam_points:${{ matrix.DISTRO.ubuntu }}
+            BASE_IMAGE=${{ matrix.DISTRO.base_image }}
+            ROS_DISTRO=${{ matrix.DISTRO.ros_distro }}
+            WITH_CUDA=${{ matrix.DISTRO.cuda }}
           context: .
 
   dispatch:
