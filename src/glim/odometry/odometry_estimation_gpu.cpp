@@ -125,7 +125,7 @@ void OdometryEstimationGPU::update_frames(const int current, const gtsam::Nonlin
   Callbacks::on_update_keyframes(keyframes);
 }
 
-gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int current, const std::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) {
+gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int current, const gtsam_points::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) {
   if (current == 0 || !frames[current]->frame->size()) {
     return gtsam::NonlinearFactorGraph();
   }

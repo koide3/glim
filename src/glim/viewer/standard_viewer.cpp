@@ -5,6 +5,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam_points/config.hpp>
+#include <gtsam_points/util/gtsam_migration.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/factors/integrated_matching_cost_factor.hpp>
 #include <gtsam_points/optimizers/isam2_result_ext.hpp>

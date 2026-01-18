@@ -5,6 +5,7 @@
 #include <memory>
 #include <random>
 #include <thread>
+#include <gtsam_points/util/gtsam_migration.hpp>
 #include <glim/util/concurrent_vector.hpp>
 #include <glim/mapping/global_mapping_base.hpp>
 
@@ -119,7 +120,7 @@ private:
   std::atomic_bool kill_switch;
   std::thread loop_detection_thread;
   ConcurrentVector<LoopCandidate> loop_candidates;
-  ConcurrentVector<std::shared_ptr<gtsam::NonlinearFactor>> detected_loops;
+  ConcurrentVector<gtsam_points::shared_ptr<gtsam::NonlinearFactor>> detected_loops;
 
   std::vector<SubMap::Ptr> submaps;
   std::vector<SubMapTarget::Ptr> submap_targets;

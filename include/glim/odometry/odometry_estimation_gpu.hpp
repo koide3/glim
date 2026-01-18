@@ -56,7 +56,7 @@ public:
 
 private:
   virtual void create_frame(EstimationFrame::Ptr& frame) override;
-  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const std::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) override;
+  virtual gtsam::NonlinearFactorGraph create_factors(const int current, const gtsam_points::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) override;
   virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors) override;
 
   void update_keyframes_overlap(int current);
