@@ -14,6 +14,7 @@
 
 #include <gtsam_points/util/gtsam_migration.hpp>
 #include <glim/util/extension_module.hpp>
+#include <gtsam_points/util/runnning_statistics.hpp>
 
 namespace spdlog {
 class logger;
@@ -63,7 +64,8 @@ private:
   bool track;
   bool show_current_coord;
   bool show_current_points;
-  int current_color_mode;
+  int odom_color_mode;
+  int submap_color_mode;
 
   bool show_odometry_scans;
   bool show_odometry_keyframes;
@@ -108,6 +110,10 @@ private:
   double last_submap_z;
   double points_alpha;
   double factors_alpha;
+
+  bool auto_intensity_range;
+  Eigen::Vector2f intensity_range;
+  gtsam_points::RunningStatistics<double> intensity_dist;
 
   std::unique_ptr<TrajectoryManager> trajectory;
   std::vector<Eigen::Isometry3f> submap_keyframes;

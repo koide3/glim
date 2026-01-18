@@ -8,7 +8,7 @@ ARG ROS_DISTRO=jazzy
 ENV ROS_DISTRO=${ROS_DISTRO}
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH:-}"
 
 # install ROS
 RUN apt-get update \
