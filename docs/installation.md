@@ -1,5 +1,71 @@
 
-GLIM is tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.5 / 12.6, and NVIDIA Jetson Orin (JetPack 6.1). You can build and install GLIM from source code, or install pre-built binaries from PPA.
+GLIM is tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.6 / 13.1, and NVIDIA Jetson Orin (JetPack 6.1). You can build and install GLIM from source code, or install pre-built binaries from PPA.
+
+## Install from [PPA](https://koide3.github.io/ppa/) [Ubuntu 24.04, 22.04] [AMD64, ARM64]
+
+### Prerequisite
+
+```bash
+sudo apt install curl gpg
+```
+
+### Setup PPA
+
+```bash
+# Automatically setup PPA via online script
+curl -s https://koide3.github.io/ppa/setup_ppa.sh | sudo bash
+```
+
+<details>
+<summary>Manually setup PPA (If you don't want to use the online script)</summary>
+```bash
+# Manually setup PPA for Ubuntu 24.04
+curl -s --compressed "https://koide3.github.io/ppa/ubuntu2404/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2404 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
+sudo apt update
+
+# Manually setup PPA for Ubuntu 22.04
+curl -s --compressed "https://koide3.github.io/ppa/ubuntu2204/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2204 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
+sudo apt update
+```
+</details>
+
+### Install dependencies
+
+```bash
+sudo apt update
+sudo apt install -y libiridescence-dev libboost-all-dev libglfw3-dev libmetis-dev
+
+# Choose one of the follows
+sudo apt install -y libgtsam-points-dev           # without CUDA
+sudo apt install -y libgtsam-points-cuda12.2-dev  # with CUDA 12.2 (Ubuntu 22.04 only)
+sudo apt install -y libgtsam-points-cuda12.6-dev  # with CUDA 12.6
+sudo apt install -y libgtsam-points-cuda13.1-dev  # with CUDA 13.1
+```
+
+### Install GLIM for ROS2
+
+```bash
+# Choose one of the follows
+
+# ROS2 jazzy (Ubuntu 24.04)
+sudo apt install -y ros-jazzy-glim-ros             # Without CUDA
+sudo apt install -y ros-jazzy-glim-ros-cuda12.6    # With CUDA 12.6
+sudo apt install -y ros-jazzy-glim-ros-cuda13.1    # With CUDA 13.1
+
+# ROS2 humble (Ubuntu 22.04)
+sudo apt install -y ros-humble-glim-ros            # Without CUDA
+sudo apt install -y ros-humble-glim-ros-cuda12.2   # With CUDA 12.2
+sudo apt install -y ros-humble-glim-ros-cuda12.6   # With CUDA 12.6
+sudo apt install -y ros-humble-glim-ros-cuda13.1   # With CUDA 13.1
+```
+
+```bash
+# After installation, make shared libraries visible to the system
+sudo ldconfig
+```
+
 
 ## Install from source
 
@@ -64,63 +130,4 @@ colcon build
     While AVX intrinsics can be enabled to speed up the mapping process by setting ```BUILD_WITH_MARCH_NATIVE=ON```, it sometimes causes segfaults unless ```march=native``` is properly set for *every* involved library. We recommend keeping it disabled if you are not sure.
 
 
-
-## Install from [PPA](https://koide3.github.io/ppa/) [Ubuntu 24.04 , 22.04, 20.04 / AMD64, ARM64]
-
-### Prerequisite
-
-```bash
-sudo apt install curl gpg
-```
-
-### Setup PPA
-
-```bash
-# Choose one of the follows
-
-# Automatically setup PPA via online script
-curl -s https://koide3.github.io/ppa/setup_ppa.sh | sudo bash
-
-# Manually setup PPA for Ubuntu 24.04
-curl -s --compressed "https://koide3.github.io/ppa/ubuntu2404/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
-echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2404 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
-
-# Manually setup PPA for Ubuntu 22.04
-curl -s --compressed "https://koide3.github.io/ppa/ubuntu2204/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
-echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2204 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
-
-# Manually setup PPA for Ubuntu 20.04
-curl -s --compressed "https://koide3.github.io/ppa/ubuntu2004/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/koide3_ppa.gpg >/dev/null
-echo "deb [signed-by=/etc/apt/trusted.gpg.d/koide3_ppa.gpg] https://koide3.github.io/ppa/ubuntu2004 ./" | sudo tee /etc/apt/sources.list.d/koide3_ppa.list
-```
-
-### Install dependencies
-
-```bash
-sudo apt update
-sudo apt install -y libiridescence-dev libboost-all-dev libglfw3-dev libmetis-dev
-
-# Choose one of the follows
-sudo apt install -y libgtsam-points-dev           # without CUDA
-sudo apt install -y libgtsam-points-cuda12.2-dev  # with CUDA 12.2
-sudo apt install -y libgtsam-points-cuda12.5-dev  # with CUDA 12.5
-sudo apt install -y libgtsam-points-cuda12.6-dev  # with CUDA 12.6
-```
-
-### Install GLIM for ROS
-
-```bash
-# Choose one of the follows
-
-# ROS2 jazzy (Ubuntu 24.04)
-sudo apt install -y ros-jazzy-glim-ros             # Without CUDA
-sudo apt install -y ros-jazzy-glim-ros-cuda12.5    # With CUDA 12.5
-sudo apt install -y ros-jazzy-glim-ros-cuda12.6    # With CUDA 12.6
-
-# ROS2 humble (Ubuntu 22.04)
-sudo apt install -y ros-humble-glim-ros            # Without CUDA
-sudo apt install -y ros-humble-glim-ros-cuda12.2   # With CUDA 12.2
-sudo apt install -y ros-humble-glim-ros-cuda12.5   # With CUDA 12.5
-sudo apt install -y ros-humble-glim-ros-cuda12.6   # With CUDA 12.6
-```
 
