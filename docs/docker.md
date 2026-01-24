@@ -1,10 +1,15 @@
 # Docker images
 
+## Note
+
+We recommend binary installation via PPA. See [Installation](installation.md) page.
+
 ## Prebuilt docker images
 
-We provide the following docker images forROS2 on docker hub.
+We provide the following docker images for ROS2 on docker hub.
 
 - [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/jazzy) koide3/glim_ros2:jazzy](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
+- [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/jazzy_cuda13.1) koide3/glim_ros2:jazzy_cuda13.1](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
 - [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/humble) koide3/glim_ros2:humble](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
 - [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/koide3/glim_ros2/humble_cuda12.2) koide3/glim_ros2:humble_cuda12.2](https://hub.docker.com/repository/docker/koide3/glim_ros2/tags)
 
