@@ -3,6 +3,8 @@
 #include <glim/util/callback_slot.hpp>
 #include <glim/odometry/estimation_frame.hpp>
 #include <glim/mapping/sub_map.hpp>
+#include <gtsam_points/optimizers/isam2_ext.hpp>
+#include <gtsam_points/optimizers/isam2_result_ext.hpp>
 
 #ifdef GLIM_USE_OPENCV
 namespace cv {
@@ -16,8 +18,6 @@ class NonlinearFactorGraph;
 }  // namespace gtsam
 
 namespace gtsam_points {
-class ISAM2Ext;
-class ISAM2ResultExt;
 class LevenbergMarquardtOptimizationStatus;
 }  // namespace gtsam_points
 

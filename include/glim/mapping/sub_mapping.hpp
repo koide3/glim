@@ -1,22 +1,16 @@
 #pragma once
 
-#include <any>
-#include <deque>
 #include <random>
 #include <memory>
 #include <glim/mapping/sub_mapping_base.hpp>
+#include <glim/common/imu_integration.hpp>
+#include <glim/common/cloud_deskewing.hpp>
+#include <glim/common/cloud_covariance_estimation.hpp>
 #include <gtsam/navigation/ImuFactor.h>
-
-namespace gtsam {
-class Values;
-class NonlinearFactorGraph;
-}  // namespace gtsam
+#include <gtsam/nonlinear/Values.h>
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
 namespace glim {
-
-class IMUIntegration;
-class CloudDeskewing;
-class CloudCovarianceEstimation;
 
 /**
  * @brief Sub mapping parameters
