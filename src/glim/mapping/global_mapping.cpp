@@ -503,7 +503,7 @@ gtsam_points::ISAM2ResultExt GlobalMapping::update_isam2(const gtsam::NonlinearF
     });
 #endif
   } catch (const gtsam::IndeterminantLinearSystemException& e) {
-    logger->error("an indeterminant lienar system exception was caught during global map optimization!!");
+    logger->error("an indeterminant linear system exception was caught during global map optimization!!");
     logger->error(e.what());
     indeterminant_nearby_key = e.nearbyVariable();
   } catch (const std::exception& e) {
