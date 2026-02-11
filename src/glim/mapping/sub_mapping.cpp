@@ -203,7 +203,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
         auto linearized = factor->linearize(*values);
         // graph->emplace_shared<gtsam::LinearContainerFactor>(linearized, *values);
 
-        auto H = linearized->hessianBlockDiagonal()[X(current)];
+        gtsam::Matrix H = linearized->hessianBlockDiagonal()[X(current)];
         noise_model = gtsam::noiseModel::Gaussian::Information(H);
       }
 

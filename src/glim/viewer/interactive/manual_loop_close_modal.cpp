@@ -1,5 +1,6 @@
 #include <glim/viewer/interactive/manual_loop_close_modal.hpp>
 
+#include <gtsam/base/Matrix.h>
 #include <spdlog/spdlog.h>
 
 #include <gtsam/inference/Symbol.h>
@@ -563,7 +564,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::create_factor() {
   factor->set_max_correspondence_distance(max_correspondence_distance);
 
   const auto linearized = factor->linearize(values);
-  const auto H = linearized->hessianBlockDiagonal()[1];
+  const gtsam::Matrix H = linearized->hessianBlockDiagonal()[1];
 
   // Cancel out the gravity alignment
   const gtsam::Pose3 T_gb_b = gtsam::Pose3(gtsam::Rot3(source_pose.linear()), gtsam::Vector3::Zero());
