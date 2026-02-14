@@ -14,8 +14,8 @@
   //
   // --- TF config ---
   // GLIM publishes TF subtrees "map -> odom -> base_frame" and "imu -> lidar".
-  // imu_frame_id           : IMU frame ID
-  // lidar_frame_id         : LiDAR frame ID
+  // imu_frame_id           : IMU frame ID (If blank, auto-detected from IMU topic)
+  // lidar_frame_id         : LiDAR frame ID (If blank, auto-detected from points topic)
   // base_frame_id          : Base frame ID. If blank, IMU frame ID is used.
   // odom_frame_id          : Odometry frame ID
   // map_frame_id           : Map frame ID
@@ -52,11 +52,11 @@
     // IMU config
     "imu_time_offset": 0.0,
     "points_time_offset": 0.0,
-    "acc_scale": 1.0,
+    "acc_scale": 0.0, // Auto-detect if zero
     // TF config
-    "imu_frame_id": "imu",
-    "lidar_frame_id": "lidar",
-    "base_frame_id": "",
+    "imu_frame_id": "", // Auto-detect if blank
+    "lidar_frame_id": "", // Auto-detect if blank
+    "base_frame_id": "", // If blank, IMU frame ID is used
     "odom_frame_id": "odom",
     "map_frame_id": "map",
     "publish_imu2lidar": true,
