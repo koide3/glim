@@ -26,6 +26,16 @@ Config::Config(const std::string& config_filename) {
 
 Config::~Config() {}
 
+bool Config::has_param(const std::string& module_name, const std::string& param_name) const {
+  const auto& json = std::any_cast<const nlohmann::json&>(config);
+  auto module = json.find(module_name);
+  if (module == json.end()) {
+    return false;
+  }
+
+  return module->find(param_name) != module->end();
+}
+
 void Config::save(const std::string& path) const {
   const auto& json = std::any_cast<const nlohmann::json&>(config);
 

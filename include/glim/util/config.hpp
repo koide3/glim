@@ -20,6 +20,14 @@ public:
   virtual ~Config();
 
   /**
+   * @brief Check if a parameter exists
+   * @param  module_name Module name
+   * @param  param_name  Parameter name
+   * @return             True if the parameter exists, otherwise false
+   */
+  bool has_param(const std::string& module_name, const std::string& param_name) const;
+
+  /**
    * @brief Get a parameter
    * @param  module_name Module name
    * @param  param_name  Parameter name
