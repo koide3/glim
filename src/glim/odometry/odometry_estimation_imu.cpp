@@ -13,6 +13,7 @@
 #include <glim/util/config.hpp>
 #include <glim/util/convert_to_string.hpp>
 #include <glim/common/imu_integration.hpp>
+#include <glim/common/imu_validation.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/odometry/initial_state_estimation.hpp>
@@ -61,6 +62,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
   isam2_relinearize_skip = config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1);
   isam2_relinearize_thresh = config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1);
 
+  validate_imu = config.param<bool>("odometry_estimation", "validate_imu", true);
   save_imu_rate_trajectory = config.param<bool>("odometry_estimation", "save_imu_rate_trajectory", false);
 
   num_threads = config.param<int>("odometry_estimation", "num_threads", 4);
@@ -88,6 +90,7 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
   }
 
   imu_integration.reset(new IMUIntegration);
+  imu_validation.reset(new IMUValidation(logger, params->validate_imu));
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation(params->num_threads));
 
@@ -344,6 +347,16 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
 
   // Update frames
   update_frames(current, new_factors);
+
+  // Check if IMU prediction is good or not
+  imu_validation->validate(
+    Eigen::Isometry3d(last_T_world_imu.matrix()),
+    last_v_world_imu,
+    Eigen::Isometry3d(predicted_T_world_imu.matrix()),
+    predicted_v_world_imu,
+    new_frame->T_world_imu,
+    new_frame->v_world_imu,
+    new_frame->stamp - last_stamp);
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.inner_begin(), frames.inner_end());
   Callbacks::on_update_new_frame(active_frames.back());

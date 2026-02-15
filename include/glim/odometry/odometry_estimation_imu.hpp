@@ -23,6 +23,7 @@ class IncrementalFixedLagSmootherExtWithFallback;
 namespace glim {
 
 class IMUIntegration;
+class IMUValidation;
 class CloudDeskewing;
 class CloudCovarianceEstimation;
 class InitialStateEstimation;
@@ -58,6 +59,7 @@ public:
   double isam2_relinearize_thresh;
 
   // Logging params
+  bool validate_imu;
   bool save_imu_rate_trajectory;
 
   int num_threads;                  // Number of threads for preprocessing and per-factor parallelism
@@ -103,6 +105,7 @@ protected:
   // Utility classes
   std::unique_ptr<InitialStateEstimation> init_estimation;
   std::unique_ptr<IMUIntegration> imu_integration;
+  std::unique_ptr<IMUValidation> imu_validation;
   std::unique_ptr<CloudDeskewing> deskewing;
   std::unique_ptr<CloudCovarianceEstimation> covariance_estimation;
 

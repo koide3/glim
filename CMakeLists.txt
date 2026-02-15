@@ -71,6 +71,7 @@ add_library(glim SHARED
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
   src/glim/common/imu_integration.cpp
+  src/glim/common/imu_validation.cpp
   src/glim/common/cloud_deskewing.cpp
   src/glim/common/cloud_covariance_estimation.cpp
   # odometry
