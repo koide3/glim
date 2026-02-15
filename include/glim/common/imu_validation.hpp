@@ -23,6 +23,8 @@ public:
     const Eigen::Vector3d& corrected_v_world_imu,
     double dt);
 
+  void validate(const Eigen::Matrix<double, 6, 1>& imu_bias);
+
 private:
   const bool enabled;
   std::shared_ptr<spdlog::logger> logger;
@@ -31,6 +33,9 @@ private:
   gtsam_points::RunningStatistics<Eigen::Array3d> noimu_error_stats;  // rotation, translation, velocity
   gtsam_points::RunningStatistics<Eigen::Array3d> imu_error_stats;    // rotation, translation, velocity
   Eigen::Array3i imu_better_counts;                                   // rotation, translation, velocity
+
+  int num_bias_validations;
+  gtsam_points::RunningStatistics<Eigen::Array<double, 6, 1>> imu_bias_stats;  // Acc, Gyro bias
 };
 
 }  // namespace glim

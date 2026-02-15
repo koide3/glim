@@ -4,6 +4,7 @@ namespace glim {
 
 IMUValidation::IMUValidation(const std::shared_ptr<spdlog::logger>& logger, bool enabled) : enabled(enabled), logger(logger) {
   num_validations = 0;
+  num_bias_validations = 0;
   imu_better_counts.setZero();
 }
 
@@ -18,6 +19,13 @@ void IMUValidation::validate(
   const Eigen::Vector3d& corrected_v_world_imu,
   double dt) {
   if (!enabled) {
+    return;
+  }
+
+  logger->debug("validating IMU prediction (|v|={:.3f} m/s)", corrected_v_world_imu.norm());
+  if (corrected_v_world_imu.norm() < 0.1) {
+    // Skip validation when the velocity is too small, as the errors can be dominated by noise.
+    logger->debug("skipping IMU validation due to small velocity");
     return;
   }
 
@@ -46,8 +54,8 @@ void IMUValidation::validate(
   imu_better_counts += (imu_errors < noimu_errors).cast<int>();
   num_validations++;
 
-  // Print statistics every 32 validations
-  if (num_validations && (num_validations % 32 == 0)) {
+  // Print statistics every 64 validations
+  if (num_validations % 64 == 0) {
     const Eigen::Array3d imu_better_ratios = imu_better_counts.cast<double>() / num_validations;
 
     bool good_imu = true;
@@ -58,7 +66,7 @@ void IMUValidation::validate(
     good_imu &= imu_better_ratios[1] > 0.4;  // Translation
     good_imu &= imu_better_ratios[2] > 0.5;  // Velocity
 
-    auto log_level = (good_imu || num_validations < 100) ? spdlog::level::debug : spdlog::level::warn;
+    auto log_level = good_imu ? spdlog::level::debug : spdlog::level::warn;
 
     const Eigen::Array3d noimu_error_means = noimu_error_stats.mean();
     const Eigen::Array3d noimu_error_stds = noimu_error_stats.std();
@@ -91,6 +99,77 @@ void IMUValidation::validate(
       imu_error_stds[2]);
     logger->log(log_level, "IMU better ratios rot={:.2f}, trans={:.2f}, vel={:.2f}", imu_better_ratios[0], imu_better_ratios[1], imu_better_ratios[2]);
   }
+}
+
+void IMUValidation::validate(const Eigen::Matrix<double, 6, 1>& imu_bias) {
+  if (!enabled) {
+    return;
+  }
+
+  num_bias_validations++;
+  if (num_bias_validations % 64) {
+    return;
+  }
+
+  const Eigen::Array3d bias_acc = imu_bias.head<3>();
+  const Eigen::Array3d bias_gyro = imu_bias.tail<3>();
+
+  bool good_imu = true;
+  good_imu &= bias_acc.cwiseAbs().maxCoeff() < 0.5;   // Acceleration bias should be small (less than 0.5 m/s^2)
+  good_imu &= bias_gyro.cwiseAbs().maxCoeff() < 0.5;  // Gyro bias should be small (less than 0.5 rad/s)
+
+  imu_bias_stats.add(imu_bias);
+  const Eigen::Array<double, 6, 1> bias_mean = imu_bias_stats.mean();
+  const Eigen::Array<double, 6, 1> bias_std = imu_bias_stats.std();
+  const Eigen::Array<double, 6, 1> bias_max = imu_bias_stats.max();
+  const Eigen::Array<double, 6, 1> bias_min = imu_bias_stats.min();
+
+  auto log_level = good_imu ? spdlog::level::debug : spdlog::level::warn;
+  if (!good_imu) {
+    logger->log(log_level, "IMU bias estimation seems inaccurate.");
+    logger->log(log_level, "Possibly T_lidar_imu is not accurate or LiDAR-IMU synchronization is not correct.");
+  }
+  logger->log(log_level, "IMU bias validation results:");
+  logger->log(log_level, "num_bias_validations={}", num_bias_validations);
+  logger->log(
+    log_level,
+    "bias_acc=[{:.3f}, {:.3f}, {:.3f}] m/s^2, bias_gyro=[{:.3f}, {:.3f}, {:.3f}] rad/s",
+    bias_acc[0],
+    bias_acc[1],
+    bias_acc[2],
+    bias_gyro[0],
+    bias_gyro[1],
+    bias_gyro[2]);
+  logger->log(
+    log_level,
+    "acc_stat ax={:.3f} +- {:.3f} [min={:.3f}, max={:.3f}], ay={:.3f} +- {:.3f} [min={:.3f}, max={:.3f}], az={:.3f} +- {:.3f} [min={:.3f}, max={:.3f}] m/s^2",
+    bias_mean[0],
+    bias_std[0],
+    bias_min[0],
+    bias_max[0],
+    bias_mean[1],
+    bias_std[1],
+    bias_min[1],
+    bias_max[1],
+    bias_mean[2],
+    bias_std[2],
+    bias_min[2],
+    bias_max[2]);
+  logger->log(
+    log_level,
+    "gyro_stat wx={:.3f} +- {:.3f} [min={:.3f}, max={:.3f}], wy={:.3f} +- {:.3f} [min={:.3f}, max={:.3f}], wz={:.3f} +- {:.3f} [min={:.3f}, max={:.3f}] rad/s",
+    bias_mean[3],
+    bias_std[3],
+    bias_min[3],
+    bias_max[3],
+    bias_mean[4],
+    bias_std[4],
+    bias_min[4],
+    bias_max[4],
+    bias_mean[5],
+    bias_std[5],
+    bias_min[5],
+    bias_max[5]);
 }
 
 }  // namespace glim

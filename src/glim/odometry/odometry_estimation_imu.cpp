@@ -357,6 +357,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     new_frame->T_world_imu,
     new_frame->v_world_imu,
     new_frame->stamp - last_stamp);
+  imu_validation->validate(new_frame->imu_bias);
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.inner_begin(), frames.inner_end());
   Callbacks::on_update_new_frame(active_frames.back());
