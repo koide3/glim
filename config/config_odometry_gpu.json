@@ -32,6 +32,7 @@
   // keyframe_delta_(trans|rot)  : Keyframe displacement threshold [m / rad]
   //
   // --- MISC ---
+  // validate_imu                 : If true, perform IMU validation and log the validation results
   // save_imu_rate_trajectory     : If true, save the IMU rate trajectory
   // num_threads                  : Number of threads for odometry estimation
   */
@@ -64,6 +65,7 @@
     "keyframe_delta_rot": 0.5,
     "keyframe_entropy_thresh": 0.99,
     // MISC
+    "validate_imu": true,
     "save_imu_rate_trajectory": true,
     "num_threads": 2
   }
