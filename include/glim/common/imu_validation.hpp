@@ -1,7 +1,5 @@
 #pragma once
 
-#include <deque>
-#include <vector>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <spdlog/spdlog.h>
