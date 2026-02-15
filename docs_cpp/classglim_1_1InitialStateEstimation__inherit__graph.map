@@ -1,0 +1,7 @@
+<map id="glim::InitialStateEstimation" name="glim::InitialStateEstimation">
+<area shape="rect" id="Node000001" title="Initial sensor state estimator." alt="" coords="155,5,355,31"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1LooseInitialStateEstimation.html" title=" " alt="" coords="5,79,244,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="223,40,147,81,145,76,221,35"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1NaiveInitialStateEstimation.html" title="Naive initial state estimator that simply calculates a pose that aligns linear acc with the gravity d..." alt="" coords="268,79,507,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="290,35,367,76,364,81,287,39"/>
+</map>

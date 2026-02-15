@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classglim_1_1Config.html" title="Configuration loader from JSON files." alt="" coords="5,5,105,31"/>
+<area shape="rect" id="Node000001" href="$classglim_1_1GlobalConfig.html" title="Global configuration class to bootstrap the root path of the configuration files." alt="" coords="153,5,296,31"/>
+<area shape="poly" id="edge1_Node000000_Node000001" title=" " alt="" coords="119,15,153,15,153,21,119,21"/>
+</map>

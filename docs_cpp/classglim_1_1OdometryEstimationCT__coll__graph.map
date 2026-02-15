@@ -1,0 +1,5 @@
+<map id="glim::OdometryEstimationCT" name="glim::OdometryEstimationCT">
+<area shape="rect" id="Node000001" title="LiDAR&#45;only odometry estimation based on CT&#45;GICP scan&#45;to&#45;model matching." alt="" coords="13,79,224,104"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1OdometryEstimationBase.html" title="Odometry estimation base class." alt="" coords="5,5,232,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="121,44,121,79,116,79,116,44"/>
+</map>
