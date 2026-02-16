@@ -3,11 +3,10 @@
 #include <memory>
 #include <chrono>
 #include <Eigen/Core>
+#include <glim/util/raw_points.hpp>
+#include <glim/util/time_keeper.hpp>
 
 namespace glim {
-
-class RawPoints;
-class TimeKeeper;
 
 class DataValidator {
 public:

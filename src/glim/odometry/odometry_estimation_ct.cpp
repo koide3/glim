@@ -121,7 +121,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     gtsam::Vector6 last_twist = gtsam::Vector6::Zero();
     if (current >= 2) {
       if (!frames[last] || !frames[last - 1]) {
-        logger->warn("neither frames[last]={} nor frames[last - 1]={} is released!!", fmt::ptr(frames[last]), fmt::ptr(frames[last - 1]));
+        logger->warn("neither frames[last]={} nor frames[last - 1]={} is released!!", fmt::ptr(frames[last].get()), fmt::ptr(frames[last - 1].get()));
         logger->warn("there might be a large time gap between point cloud frames");
       } else {
         const double delta_time = (frames[last]->stamp + frames[last]->frame->times[frames[last]->frame->size() - 1]) - frames[last - 1]->stamp;

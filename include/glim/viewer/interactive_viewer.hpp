@@ -11,6 +11,8 @@
 #include <glim/mapping/sub_map.hpp>
 #include <glim/util/extension_module.hpp>
 #include <glim/util/concurrent_vector.hpp>
+#include <gtsam_points/optimizers/isam2_ext.hpp>
+#include <gtsam_points/optimizers/isam2_result_ext.hpp>
 #include <gtsam_points/util/gtsam_migration.hpp>
 
 namespace spdlog {
@@ -22,11 +24,6 @@ class Values;
 class NonlinearFactor;
 class NonlinearFactorGraph;
 }  // namespace gtsam
-
-namespace gtsam_points {
-class ISAM2Ext;
-class ISAM2ResultExt;
-}  // namespace gtsam_points
 
 namespace glim {
 
