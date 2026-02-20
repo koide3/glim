@@ -48,11 +48,13 @@ public:
 
   /**
    * @brief Insert a GNSS data
-   * @param stamp  Timestamp
-   * @param pos    Position
-   * @param var    Position variance
+   * @param stamp         Timestamp
+   * @param pos           Position in local/odometry frame
+   * @param vel           Velocity in local/odometry frame (Doppler-derived)
+   * @param var           Position variance
+   * @param is_rtk_fixed  True if RTK Fix, False if Float/Single
    */
-  virtual void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var);
+  virtual void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& vel, const Eigen::Vector3d& var, bool is_rtk_fixed = true);
 
   /**
    * @brief Insert a point cloud

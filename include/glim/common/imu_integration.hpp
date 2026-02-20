@@ -18,6 +18,8 @@ struct IMUIntegrationParams {
   double acc_noise;   // Linear acceleration noise
   double gyro_noise;  // Angular velocity noise
   double int_noise;   // Integration noise
+
+  std::optional<gtsam::Pose3> body_P_sensor;
 };
 
 /**

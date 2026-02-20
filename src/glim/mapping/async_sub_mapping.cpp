@@ -25,6 +25,12 @@ void AsyncSubMapping::insert_imu(const double stamp, const Eigen::Vector3d& line
   input_imu_queue.push_back(imu_data);
 }
 
+void AsyncSubMapping::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) {
+  Eigen::Matrix<double, 9, 1> gnss_data;
+  gnss_data << stamp, pos, var;
+  input_gnss_queue.push_back(gnss_data);
+}
+
 void AsyncSubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame) {
   input_frame_queue.push_back(odom_frame);
 }
@@ -53,6 +59,7 @@ void AsyncSubMapping::run() {
     auto images = input_image_queue.get_all_and_clear();
 #endif
     auto imu_frames = input_imu_queue.get_all_and_clear();
+    auto gnss_frames = input_gnss_queue.get_all_and_clear();
     auto odom_frames = input_frame_queue.get_all_and_clear();
 
     if (
@@ -73,6 +80,13 @@ void AsyncSubMapping::run() {
       const Eigen::Vector3d linear_acc = imu.block<3, 1>(1, 0);
       const Eigen::Vector3d angular_vel = imu.block<3, 1>(4, 0);
       sub_mapping->insert_imu(stamp, linear_acc, angular_vel);
+    }
+
+    for (const auto& gnss : gnss_frames) {
+      const double stamp = gnss[0];
+      const Eigen::Vector3d pos = gnss.block<3, 1>(1, 0);
+      const Eigen::Vector3d var = gnss.block<3, 1>(4, 0);
+      sub_mapping->insert_gnss(stamp, pos, var);
     }
 
 #ifdef GLIM_USE_OPENCV

@@ -3,11 +3,15 @@
 #include <filesystem>
 #include <spdlog/spdlog.h>
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/slam/expressions.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/navigation/GPSFactor.h>
+#include <gtsam/nonlinear/ExpressionFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <gtsam_points/config.hpp>
+#include <gtsam_points/factors/pose3_interpolation_factor.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/types/point_cloud_gpu.hpp>
 #include <gtsam_points/types/gaussian_voxelmap_cpu.hpp>
@@ -33,6 +37,7 @@
 namespace glim {
 
 using gtsam::symbol_shorthand::B;
+using gtsam::symbol_shorthand::G;
 using gtsam::symbol_shorthand::V;
 using gtsam::symbol_shorthand::X;
 
@@ -75,7 +80,14 @@ SubMappingParams::~SubMappingParams() {}
 
 SubMapping::SubMapping(const SubMappingParams& params) : params(params) {
   submap_count = 0;
-  imu_integration.reset(new IMUIntegration);
+
+  Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
+  Eigen::Isometry3d T_base_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_base_imu", Eigen::Isometry3d::Identity());
+
+  IMUIntegrationParams imu_params;
+  imu_params.body_P_sensor = gtsam::Pose3(T_base_imu.matrix());
+  imu_integration.reset(new IMUIntegration(imu_params));
+
   deskewing.reset(new CloudDeskewing);
   covariance_estimation.reset(new CloudCovarianceEstimation);
 
@@ -101,6 +113,49 @@ void SubMapping::insert_imu(const double stamp, const Eigen::Vector3d& linear_ac
   }
 }
 
+void SubMapping::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) {
+  // Legacy GNSS insertion removed.
+}
+
+gtsam::NonlinearFactorGraph SubMapping::create_gnss_factor(const int current, gtsam::Values& new_values) {
+  gtsam::NonlinearFactorGraph factors;
+
+  // Get GNSS data from the current frame's custom_data
+  const auto* gnss_data = odom_frames[current]->get_custom_data<GNSSData>("gnss");
+  if (gnss_data == nullptr) {
+    return factors;
+  }
+
+  // Build noise model from variance
+  Eigen::Vector3d sigmas;
+  if (gnss_data->variance.norm() > 1e-6) {
+    sigmas << std::sqrt(gnss_data->variance[0]), std::sqrt(gnss_data->variance[1]),
+      std::sqrt(gnss_data->variance[2]) * 2.0;  // Z is less accurate
+  } else {
+    sigmas << 0.1, 0.1, 0.2;  // Default fallback
+  }
+
+  // Inflate noise if RTK is not fixed
+  if (!gnss_data->is_rtk_fixed) {
+    sigmas *= 10.0;  // Reduce weight when RTK is lost
+  }
+
+  auto noise = gtsam::noiseModel::Diagonal::Sigmas(sigmas);
+
+  // Add GPS factor constraining translational position
+  factors.emplace_shared<gtsam::GPSFactor>(X(current), gnss_data->position, noise);
+
+  logger->debug(
+    "SubMapping GNSS factor added for frame {} at pos=[{:.2f}, {:.2f}, {:.2f}], rtk={}",
+    current,
+    gnss_data->position.x(),
+    gnss_data->position.y(),
+    gnss_data->position.z(),
+    gnss_data->is_rtk_fixed);
+
+  return factors;
+}
+
 void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   logger->trace("insert_frame frame_id={} stamp={}", odom_frame_->id, odom_frame_->stamp);
   Callbacks::on_insert_frame(odom_frame_);
@@ -117,7 +172,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   if (params.enable_imu) {
     logger->debug("smoothing trajectory");
     // Smoothing IMU-based pose estimation
-    gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_imu.matrix()), odom_frame->v_world_imu);
+    gtsam::NavState nav_world_imu(gtsam::Pose3(odom_frame->T_world_base.matrix()), odom_frame->v_world_imu);
     gtsam::imuBias::ConstantBias imu_bias(odom_frame->imu_bias);
 
     std::vector<double> imu_stamps;
@@ -130,8 +185,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
     }
 
     gtsam::NonlinearFactorGraph graph;
-    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3(odom_frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
-    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(imu_stamps.size() - 1), gtsam::Pose3(next_frame->T_world_imu.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(0), gtsam::Pose3(odom_frame->T_world_base.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
+    graph.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(imu_stamps.size() - 1), gtsam::Pose3(next_frame->T_world_base.matrix()), gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
     for (int i = 1; i < imu_stamps.size(); i++) {
       const double dt = (imu_stamps[i] - imu_stamps[i - 1]) / (next_frame->stamp - odom_frame->stamp);
       const Eigen::Isometry3d T_last_current = imu_poses[i - 1].inverse() * imu_poses[i];
@@ -175,7 +230,7 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   odom_frames.push_back(odom_frame);
   values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
 
-  if (params.enable_imu && odom_frame->frame_id != FrameID::IMU) {
+  if (params.enable_imu && odom_frame->frame_id != FrameID::BASE) {
     logger->warn("odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation");
   }
 
@@ -213,6 +268,8 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
       logger->warn("unknown between registration type ({})", params.between_registration_type);
     }
   }
+
+  graph->add(create_gnss_factor(current, *values));
 
   // Create an IMU preintegration factor
   if (params.enable_imu) {
@@ -361,12 +418,11 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     }
 
     auto deskewed =
-      deskewing
-        ->deskew(odom_frame->T_lidar_imu.inverse(), imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
+      deskewing->deskew(odom_frame->T_base_lidar, imu_pred_times, imu_pred_poses, odom_frame->raw_frame->stamp, odom_frame->raw_frame->times, odom_frame->raw_frame->points);
 
     auto frame = std::make_shared<gtsam_points::PointCloudCPU>(deskewed);
     for (int i = 0; i < frame->size(); i++) {
-      frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
+      frame->points[i] = odom_frame->T_base_lidar * frame->points[i];
     }
     frame->add_covs(covariance_estimation->estimate(frame->points_storage, odom_frame->raw_frame->neighbors));
 

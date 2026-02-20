@@ -30,8 +30,8 @@ namespace glim {
 using Callbacks = OdometryEstimationCallbacks;
 
 using gtsam::symbol_shorthand::B;  // IMU bias
-using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
-using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
+using gtsam::symbol_shorthand::V;  // Base velocity   (v_world_base)
+using gtsam::symbol_shorthand::X;  // Base pose       (T_world_base)
 
 OdometryEstimationCPUParams::OdometryEstimationCPUParams() : OdometryEstimationIMUParams() {
   // odometry config
@@ -53,7 +53,7 @@ OdometryEstimationCPUParams::OdometryEstimationCPUParams() : OdometryEstimationI
 OdometryEstimationCPUParams::~OdometryEstimationCPUParams() {}
 
 OdometryEstimationCPU::OdometryEstimationCPU(const OdometryEstimationCPUParams& params) : OdometryEstimationIMU(std::make_unique<OdometryEstimationCPUParams>(params)) {
-  last_T_target_imu.setIdentity();
+  last_T_target_base.setIdentity();
   if (params.registration_type == "GICP") {
     target_ivox.reset(new gtsam_points::iVox(params.ivox_resolution));
     target_ivox->voxel_insertion_setting().set_min_dist_in_cell(params.ivox_min_dist);
@@ -79,16 +79,16 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   const int last = current - 1;
 
   if (current == 0) {
-    last_T_target_imu = frames[current]->T_world_imu;
-    update_target(current, frames[current]->T_world_imu);
+    last_T_target_base = frames[current]->T_world_base;
+    update_target(current, frames[current]->T_world_base);
     return gtsam::NonlinearFactorGraph();
   }
 
-  const Eigen::Isometry3d pred_T_last_current = frames[last]->T_world_imu.inverse() * frames[current]->T_world_imu;
-  const Eigen::Isometry3d pred_T_target_imu = last_T_target_imu * pred_T_last_current;
+  const Eigen::Isometry3d pred_T_last_current = frames[last]->T_world_base.inverse() * frames[current]->T_world_base;
+  const Eigen::Isometry3d pred_T_target_base = last_T_target_base * pred_T_last_current;
 
   gtsam::Values values;
-  values.insert(X(current), gtsam::Pose3(pred_T_target_imu.matrix()));
+  values.insert(X(current), gtsam::Pose3(pred_T_target_base.matrix()));
 
   // Create frame-to-model matching factor
   gtsam::NonlinearFactorGraph matching_cost_factors;
@@ -148,11 +148,13 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
   });
 #endif
 
-  const Eigen::Isometry3d T_target_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
-  Eigen::Isometry3d T_last_current = last_T_target_imu.inverse() * T_target_imu;
+  const Eigen::Isometry3d T_target_base = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(current)).matrix());
+  Eigen::Isometry3d T_last_current = last_T_target_base.inverse() * T_target_base;
   T_last_current.linear() = Eigen::Quaterniond(T_last_current.linear()).normalized().toRotationMatrix();
-  frames[current]->T_world_imu = frames[last]->T_world_imu * T_last_current;
-  new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_imu.matrix()));
+
+  frames[current]->set_T_world_sensor(FrameID::BASE, frames[last]->T_world_base * T_last_current);
+
+  new_values.insert_or_assign(X(current), gtsam::Pose3(frames[current]->T_world_base.matrix()));
 
   gtsam::NonlinearFactorGraph factors;
 
@@ -164,24 +166,24 @@ gtsam::NonlinearFactorGraph OdometryEstimationCPU::create_factors(const int curr
 
   // TODO: Extract a relative pose covariance from a frame-to-model matching result?
   factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(last), X(current), gtsam::Pose3(T_last_current.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
-  factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(T_target_imu.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+  factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(current), gtsam::Pose3(T_target_base.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
 
-  update_target(current, T_target_imu);
-  last_T_target_imu = T_target_imu;
+  update_target(current, T_target_base);
+  last_T_target_base = T_target_base;
 
   return factors;
 }
 
 void OdometryEstimationCPU::fallback_smoother() {}
 
-void OdometryEstimationCPU::update_target(const int current, const Eigen::Isometry3d& T_target_imu) {
+void OdometryEstimationCPU::update_target(const int current, const Eigen::Isometry3d& T_target_base) {
   const auto params = static_cast<const OdometryEstimationCPUParams*>(this->params.get());
   auto frame = frames[current]->frame;
   if (current >= 5) {
     frame = gtsam_points::random_sampling(frames[current]->frame, params->target_downsampling_rate, mt);
   }
 
-  auto transformed = gtsam_points::transform(frame, T_target_imu);
+  auto transformed = gtsam_points::transform(frame, T_target_base);
   if (params->registration_type == "GICP") {
     target_ivox->insert(*transformed);
   } else if (params->registration_type == "VGICP") {
@@ -197,14 +199,16 @@ void OdometryEstimationCPU::update_target(const int current, const Eigen::Isomet
     frame->id = frames.size() - 1;
     frame->stamp = frames.back()->stamp;
 
-    frame->T_lidar_imu = frames.back()->T_lidar_imu;
-    frame->T_world_lidar = frame->T_lidar_imu.inverse();
-    frame->T_world_imu.setIdentity();
+    frame->T_base_imu = frames.back()->T_base_imu;
+    frame->T_base_gnss = frames.back()->T_base_gnss;
+    frame->T_base_lidar = frames.back()->T_base_lidar;
+
+    frame->set_T_world_sensor(FrameID::BASE, Eigen::Isometry3d::Identity());
 
     frame->v_world_imu.setZero();
     frame->imu_bias.setZero();
 
-    frame->frame_id = FrameID::IMU;
+    frame->frame_id = FrameID::BASE;
 
     if (params->registration_type == "GICP") {
       frame->frame = std::make_shared<gtsam_points::PointCloudCPU>(target_ivox->voxel_points());

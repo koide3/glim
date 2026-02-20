@@ -67,6 +67,9 @@ public:
 
   virtual EstimationFrame::ConstPtr insert_frame(const PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
 
+protected:
+  Eigen::Isometry3d T_base_lidar;
+  
 private:
   using Params = OdometryEstimationCTParams;
   Params params;

@@ -53,6 +53,9 @@ OdometryEstimationCTParams::OdometryEstimationCTParams() {
 OdometryEstimationCTParams::~OdometryEstimationCTParams() {}
 
 OdometryEstimationCT::OdometryEstimationCT(const OdometryEstimationCTParams& params) : params(params) {
+  Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
+  T_base_lidar = sensor_config.param<Eigen::Isometry3d>("sensors", "T_base_lidar", Eigen::Isometry3d::Identity());
+
   covariance_estimation.reset(new CloudCovarianceEstimation(params.num_threads));
 
   marginalized_cursor = 0;
@@ -86,7 +89,9 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   EstimationFrame::Ptr new_frame(new EstimationFrame);
   new_frame->id = current;
   new_frame->stamp = raw_frame->stamp;
-  new_frame->T_lidar_imu.setIdentity();
+
+  new_frame->T_base_lidar.setIdentity();
+  
   new_frame->v_world_imu.setZero();
   new_frame->imu_bias.setZero();
   new_frame->raw_frame = raw_frame;
@@ -133,6 +138,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     const auto& last_frame = frames[last];
     const double last_time_begin = last_frame->stamp + last_frame->frame->times[0];
     const double last_time_end = last_frame->stamp + last_frame->frame->times[last_frame->frame->size() - 1];
+
     const auto last_T_world_lidar_begin_ = smoother->calculateEstimate<gtsam::Pose3>(X(last));
     const auto last_T_world_lidar_end_ = smoother->calculateEstimate<gtsam::Pose3>(Y(last));
     const auto last_T_world_lidar_begin = gtsam::Pose3(last_T_world_lidar_begin_.rotation().normalized(), last_T_world_lidar_begin_.translation());
@@ -258,6 +264,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
   for (int i = marginalized_cursor; i < frames.size(); i++) {
     try {
       Eigen::Isometry3d T_world_lidar = Eigen::Isometry3d(smoother->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
+
       frames[i]->set_T_world_sensor(FrameID::LIDAR, T_world_lidar);
     } catch (std::out_of_range& e) {
       logger->error("caught {}", e.what());
@@ -279,9 +286,11 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
     frame->id = current;
     frame->stamp = new_frame->stamp;
 
-    frame->T_lidar_imu.setIdentity();
-    frame->T_world_lidar.setIdentity();
-    frame->T_world_imu.setIdentity();
+    frame->T_base_lidar = new_frame->T_base_lidar;
+    frame->T_base_imu = new_frame->T_base_imu;
+    frame->T_base_gnss = new_frame->T_base_gnss;
+
+    frame->set_T_world_sensor(FrameID::LIDAR, Eigen::Isometry3d::Identity());
 
     frame->v_world_imu.setZero();
     frame->imu_bias.setZero();

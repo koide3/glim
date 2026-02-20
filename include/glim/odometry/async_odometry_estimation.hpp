@@ -50,11 +50,13 @@ public:
 
   /**
    * @brief Insert a GNSS data into the odometry estimation
-   * @param stamp   Timestamp
-   * @param pos     Position
-   * @param var     Variance
+   * @param stamp         Timestamp
+   * @param pos           Position
+   * @param vel           Velocity (Doppler-derived)
+   * @param var           Variance
+   * @param is_rtk_fixed  True if RTK Fix, False if Float/Single
    */
-  void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var);
+  void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& vel, const Eigen::Vector3d& var, bool is_rtk_fixed = true);
 
   /**
    * @brief Insert a preprocessed point cloud into odometry estimation
@@ -92,7 +94,8 @@ private:
   ConcurrentVector<std::pair<double, cv::Mat>> input_image_queue;
 #endif
   ConcurrentVector<Eigen::Matrix<double, 7, 1>> input_imu_queue;
-  ConcurrentVector<Eigen::Matrix<double, 7, 1>> input_gnss_queue;
+  // GNSS queue: [stamp, pos(3), vel(3), var(3), is_rtk_fixed] = 11 elements
+  ConcurrentVector<Eigen::Matrix<double, 11, 1>> input_gnss_queue;
   ConcurrentVector<PreprocessedFrame::Ptr> input_frame_queue;
 
   // Output queues

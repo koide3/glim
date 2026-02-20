@@ -28,6 +28,7 @@ find_package(GTSAM 4.3 REQUIRED)
 find_package(gtsam_points 1.2.0 REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(GeographicLib REQUIRED)
 
 if(BUILD_WITH_VIEWER)
   find_package(Iridescence REQUIRED)
@@ -113,6 +114,7 @@ target_link_libraries(glim
   spdlog::spdlog
   $<TARGET_NAME_IF_EXISTS:Iridescence::Iridescence>
   ${OpenCV_LIBRARIES}
+  GeographicLib::GeographicLib
 )
 if(BUILD_WITH_OPENCV)
   target_compile_definitions(glim PUBLIC GLIM_USE_OPENCV)

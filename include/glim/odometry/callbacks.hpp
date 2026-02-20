@@ -72,6 +72,14 @@ struct OdometryEstimationCallbacks {
   static CallbackSlot<void(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var)> on_insert_gnss;
 
   /**
+   * @brief GNSS factor created callback
+   * @param gnss_id          GNSS node ID (G(gnss_id))
+   * @param gnss_node_pos    Initial estimated position of the GNSS virtual node
+   * @param rtk_measurement  Raw RTK measurement position (in local frame)
+   */
+  static CallbackSlot<void(const int gnss_id, const Eigen::Vector3d& gnss_node_pos, const Eigen::Vector3d& rtk_measurement)> on_gnss_factor_created;
+
+  /**
    * @brief PointCloud input callback
    * @param frame  Preprocessed point cloud frame
    */

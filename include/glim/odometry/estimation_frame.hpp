@@ -11,7 +11,26 @@
 
 namespace glim {
 
-enum class FrameID { WORLD, LIDAR, IMU };
+/**
+ * @brief GNSS measurement data for backend propagation
+ */
+struct GNSSData {
+  double stamp;
+  Eigen::Vector3d position;  ///< Position in world/ENU frame
+  Eigen::Vector3d velocity;  ///< Velocity in world frame (from Doppler)
+  Eigen::Vector3d variance;  ///< Position variance
+  bool is_rtk_fixed;         ///< RTK fix status
+
+  GNSSData() : stamp(0), position(Eigen::Vector3d::Zero()), velocity(Eigen::Vector3d::Zero()), variance(Eigen::Vector3d::Ones()), is_rtk_fixed(false) {}
+  GNSSData(double s, const Eigen::Vector3d& p, const Eigen::Vector3d& v, const Eigen::Vector3d& var, bool rtk)
+  : stamp(s),
+    position(p),
+    velocity(v),
+    variance(var),
+    is_rtk_fixed(rtk) {}
+};
+
+enum class FrameID { WORLD, BASE, IMU, GNSS, LIDAR };
 
 /**
  * @brief Odometry estimation frame
@@ -82,9 +101,14 @@ public:
   long id;       ///< Frame ID
   double stamp;  ///< Timestamp
 
-  Eigen::Isometry3d T_lidar_imu;    ///< LiDAR-IMU transformation
-  Eigen::Isometry3d T_world_lidar;  ///< LiDAR pose in the world space
+  Eigen::Isometry3d T_base_imu;    ///< IMU pose in the base frame
+  Eigen::Isometry3d T_base_gnss;   ///< GNSS pose in the base frame
+  Eigen::Isometry3d T_base_lidar;  ///< LiDAR pose in the base frame
+
+  Eigen::Isometry3d T_world_base;   ///< Base pose in the world space
   Eigen::Isometry3d T_world_imu;    ///< IMU pose in the world space
+  Eigen::Isometry3d T_world_gnss;   ///< GNSS pose in the world space
+  Eigen::Isometry3d T_world_lidar;  ///< LiDAR pose in the world space
 
   Eigen::Vector3d v_world_imu;           ///< IMU velocity in the world frame
   Eigen::Matrix<double, 6, 1> imu_bias;  ///< IMU bias

@@ -54,4 +54,11 @@ inline std::string convert_to_string(const Eigen::Isometry3d& pose) {
   const Eigen::Quaterniond quat(pose.linear());
   return fmt::format("se3({:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f})", trans.x(), trans.y(), trans.z(), quat.x(), quat.y(), quat.z(), quat.w());
 }
+
+template <int R, int C>
+std::string convert_to_string(const Eigen::Matrix<double, R, C>& mat) {
+  std::stringstream sst;
+  sst << mat;
+  return sst.str();
+}
 }  // namespace glim

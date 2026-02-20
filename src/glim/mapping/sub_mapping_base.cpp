@@ -20,6 +20,10 @@ void SubMappingBase::insert_imu(const double stamp, const Eigen::Vector3d& linea
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
 }
 
+void SubMappingBase::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) {
+  Callbacks::on_insert_gnss(stamp, pos, var);
+}
+
 void SubMappingBase::insert_frame(const EstimationFrame::ConstPtr& frame) {
   Callbacks::on_insert_frame(frame);
 }

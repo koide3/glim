@@ -9,6 +9,17 @@
 
 namespace glim {
 
+struct SubMMapGNSSData {
+  double stamp;
+  Eigen::Vector3d pos;
+  Eigen::Vector3d var;
+
+  template<class Archive>
+  void serialize(Archive& archive) {
+    archive(stamp, pos, var);
+  }
+};
+
 /**
  * @brief SubMap
  *
@@ -90,6 +101,7 @@ public:
 
   std::vector<EstimationFrame::ConstPtr> frames;       ///< Optimized odometry frames
   std::vector<EstimationFrame::ConstPtr> odom_frames;  ///< Original odometry frames
+  std::vector<SubMMapGNSSData> gnss_data;               ///< GNSS data associated with this submap
 
   std::unordered_map<std::string, std::shared_ptr<void>> custom_data;  ///< User-defined custom data
 };

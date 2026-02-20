@@ -4,6 +4,9 @@
 #include <deque>
 #include <random>
 #include <memory>
+
+#include <GeographicLib/LocalCartesian.hpp>
+
 #include <glim/mapping/sub_mapping_base.hpp>
 
 namespace gtsam {
@@ -61,6 +64,7 @@ public:
   virtual ~SubMapping() override;
 
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
+  virtual void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) override;
   virtual void insert_frame(const EstimationFrame::ConstPtr& odom_frame) override;
 
   virtual std::vector<SubMap::Ptr> get_submaps() override;
@@ -69,6 +73,7 @@ public:
 
 private:
   void insert_keyframe(const int current, const EstimationFrame::ConstPtr& odom_frame);
+  gtsam::NonlinearFactorGraph create_gnss_factor(const int current, gtsam::Values& new_values);
 
   SubMap::Ptr create_submap(bool force_create = false) const;
 
@@ -88,6 +93,7 @@ private:
 
   std::deque<EstimationFrame::ConstPtr> delayed_input_queue;
   std::vector<EstimationFrame::ConstPtr> odom_frames;
+  std::vector<Eigen::Matrix<double, 7, 1>> gnss_frames;
 
   std::vector<int> keyframe_indices;
   std::vector<EstimationFrame::Ptr> keyframes;
@@ -98,6 +104,14 @@ private:
   std::vector<SubMap::Ptr> submap_queue;
 
   std::shared_ptr<void> tbb_task_arena;
+
+  GeographicLib::LocalCartesian geo_converter;
+  std::deque<Eigen::Matrix<double, 7, 1>> gnss_queue;
+  bool gnss_set_origin {false};
+
+  Eigen::Isometry3d T_ned_odom;
+  Eigen::Isometry3d T_world_odom;
+  int gnss_id {0};
 };
 
 }  // namespace glim

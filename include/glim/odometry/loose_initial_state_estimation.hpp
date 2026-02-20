@@ -17,7 +17,7 @@ class CloudCovarianceEstimation;
 
 class LooseInitialStateEstimation : public InitialStateEstimation {
 public:
-  LooseInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias);
+  LooseInitialStateEstimation(const Eigen::Isometry3d& T_base_imu, const Eigen::Isometry3d& T_base_lidar, const Eigen::Matrix<double, 6, 1>& imu_bias);
   virtual ~LooseInitialStateEstimation() override;
 
   virtual void insert_frame(const PreprocessedFrame::ConstPtr& raw_frame) override;
@@ -25,7 +25,9 @@ public:
   virtual EstimationFrame::ConstPtr initial_pose() override;
 
 private:
-  const Eigen::Isometry3d T_lidar_imu;
+  const Eigen::Isometry3d T_base_imu;
+  const Eigen::Isometry3d T_base_lidar;
+  Eigen::Isometry3d T_lidar_imu;
 
   int num_threads;
   double window_size;

@@ -20,7 +20,8 @@ void OdometryEstimationBase::insert_imu(const double stamp, const Eigen::Vector3
   Callbacks::on_insert_imu(stamp, linear_acc, angular_vel);
 }
 
-void OdometryEstimationBase::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) {
+void OdometryEstimationBase::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& vel, const Eigen::Vector3d& var, bool is_rtk_fixed) {
+  // Note: Callbacks don't include velocity/RTK for backward compatibility
   Callbacks::on_insert_gnss(stamp, pos, var);
 }
 
@@ -33,4 +34,4 @@ std::shared_ptr<OdometryEstimationBase> OdometryEstimationBase::load_module(cons
   return load_module_from_so<OdometryEstimationBase>(so_name, "create_odometry_estimation_module");
 }
 
-}
+}  // namespace glim

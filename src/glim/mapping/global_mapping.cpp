@@ -11,6 +11,9 @@
 #include <gtsam/slam/PoseRotationPrior.h>
 #include <gtsam/slam/PoseTranslationPrior.h>
 #include <gtsam/navigation/ImuBias.h>
+#include <gtsam/navigation/GPSFactor.h>
+#include <gtsam/slam/expressions.h>
+#include <gtsam/nonlinear/ExpressionFactor.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
@@ -33,6 +36,7 @@
 #include <glim/util/serialization.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/mapping/callbacks.hpp>
+#include <glim/odometry/estimation_frame.hpp>
 
 #ifdef GTSAM_USE_TBB
 #include <tbb/task_arena.h>
@@ -87,7 +91,13 @@ GlobalMapping::GlobalMapping(const GlobalMappingParams& params) : params(params)
 #endif
 
   session_id = 0;
-  imu_integration.reset(new IMUIntegration);
+
+  Config sensor_config(GlobalConfig::get_config_path("config_sensors"));
+  Eigen::Isometry3d T_base_imu = sensor_config.param<Eigen::Isometry3d>("sensors", "T_base_imu", Eigen::Isometry3d::Identity());
+
+  IMUIntegrationParams imu_params;
+  imu_params.body_P_sensor = gtsam::Pose3(T_base_imu.matrix());
+  imu_integration.reset(new IMUIntegration(imu_params));
 
   new_values.reset(new gtsam::Values);
   new_factors.reset(new gtsam::NonlinearFactorGraph);
@@ -143,6 +153,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
     const Eigen::Isometry3d T_origin0_endpointR0 = submaps[last]->T_origin_endpoint_R;
     const Eigen::Isometry3d T_origin1_endpointL1 = submaps[current]->T_origin_endpoint_L;
+
     const Eigen::Isometry3d T_endpointR0_endpointL1 = submaps[last]->odom_frames.back()->T_world_sensor().inverse() * submaps[current]->odom_frames.front()->T_world_sensor();
     const Eigen::Isometry3d T_origin0_origin1 = T_origin0_endpointR0 * T_endpointR0_endpointL1 * T_origin1_endpointL1.inverse();
 
@@ -165,10 +176,13 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
     new_factors->add(*create_matching_cost_factors(current));
   }
 
+  // Add GNSS factors for all submaps (including the first one)
+  new_factors->add(*create_gnss_factors(current));
+
   if (params.enable_imu) {
     logger->debug("create IMU factor");
-    if (submap->odom_frames.front()->frame_id != FrameID::IMU) {
-      logger->warn("odom frames are not estimated in the IMU frame while global mapping requires IMU estimation");
+    if (submap->odom_frames.front()->frame_id != FrameID::BASE) {
+      logger->warn("odom frames are not estimated in the BASE frame while global mapping requires IMU estimation");
     }
 
     // Local velocities
@@ -483,6 +497,69 @@ std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_matching_cost
   return factors;
 }
 
+std::shared_ptr<gtsam::NonlinearFactorGraph> GlobalMapping::create_gnss_factors(int current) const {
+  auto factors = gtsam::make_shared<gtsam::NonlinearFactorGraph>();
+
+  const auto& submap = submaps[current];
+  if (submap->frames.empty()) {
+    return factors;
+  }
+
+  // Compute the transform from odometry frame to submap origin frame
+  // T_world_origin * T_origin_endpoint_L = T_world_endpoint_L
+  // T_world_base_frame = T_world_endpoint_L * T_odom_base0^-1 * frame->T_world_base
+  // => T_origin_frame = T_origin_endpoint_L * T_odom_base0^-1 * frame->T_world_base
+  const Eigen::Isometry3d T_odom_base0 = submap->frames.front()->T_world_base;
+
+  // Iterate through all frames in the submap and add GNSS factors
+  for (size_t i = 0; i < submap->frames.size(); i++) {
+    const auto& frame = submap->frames[i];
+    const auto* gnss_data = frame->get_custom_data<GNSSData>("gnss");
+    if (gnss_data == nullptr) {
+      continue;
+    }
+
+    // Build noise model from variance
+    Eigen::Vector3d sigmas;
+    if (gnss_data->variance.norm() > 1e-6) {
+      sigmas << std::sqrt(gnss_data->variance[0]), std::sqrt(gnss_data->variance[1]), std::sqrt(gnss_data->variance[2]) * 2.0;
+    } else {
+      sigmas << 0.1, 0.1, 0.2;
+    }
+
+    // Inflate noise if RTK is not fixed
+    if (!gnss_data->is_rtk_fixed) {
+      sigmas *= 10.0;
+    }
+
+    auto noise = gtsam::noiseModel::Diagonal::Sigmas(sigmas);
+
+    // Compute frame's relative pose within the submap origin frame
+    // T_origin_frame = T_origin_endpoint_L * T_odom_base0^-1 * frame->T_world_base
+    const Eigen::Isometry3d T_origin_frame = submap->T_origin_endpoint_L * T_odom_base0.inverse() * frame->T_world_base;
+    const gtsam::Point3 offset_in_origin = T_origin_frame.translation();
+
+    // Use ExpressionFactor: constrains (X(current) * offset).translation() == gnss_position
+    // This correctly accounts for the frame's position within the submap
+    gtsam::Pose3_ T_world_origin_expr(X(current));
+    gtsam::Point3_ predicted_pos = gtsam::transformFrom(T_world_origin_expr, offset_in_origin);
+    factors->addExpressionFactor(noise, gtsam::Point3(gnss_data->position), predicted_pos);
+
+    logger->debug(
+      "GlobalMapping GNSS factor added for submap {} frame {} at pos=[{:.2f}, {:.2f}, {:.2f}], offset=[{:.2f}, {:.2f}, {:.2f}]",
+      current,
+      i,
+      gnss_data->position.x(),
+      gnss_data->position.y(),
+      gnss_data->position.z(),
+      offset_in_origin.x(),
+      offset_in_origin.y(),
+      offset_in_origin.z());
+  }
+
+  return factors;
+}
+
 void GlobalMapping::update_submaps() {
   for (int i = 0; i < submaps.size(); i++) {
     submaps[i]->T_world_origin = Eigen::Isometry3d(isam2->calculateEstimate<gtsam::Pose3>(X(i)).matrix());
@@ -573,6 +650,8 @@ void GlobalMapping::save(const std::string& path) {
   serializeToBinaryFile(serializable_factors, path + "/graph.bin");
   serializeToBinaryFile(isam2->calculateEstimate(), path + "/values.bin");
 
+  serializable_factors.saveGraph(path + "/graph.dot", isam2->calculateEstimate());
+
   std::ofstream ofs(path + "/graph.txt");
   ofs << "num_submaps: " << submaps.size() << std::endl;
   ofs << "num_all_frames: " << std::accumulate(submaps.begin(), submaps.end(), 0, [](int sum, const SubMap::ConstPtr& submap) { return sum + submap->frames.size(); }) << std::endl;
@@ -597,11 +676,17 @@ void GlobalMapping::save(const std::string& path) {
     ofs << "matching_cost " << type << " " << symbol0.index() << " " << symbol1.index() << std::endl;
   }
 
-  std::ofstream odom_lidar_ofs(path + "/odom_lidar.txt");
-  std::ofstream traj_lidar_ofs(path + "/traj_lidar.txt");
+  std::ofstream odom_base_ofs(path + "/odom_base.txt");
+  std::ofstream traj_base_ofs(path + "/traj_base.txt");
 
   std::ofstream odom_imu_ofs(path + "/odom_imu.txt");
   std::ofstream traj_imu_ofs(path + "/traj_imu.txt");
+
+  std::ofstream odom_gnss_ofs(path + "/odom_gnss.txt");
+  std::ofstream traj_gnss_ofs(path + "/traj_gnss.txt");
+
+  std::ofstream odom_lidar_ofs(path + "/odom_lidar.txt");
+  std::ofstream traj_lidar_ofs(path + "/traj_lidar.txt");
 
   const auto write_tum_frame = [](std::ofstream& ofs, const double stamp, const Eigen::Isometry3d& pose) {
     const Eigen::Quaterniond quat(pose.linear());
@@ -611,19 +696,27 @@ void GlobalMapping::save(const std::string& path) {
 
   for (int i = 0; i < submaps.size(); i++) {
     for (const auto& frame : submaps[i]->odom_frames) {
-      write_tum_frame(odom_lidar_ofs, frame->stamp, frame->T_world_lidar);
+      write_tum_frame(odom_base_ofs, frame->stamp, frame->T_world_base);
       write_tum_frame(odom_imu_ofs, frame->stamp, frame->T_world_imu);
+      write_tum_frame(odom_gnss_ofs, frame->stamp, frame->T_world_gnss);
+      write_tum_frame(odom_lidar_ofs, frame->stamp, frame->T_world_lidar);
     }
 
     const Eigen::Isometry3d T_world_endpoint_L = submaps[i]->T_world_origin * submaps[i]->T_origin_endpoint_L;
-    const Eigen::Isometry3d T_odom_lidar0 = submaps[i]->frames.front()->T_world_lidar;
-    const Eigen::Isometry3d T_odom_imu0 = submaps[i]->frames.front()->T_world_imu;
+    // const Eigen::Isometry3d T_odom_lidar0 = submaps[i]->frames.front()->T_world_lidar;
+    // const Eigen::Isometry3d T_odom_imu0 = submaps[i]->frames.front()->T_world_imu;
+    const Eigen::Isometry3d T_odom_base0 = submaps[i]->frames.front()->T_world_base;
 
     for (const auto& frame : submaps[i]->frames) {
-      const Eigen::Isometry3d T_world_imu = T_world_endpoint_L * T_odom_imu0.inverse() * frame->T_world_imu;
-      const Eigen::Isometry3d T_world_lidar = T_world_imu * frame->T_lidar_imu.inverse();
+      const Eigen::Isometry3d T_world_base = T_world_endpoint_L * T_odom_base0.inverse() * frame->T_world_base;
 
+      const Eigen::Isometry3d T_world_imu = T_world_base * frame->T_base_imu;
+      const Eigen::Isometry3d T_world_gnss = T_world_base * frame->T_base_gnss;
+      const Eigen::Isometry3d T_world_lidar = T_world_base * frame->T_base_lidar;
+
+      write_tum_frame(traj_base_ofs, frame->stamp, T_world_base);
       write_tum_frame(traj_imu_ofs, frame->stamp, T_world_imu);
+      write_tum_frame(traj_gnss_ofs, frame->stamp, T_world_gnss);
       write_tum_frame(traj_lidar_ofs, frame->stamp, T_world_lidar);
     }
 
@@ -945,6 +1038,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     const auto submap = submaps[i];
     const gtsam::imuBias::ConstantBias imu_biasL(submap->frames.front()->imu_bias);
     const gtsam::imuBias::ConstantBias imu_biasR(submap->frames.back()->imu_bias);
+
     const Eigen::Vector3d v_origin_imuL = submap->T_world_origin.linear().inverse() * submap->frames.front()->v_world_imu;
     const Eigen::Vector3d v_origin_imuR = submap->T_world_origin.linear().inverse() * submap->frames.back()->v_world_imu;
 

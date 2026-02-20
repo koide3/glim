@@ -32,9 +32,10 @@ void AsyncOdometryEstimation::insert_imu(const double stamp, const Eigen::Vector
   input_imu_queue.push_back(imu_data);
 }
 
-void AsyncOdometryEstimation::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) {
-  Eigen::Matrix<double, 7, 1> gnss_data;
-  gnss_data << stamp, pos, var;
+void AsyncOdometryEstimation::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& vel, const Eigen::Vector3d& var, bool is_rtk_fixed) {
+  // Store as 11-element vector: [stamp, pos(3), vel(3), var(3), is_rtk_fixed]
+  Eigen::Matrix<double, 11, 1> gnss_data;
+  gnss_data << stamp, pos, vel, var, (is_rtk_fixed ? 1.0 : 0.0);
   input_gnss_queue.push_back(gnss_data);
 }
 
@@ -100,10 +101,13 @@ void AsyncOdometryEstimation::run() {
     }
 
     for (const auto& gnss : gnss_frames) {
+      // Extract from 11-element vector: [stamp, pos(3), vel(3), var(3), is_rtk_fixed]
       const double stamp = gnss[0];
-      const Eigen::Vector3d pos = gnss.block<3, 1>(1, 0);
-      const Eigen::Vector3d var = gnss.block<3, 1>(4, 0);
-      odometry_estimation->insert_gnss(stamp, pos, var);
+      const Eigen::Vector3d pos = gnss.segment<3>(1);
+      const Eigen::Vector3d vel = gnss.segment<3>(4);
+      const Eigen::Vector3d var = gnss.segment<3>(7);
+      const bool is_rtk_fixed = (gnss[10] > 0.5);
+      odometry_estimation->insert_gnss(stamp, pos, vel, var, is_rtk_fixed);
     }
 
 #ifdef GLIM_USE_OPENCV

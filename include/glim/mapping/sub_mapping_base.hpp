@@ -42,6 +42,14 @@ public:
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel);
 
   /**
+   * @brief Insert a GNSS data
+   * @param stamp  Timestamp
+   * @param pos    Position
+   * @param var    Position variance
+   */
+  virtual void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var);
+
+  /**
    * @brief Insert an odometry estimation frame
    * @param odom_frame  Marginalized odometry estimation frame
    */

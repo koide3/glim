@@ -30,7 +30,10 @@ void SubMap::save(const std::string& path) const {
   ofs << "T_origin_endpoint_R: " << std::endl << T_origin_endpoint_R.matrix() << std::endl;
 
   if (!frames.empty()) {
-    ofs << "T_lidar_imu: " << std::endl << frames.back()->T_lidar_imu.matrix() << std::endl;
+    ofs << "T_base_imu: " << std::endl << frames.back()->T_base_imu.matrix() << std::endl;
+    ofs << "T_base_gnss: " << std::endl << frames.back()->T_base_gnss.matrix() << std::endl;
+    ofs << "T_base_lidar: " << std::endl << frames.back()->T_base_lidar.matrix() << std::endl;
+
     ofs << "imu_bias: " << frames.back()->imu_bias.transpose() << std::endl;
     ofs << "frame_id: " << static_cast<int>(frames.back()->frame_id) << std::endl;
   }
@@ -41,8 +44,10 @@ void SubMap::save(const std::string& path) const {
     ofs << "frame_" << i << std::endl;
     ofs << "id: " << frames[i]->id << std::endl;
     ofs << "stamp: " << boost::format("%.9f") % frames[i]->stamp << std::endl;
-    ofs << "T_odom_lidar: " << std::endl << odom_frames[i]->T_world_lidar.matrix() << std::endl;
-    ofs << "T_world_lidar: " << std::endl << frames[i]->T_world_lidar.matrix() << std::endl;
+
+    ofs << "T_odom_base: " << std::endl << odom_frames[i]->T_world_base.matrix() << std::endl;
+    ofs << "T_world_base: " << std::endl << frames[i]->T_world_base.matrix() << std::endl;
+
     ofs << "v_world_imu: " << frames[i]->v_world_imu.transpose() << std::endl;
   }
 
@@ -94,7 +99,12 @@ SubMap::Ptr SubMap::load(const std::string& path) {
   submap->T_origin_endpoint_R.matrix() = read_matrix<4, 4>(ifs);
 
   ifs >> token;
-  Eigen::Isometry3d T_lidar_imu(read_matrix<4, 4>(ifs));
+  Eigen::Isometry3d T_base_imu(read_matrix<4, 4>(ifs));
+  ifs >> token;
+  Eigen::Isometry3d T_base_gnss(read_matrix<4, 4>(ifs));
+  ifs >> token;
+  Eigen::Isometry3d T_base_lidar(read_matrix<4, 4>(ifs));
+
   ifs >> token;
   Eigen::Matrix<double, 6, 1> imu_bias = read_matrix<6, 1>(ifs);
 
@@ -111,10 +121,10 @@ SubMap::Ptr SubMap::load(const std::string& path) {
     ifs >> token >> stamp;
 
     ifs >> token;
-    Eigen::Isometry3d T_odom_lidar(read_matrix<4, 4>(ifs));
+    Eigen::Isometry3d T_odom_base(read_matrix<4, 4>(ifs));
 
     ifs >> token;
-    Eigen::Isometry3d T_world_lidar(read_matrix<4, 4>(ifs));
+    Eigen::Isometry3d T_world_base(read_matrix<4, 4>(ifs));
 
     ifs >> token;
     Eigen::Vector3d v_world_imu = read_matrix<3, 1>(ifs);
@@ -122,9 +132,11 @@ SubMap::Ptr SubMap::load(const std::string& path) {
     EstimationFrame::Ptr frame(new EstimationFrame);
     frame->id = id;
     frame->stamp = stamp;
-    frame->T_lidar_imu = T_lidar_imu;
-    frame->T_world_lidar = T_world_lidar;
-    frame->T_world_imu = T_world_lidar * T_lidar_imu;
+
+    frame->T_base_imu = T_base_imu;
+    frame->T_base_gnss = T_base_gnss;
+    frame->T_base_lidar = T_base_lidar;
+    frame->set_T_world_sensor(FrameID::BASE, T_world_base);
 
     frame->v_world_imu = v_world_imu;
     frame->imu_bias = imu_bias;
@@ -132,8 +144,7 @@ SubMap::Ptr SubMap::load(const std::string& path) {
 
     EstimationFrame::Ptr odom_frame(new EstimationFrame);
     *odom_frame = *frame;
-    odom_frame->T_world_lidar = T_odom_lidar;
-    odom_frame->T_world_imu = T_odom_lidar * T_lidar_imu;
+    odom_frame->set_T_world_sensor(FrameID::BASE, T_odom_base);
 
     submap->frames.push_back(frame);
     submap->odom_frames.push_back(odom_frame);

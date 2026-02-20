@@ -62,6 +62,7 @@ private:
 
   bool track;
   bool show_current_coord;
+  bool show_sensor_coord;
   bool show_current_points;
   int current_color_mode;
 
@@ -81,8 +82,16 @@ private:
   double last_median_distance;
   std::vector<double> last_voxel_resolutions;
 
-  int gnss_id {0};
+  int gnss_id{0};
+  int inserted_gnss_id{0};
   std::map<int, Eigen::Isometry3f> gnss_poses;
+  std::map<int, Eigen::Vector3f> rtk_measurements;  // Raw RTK positions for each GNSS node
+
+  // Track GNSS node odom-frame pose for re-transform after global optimization
+  struct GNSSNodeInfo {
+    Eigen::Isometry3f T_odom_gnss;   // Pose in odometry frame (before world transform)
+  };
+  std::map<int, GNSSNodeInfo> gnss_node_info;
 
   using FactorLine = std::tuple<Eigen::Vector3f, Eigen::Vector3f, Eigen::Vector4f, Eigen::Vector4f>;
   using FactorLineGetter = std::function<std::optional<FactorLine>(const gtsam::NonlinearFactor*)>;

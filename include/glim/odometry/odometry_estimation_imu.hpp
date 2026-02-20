@@ -42,8 +42,12 @@ public:
   // Sensor params;
   bool fix_imu_bias;
   double imu_bias_noise;
-  Eigen::Isometry3d T_lidar_imu;
   Eigen::Matrix<double, 6, 1> imu_bias;
+
+  Eigen::Isometry3d T_base_imu;
+  Eigen::Isometry3d T_base_gnss;
+  Eigen::Isometry3d T_base_lidar;
+  Eigen::Isometry3d T_odom_gnss_world;
 
   // Init state
   std::string initialization_mode;
@@ -57,6 +61,12 @@ public:
   bool use_isam2_dogleg;
   double isam2_relinearize_skip;
   double isam2_relinearize_thresh;
+
+  // GNSS fusion params
+  double gps_noise_std;            // Standard deviation for GPS position noise (m)
+  double gps_velocity_noise_std;   // Standard deviation for GPS velocity noise (m/s)
+  double rtk_loss_position_scale;  // Scale factor for position noise when RTK lost
+  double interpolation_noise_std;  // Standard deviation for interpolation constraint
 
   // Logging params
   bool save_imu_rate_trajectory;
@@ -76,7 +86,7 @@ public:
   virtual ~OdometryEstimationIMU() override;
 
   virtual void insert_imu(const double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
-  virtual void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& var) override;
+  virtual void insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& vel, const Eigen::Vector3d& var, bool is_rtk_fixed = true) override;
   virtual EstimationFrame::ConstPtr insert_frame(const PreprocessedFrame::Ptr& frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) override;
   virtual std::vector<EstimationFrame::ConstPtr> get_remaining_frames() override;
 
@@ -95,19 +105,33 @@ protected:
 protected:
   std::unique_ptr<OdometryEstimationIMUParams> params;
 
-  // Geographic converter
-  std::deque<Eigen::Matrix<double, 7, 1>> gnss_queue;
+  // GNSS measurement buffer
+  struct GNSSMeasurement {
+    double stamp;
+    Eigen::Vector3d position;  // Position in odometry frame
+    Eigen::Vector3d velocity;  // Velocity in odometry frame (Doppler-derived)
+    Eigen::Vector3d variance;
+    bool is_rtk_fixed;  // True if RTK Fix, False if Float/Single
+  };
+  std::deque<GNSSMeasurement> gnss_buffer;
+
+  // Geographic converter (for WGS84 to local conversion if needed)
   GeographicLib::LocalCartesian geo_converter;
-  bool gnss_intialized {false};
+  bool gnss_set_origin{false};
 
   // Sensor extrinsic params
+  Eigen::Isometry3d T_base_imu;
+  Eigen::Isometry3d T_base_gnss;
+  Eigen::Isometry3d T_base_lidar;
+
   Eigen::Isometry3d T_lidar_imu;
   Eigen::Isometry3d T_imu_lidar;
+  Eigen::Vector3d t_base_gnss;
 
   // Frames & keyframes
   int marginalized_cursor;
   std::vector<EstimationFrame::Ptr> frames;
-  uint64_t gnss_id {0};
+  uint64_t gnss_id{0};
 
   // Utility classes
   std::unique_ptr<InitialStateEstimation> init_estimation;

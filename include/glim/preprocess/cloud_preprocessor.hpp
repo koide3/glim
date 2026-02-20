@@ -32,7 +32,7 @@ public:
   std::string crop_bbox_frame;        ///< Bounding box reference frame
   Eigen::Vector3d crop_bbox_min;      ///< Bounding box min point
   Eigen::Vector3d crop_bbox_max;      ///< Bounding box max point
-  Eigen::Isometry3d T_imu_lidar;      ///< LiDAR-IMU transformation when cropbox is defined in IMU frame
+  Eigen::Isometry3d T_base_lidar;      ///< LiDAR-IMU transformation when cropbox is defined in IMU frame
   int k_correspondences;              ///< Number of neighboring points
 
   int num_threads;                    ///< Number of threads

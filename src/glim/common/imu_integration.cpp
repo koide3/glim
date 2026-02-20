@@ -11,6 +11,8 @@ IMUIntegrationParams::IMUIntegrationParams(const bool upright) {
   this->acc_noise = config_sensors.param<double>("sensors", "imu_acc_noise", 0.01);
   this->gyro_noise = config_sensors.param<double>("sensors", "imu_gyro_noise", 0.001);
   this->int_noise = config_sensors.param<double>("sensors", "imu_int_noise", 0.001);
+
+  this->body_P_sensor = std::nullopt;
 }
 
 IMUIntegrationParams::~IMUIntegrationParams() {}
@@ -24,6 +26,11 @@ IMUIntegration::IMUIntegration(const IMUIntegrationParams& params) {
   imu_params->accelerometerCovariance = gtsam::Matrix3::Identity() * std::pow(params.acc_noise, 2);
   imu_params->gyroscopeCovariance = gtsam::Matrix3::Identity() * std::pow(params.gyro_noise, 2);
   imu_params->integrationCovariance = gtsam::Matrix3::Identity() * pow(params.int_noise, 2);
+
+  if (params.body_P_sensor) {
+    imu_params->setBodyPSensor(*params.body_P_sensor);
+  }
+
   imu_measurements.reset(new gtsam::PreintegratedImuMeasurements(imu_params));
 }
 
@@ -86,7 +93,8 @@ int IMUIntegration::integrate_imu(
   const gtsam::imuBias::ConstantBias& bias,
   std::vector<double>& pred_times,
   std::vector<Eigen::Isometry3d>& pred_poses) {
-  //
+  
+  // Reset
   imu_measurements->resetIntegrationAndSetBias(bias);
 
   pred_times.emplace_back(start_time);

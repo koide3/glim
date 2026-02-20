@@ -53,12 +53,12 @@ private:
 
   virtual void fallback_smoother() override;
 
-  void update_target(const int current, const Eigen::Isometry3d& T_target_imu);
+  void update_target(const int current, const Eigen::Isometry3d& T_target_base);
 
 private:
   // Registration params
   std::mt19937 mt;                                                                   ///< RNG
-  Eigen::Isometry3d last_T_target_imu;                                               ///< Last IMU pose w.r.t. target model
+  Eigen::Isometry3d last_T_target_base;                                               ///< Last Base pose w.r.t. target model
   std::vector<std::shared_ptr<gtsam_points::GaussianVoxelMapCPU>> target_voxelmaps;  ///< VGICP target voxelmap
   std::shared_ptr<gtsam_points::iVox> target_ivox;                                   ///< GICP target iVox
   EstimationFrame::ConstPtr target_ivox_frame;                                       ///< Target points (just for visualization)

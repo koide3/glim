@@ -54,13 +54,13 @@ class NaiveInitialStateEstimation : public InitialStateEstimation {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  NaiveInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias);
+  NaiveInitialStateEstimation(const Eigen::Isometry3d& T_base_imu, const Eigen::Isometry3d& T_base_lidar, const Eigen::Matrix<double, 6, 1>& imu_bias);
   virtual ~NaiveInitialStateEstimation() override;
 
   virtual void insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
   virtual EstimationFrame::ConstPtr initial_pose() override;
 
-  void set_init_state(const Eigen::Isometry3d& init_T_world_imu, const Eigen::Vector3d& init_v_world_imu);
+  void set_init_state(const Eigen::Isometry3d& init_T_world_base, const Eigen::Vector3d& init_v_world_base);
 
 private:
   double window_size;
@@ -71,11 +71,13 @@ private:
   Eigen::Vector3d sum_acc;
 
   Eigen::Matrix<double, 6, 1> imu_bias;
-  Eigen::Isometry3d T_lidar_imu;
+
+  Eigen::Isometry3d T_base_imu;
+  Eigen::Isometry3d T_base_lidar;
 
   bool force_init;
-  Eigen::Vector3d init_v_world_imu;
-  Eigen::Isometry3d init_T_world_imu;
+  Eigen::Vector3d init_v_world_base;
+  Eigen::Isometry3d init_T_world_base;
 };
 
 // TODO: Implement Loose-coupling-based initial state estimator

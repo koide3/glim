@@ -24,14 +24,21 @@
 
 namespace glim {
 
-LooseInitialStateEstimation::LooseInitialStateEstimation(const Eigen::Isometry3d& T_lidar_imu, const Eigen::Matrix<double, 6, 1>& imu_bias) : T_lidar_imu(T_lidar_imu) {
+LooseInitialStateEstimation::LooseInitialStateEstimation(const Eigen::Isometry3d& T_base_imu, const Eigen::Isometry3d& T_base_lidar, const Eigen::Matrix<double, 6, 1>& imu_bias)
+: T_base_imu(T_base_imu),
+  T_base_lidar(T_base_lidar) {
+  T_lidar_imu = T_base_lidar.inverse() * T_base_imu;
+
   glim::Config config(glim::GlobalConfig::get_config_path("config_odometry"));
   num_threads = config.param("odometry_estimation", "num_threads", 2);
   window_size = config.param("odometry_estimation", "initialization_window_size", 1.0);
 
   target_ivox.reset(new gtsam_points::iVox(1.0));
   covariance_estimation.reset(new CloudCovarianceEstimation(num_threads));
-  imu_integration.reset(new glim::IMUIntegration());
+
+  IMUIntegrationParams imu_params;
+  imu_params.body_P_sensor = gtsam::Pose3(T_base_imu.matrix());
+  imu_integration.reset(new glim::IMUIntegration(imu_params));
 }
 
 LooseInitialStateEstimation::~LooseInitialStateEstimation() {}
@@ -72,6 +79,8 @@ void LooseInitialStateEstimation::insert_frame(const PreprocessedFrame::ConstPtr
     values = gtsam_points::LevenbergMarquardtOptimizerExt(graph, values, lm_params).optimize();
 
     estimated_T_odom_lidar = values.at<gtsam::Pose3>(0);
+  } else {
+    estimated_T_odom_lidar = gtsam::Pose3(T_base_lidar.matrix());
   }
 
   auto transformed = gtsam_points::transform(frame, Eigen::Isometry3d(estimated_T_odom_lidar.matrix()));
@@ -107,11 +116,15 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
     const auto& [t0, T_odom_lidar0] = T_odom_lidar[i - 1];
     const auto& [t1, T_odom_lidar1] = T_odom_lidar[i];
 
-    const Eigen::Isometry3d T_odom_imu0 = T_odom_lidar0 * T_lidar_imu;
-    const Eigen::Isometry3d T_odom_imu1 = T_odom_lidar1 * T_lidar_imu;
-    const Eigen::Isometry3d T_imu0_imu1 = T_odom_imu0.inverse() * T_odom_imu1;
+    // const Eigen::Isometry3d T_odom_imu0 = T_odom_lidar0 * T_lidar_imu;
+    // const Eigen::Isometry3d T_odom_imu1 = T_odom_lidar1 * T_lidar_imu;
+    const Eigen::Isometry3d T_odom_base0 = T_odom_lidar0 * T_base_lidar.inverse();
+    const Eigen::Isometry3d T_odom_base1 = T_odom_lidar1 * T_base_lidar.inverse();
 
-    graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i - 1), X(i), gtsam::Pose3(T_imu0_imu1.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
+    // const Eigen::Isometry3d T_imu0_imu1 = T_odom_imu0.inverse() * T_odom_imu1;
+    const Eigen::Isometry3d T_odom0_odom1 = T_odom_base0.inverse() * T_odom_base1;
+
+    graph.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i - 1), X(i), gtsam::Pose3(T_odom0_odom1.matrix()), gtsam::noiseModel::Isotropic::Precision(6, 1e3));
 
     int num_integrated;
     gtsam::imuBias::ConstantBias imu_bias;
@@ -147,7 +160,10 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
     }
 
     const Eigen::Vector3d acc_local = imu_data[imu_cursor].middleRows<3>(1);
-    sum_acc_odom += (T_odom_lidar[i].second * T_lidar_imu).linear() * acc_local.normalized();
+
+    // sum_acc_odom += (T_odom_lidar[i].second * T_lidar_imu).linear() * acc_local.normalized();
+    const Eigen::Matrix3d R_odom_imu = (T_odom_lidar[i].second * T_base_lidar.inverse()).linear();
+    sum_acc_odom += R_odom_imu * acc_local.normalized();
   }
 
   Eigen::Isometry3d init_T_world_odom = Eigen::Isometry3d::Identity();
@@ -166,8 +182,9 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
 
   gtsam::Values values;
   for (int i = 0; i < T_odom_lidar.size(); i++) {
-    const Eigen::Isometry3d T_world_imu = init_T_world_odom * T_odom_lidar[i].second * T_lidar_imu;
-    values.insert(X(i), gtsam::Pose3(T_world_imu.matrix()));
+    const Eigen::Isometry3d T_world_base = init_T_world_odom * T_odom_lidar[i].second * T_base_lidar.inverse();
+
+    values.insert(X(i), gtsam::Pose3(T_world_base.matrix()));
     values.insert(V(i), gtsam::Vector3(0.0, 0.0, 0.0));
     values.insert(B(i), gtsam::imuBias::ConstantBias());
 
@@ -178,18 +195,29 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
   lm_params.setVerbosityLM("SUMMARY");
   values = gtsam::LevenbergMarquardtOptimizer(graph, values, lm_params).optimize();
 
-  gtsam::Pose3 T_odom_imu0 = values.at<gtsam::Pose3>(X(0));
-  gtsam::Pose3 T_odom_lidar0 = T_odom_imu0 * gtsam::Pose3(T_lidar_imu.inverse().matrix());
+  // gtsam::Pose3 T_odom_imu0 = values.at<gtsam::Pose3>(X(0));
+  // gtsam::Pose3 T_odom_lidar0 = T_odom_imu0 * gtsam::Pose3(T_lidar_imu.inverse().matrix());
 
   EstimationFrame::Ptr estimated(new EstimationFrame);
   estimated->id = -1;
   estimated->stamp = T_odom_lidar.back().first;
-  estimated->T_lidar_imu = T_lidar_imu;
+
+  estimated->T_base_imu = T_base_imu;
+  estimated->T_base_lidar = T_base_lidar;
+
   estimated->v_world_imu = values.at<gtsam::Vector3>(V(T_odom_lidar.size() - 1));
   estimated->imu_bias = values.at<gtsam::imuBias::ConstantBias>(B(T_odom_lidar.size() - 1)).vector();
 
-  estimated->T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(T_odom_lidar.size() - 1)).matrix());
-  estimated->T_world_lidar = estimated->T_world_imu * T_lidar_imu.inverse();
+  // Eigen::Isometry3d T_world_imu = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(T_odom_lidar.size() - 1)).matrix());
+  // estimated->set_T_world_sensor(FrameID::IMU, T_world_imu);
+  Eigen::Isometry3d T_world_base = Eigen::Isometry3d(values.at<gtsam::Pose3>(X(T_odom_lidar.size() - 1)).matrix());
+  estimated->set_T_world_sensor(FrameID::BASE, T_world_base);
+
+  logger->info(
+    "Loose Init done. Base Pose: Trans=[{:.3f}, {:.3f}, {:.3f}]",
+    estimated->T_world_base.translation().x(),
+    estimated->T_world_base.translation().y(),
+    estimated->T_world_base.translation().z());
 
   IMUStateInitializationCallbacks::on_finished(estimated);
 
