@@ -161,8 +161,8 @@ EstimationFrame::ConstPtr LooseInitialStateEstimation::initial_pose() {
 
     const Eigen::Vector3d acc_local = imu_data[imu_cursor].middleRows<3>(1);
 
-    // sum_acc_odom += (T_odom_lidar[i].second * T_lidar_imu).linear() * acc_local.normalized();
-    const Eigen::Matrix3d R_odom_imu = (T_odom_lidar[i].second * T_base_lidar.inverse()).linear();
+    // R_odom_imu = R_odom_lidar * R_lidar_imu = R_odom_base * R_base_imu
+    const Eigen::Matrix3d R_odom_imu = (T_odom_lidar[i].second * T_base_lidar.inverse()).linear() * T_base_imu.linear();
     sum_acc_odom += R_odom_imu * acc_local.normalized();
   }
 

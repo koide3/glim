@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any>
+#include <functional>
 #include <memory>
 #include <random>
 #include <glim/mapping/global_mapping_base.hpp>
@@ -75,7 +76,7 @@ public:
    * @brief Load a mapping result from a dumped directory
    * @param path Input dump path
    */
-  bool load(const std::string& path);
+  bool load(const std::string& path, std::function<void()> progress_cb = nullptr);
 
 private:
   void insert_submap(int current, const SubMap::Ptr& submap);

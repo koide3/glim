@@ -745,7 +745,7 @@ std::vector<Eigen::Vector4d> GlobalMapping::export_points() {
   return all_points;
 }
 
-bool GlobalMapping::load(const std::string& path) {
+bool GlobalMapping::load(const std::string& path, std::function<void()> progress_cb) {
   std::ifstream ifs(path + "/graph.txt");
   if (!ifs) {
     logger->error("failed to open {}/graph.txt", path);
@@ -795,6 +795,7 @@ bool GlobalMapping::load(const std::string& path) {
     submaps.push_back(submap);
     submaps.back()->voxelmaps.clear();
     subsampled_submaps.push_back(subsampled_submap);
+    if (progress_cb) progress_cb();
 
     if (params.enable_gpu) {
 #ifdef GTSAM_POINTS_USE_CUDA

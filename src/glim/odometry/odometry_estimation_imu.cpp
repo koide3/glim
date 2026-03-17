@@ -2,6 +2,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <Eigen/Geometry>
+
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/expressions.h>
 #include <gtsam/slam/BetweenFactor.h>
@@ -11,7 +13,6 @@
 
 #include <gtsam_points/types/point_cloud_cpu.hpp>
 #include <gtsam_points/factors/linear_damping_factor.hpp>
-#include <gtsam_points/factors/pose3_interpolation_factor.hpp>
 #include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 
 #include <glim/util/config.hpp>
@@ -73,7 +74,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
   gps_noise_std = config.param<double>("odometry_estimation", "gps_noise_std", 0.05);
   gps_velocity_noise_std = config.param<double>("odometry_estimation", "gps_velocity_noise_std", 0.1);
   rtk_loss_position_scale = config.param<double>("odometry_estimation", "rtk_loss_position_scale", 100.0);
-  interpolation_noise_std = config.param<double>("odometry_estimation", "interpolation_noise_std", 0.01);
+  gps_z_sigma_min = config.param<double>("odometry_estimation", "gps_z_sigma_min", 0.3);
 
   save_imu_rate_trajectory = config.param<bool>("odometry_estimation", "save_imu_rate_trajectory", false);
 
@@ -133,17 +134,38 @@ void OdometryEstimationIMU::insert_imu(const double stamp, const Eigen::Vector3d
   imu_integration->insert_imu(stamp, linear_acc, angular_vel);
 }
 
+static Eigen::Isometry3d interpolate_pose(
+  const std::vector<double>& times,
+  const std::vector<Eigen::Isometry3d>& poses,
+  double t) {
+  if (poses.size() < 2) return poses.empty() ? Eigen::Isometry3d::Identity() : poses.back();
+  if (t <= times.front()) return poses.front();
+  if (t >= times.back()) return poses.back();
+
+  auto it = std::lower_bound(times.begin(), times.end(), t);
+  const int i1 = std::distance(times.begin(), it);
+  const int i0 = i1 - 1;
+  const double tau = (t - times[i0]) / (times[i1] - times[i0]);
+
+  Eigen::Isometry3d result = Eigen::Isometry3d::Identity();
+  result.translation() = (1.0 - tau) * poses[i0].translation() + tau * poses[i1].translation();
+  result.linear() = Eigen::Quaterniond(poses[i0].linear()).slerp(tau, Eigen::Quaterniond(poses[i1].linear())).toRotationMatrix();
+  return result;
+}
+
 void OdometryEstimationIMU::insert_gnss(const double stamp, const Eigen::Vector3d& pos, const Eigen::Vector3d& vel, const Eigen::Vector3d& var, bool is_rtk_fixed) {
   // Buffer GNSS measurement with velocity and RTK status
   gnss_buffer.push_back({stamp, pos, vel, var, is_rtk_fixed});
 }
 
-gtsam::NonlinearFactorGraph OdometryEstimationIMU::create_gnss_factor(const int current, gtsam::Values& new_values, std::map<std::uint64_t, double>& new_stamp) {
-  using gtsam::symbol_shorthand::G;  // GNSS virtual pose
-
+gtsam::NonlinearFactorGraph OdometryEstimationIMU::create_gnss_factor(
+  const int current,
+  gtsam::Values& new_values,
+  const std::vector<double>& imu_pred_times,
+  const std::vector<Eigen::Isometry3d>& imu_pred_poses) {
   gtsam::NonlinearFactorGraph factors;
 
-  if (current < 1 || gnss_buffer.empty()) {
+  if (current < 1 || gnss_buffer.empty() || imu_pred_poses.empty()) {
     return factors;
   }
 
@@ -151,126 +173,89 @@ gtsam::NonlinearFactorGraph OdometryEstimationIMU::create_gnss_factor(const int 
   const double t_last = frames[last]->stamp;
   const double t_current = frames[current]->stamp;
 
-  // Get pose and velocity estimates for interpolation
-  const gtsam::Pose3 T_world_base_last(frames[last]->T_world_base.matrix());
-  const gtsam::Pose3 T_world_base_current = new_values.at<gtsam::Pose3>(X(current));
-  const gtsam::Vector3 v_world_last = frames[last]->v_world_imu;
-  const gtsam::Vector3 v_world_current = new_values.at<gtsam::Vector3>(V(current));
+  const Eigen::Isometry3d& T_at_current = imu_pred_poses.back();
 
-  // Process GNSS measurements between last and current frame
+  const gtsam::Pose3 T_world_base_current = new_values.at<gtsam::Pose3>(X(current));
+
   auto it = gnss_buffer.begin();
   while (it != gnss_buffer.end()) {
     const double t_gnss = it->stamp;
 
-    // Skip measurements before the last frame
     if (t_gnss <= t_last) {
       it = gnss_buffer.erase(it);
       continue;
     }
-
-    // Stop if measurement is after current frame (process in next iteration)
     if (t_gnss > t_current) {
       break;
     }
 
-    // Calculate interpolation ratio
-    const double tau = (t_gnss - t_last) / (t_current - t_last);
+    // IMU-based pose at GNSS timestamp (T_world_base)
+    const Eigen::Isometry3d T_at_gnss = interpolate_pose(imu_pred_times, imu_pred_poses, t_gnss);
 
-    // Create virtual node key for GNSS pose
-    const gtsam::Key gnss_key = G(gnss_id);
-    gnss_id++;
-
-    // Interpolate initial pose estimate for the virtual node
-    const gtsam::Pose3 T_world_base_gnss = gtsam::interpolate(T_world_base_last, T_world_base_current, tau);
-    new_values.insert(gnss_key, T_world_base_gnss);
-    new_stamp[gnss_key] = t_gnss;
-
-    // Add Pose3InterpolationFactor: constrains gnss_key to lie between X(last) and X(current)
-    auto interpolation_noise = gtsam::noiseModel::Isotropic::Sigma(6, params->interpolation_noise_std);
-    factors.emplace_shared<gtsam_points::Pose3InterpolationFactor>(X(last), X(current), gnss_key, tau, interpolation_noise);
-
-    // === INNOVATION 1: DYNAMIC COVARIANCE SCALING ===
-    // Base position sigmas from variance or config
-    Eigen::Vector3d pos_sigmas;
-    if (it->variance.norm() > 1e-6) {
-      // Use sqrt of variance (std dev), with Z axis scaled up (GPS altitude is less accurate)
-      pos_sigmas << std::sqrt(it->variance[0]), std::sqrt(it->variance[1]), std::sqrt(it->variance[2]) * 2.0;
-    } else {
-      // Fallback to config parameter
-      pos_sigmas << params->gps_noise_std, params->gps_noise_std, params->gps_noise_std * 2.0;
+    // ---- ENU→World calibration (one-time, velocity-based) -------------------------
+    // GLIM world = FLU (X=Forward, Y=Left, Z=Up).
+    // GNSSPreprocessor output = ENU (X=East, Y=North, Z=Up).
+    // Doppler velocity in ENU gives the vehicle heading in ENU frame.
+    // Once heading is known, R_world_enu = Rz(-enu_yaw) and t_world_enu is anchored
+    // to the current odometry pose so ENU and world are consistent.
+    // Skip this GNSS measurement if calibration not yet done.
+    const double speed_xy = it->velocity.head<2>().norm();
+    if (!enu_calibrated_) {
+      if (speed_xy < 1.5) {
+        it = gnss_buffer.erase(it);
+        continue;
+      }
+      // vel_enu = [East, North, Up]  →  heading CCW from East
+      enu_yaw_world_x_ = std::atan2(it->velocity.y(), it->velocity.x());
+      const Eigen::Matrix3d R_world_enu =
+        Eigen::AngleAxisd(-enu_yaw_world_x_, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+      // Correct t_world_enu_ so the first GPSFactor has exactly zero residual:
+      //   p_base_world = R_world_enu * antenna_enu + t_world_enu_ - R_world_base * t_base_gnss
+      //   Set p_base_world = T_at_gnss.translation():
+      //   → t_world_enu_ = T_at_gnss.translation() + R_world_base * t_base_gnss - R_world_enu * antenna_enu
+      t_world_enu_ = T_at_gnss.translation() + T_at_gnss.linear() * t_base_gnss - R_world_enu * it->position;
+      enu_calibrated_ = true;
+      logger->info(
+        "ENU→World calibrated from velocity: heading_enu={:.1f}° t_world_enu=[{:.3f},{:.3f},{:.3f}]",
+        enu_yaw_world_x_ * 180.0 / M_PI, t_world_enu_.x(), t_world_enu_.y(), t_world_enu_.z());
     }
 
-    // If RTK is lost, inflate position covariance to make the factor almost ignorable
+    // Transform GNSS antenna position from ENU to world frame
+    const Eigen::Matrix3d R_world_enu =
+      Eigen::AngleAxisd(-enu_yaw_world_x_, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+    const Eigen::Vector3d p_antenna_world = R_world_enu * it->position + t_world_enu_;
+
+    // Lever-arm correction: p_base_world = p_antenna_world - R_world_base * t_base_gnss
+    const Eigen::Vector3d p_base_at_gnss = p_antenna_world - T_at_gnss.linear() * t_base_gnss;
+    const Eigen::Vector3d p_base_at_current =
+      p_base_at_gnss + (T_at_current.translation() - T_at_gnss.translation());
+
+    // Noise from GNSS variance
+    Eigen::Vector3d pos_sigmas;
+    if (it->variance.norm() > 1e-6) {
+      pos_sigmas << std::sqrt(it->variance[0]), std::sqrt(it->variance[1]), std::sqrt(it->variance[2]) * 2.0;
+    } else {
+      pos_sigmas << params->gps_noise_std, params->gps_noise_std, params->gps_noise_std * 2.0;
+    }
     if (!it->is_rtk_fixed) {
       pos_sigmas *= params->rtk_loss_position_scale;
       logger->debug("GNSS RTK lost: inflating position sigma by {}x", params->rtk_loss_position_scale);
     }
-
-    // Clamp to reasonable range
+    pos_sigmas[2] = std::max(pos_sigmas[2], params->gps_z_sigma_min);
     pos_sigmas = pos_sigmas.cwiseMax(0.01).cwiseMin(1000.0);
-
     auto gps_noise = gtsam::noiseModel::Diagonal::Sigmas(pos_sigmas);
 
-    // The GPS measurement position (already in base frame from NavSatTransform)
-    const Eigen::Vector3d gnss_pos_base = it->position;
+    factors.emplace_shared<gtsam::GPSFactor>(X(current), p_base_at_current, gps_noise);
 
-    // Add GPSFactor: constrains gnss_key translation to measured position
-    factors.emplace_shared<gtsam::GPSFactor>(gnss_key, gnss_pos_base, gps_noise);
+    logger->debug("GPSFactor on X({}): p_base_world=[{:.3f},{:.3f},{:.3f}] rtk={}",
+                  current, p_base_at_current.x(), p_base_at_current.y(), p_base_at_current.z(),
+                  it->is_rtk_fixed);
 
-    // === VELOCITY FACTOR — DISABLED (experiments showed no benefit) ===
-    // Tested with σ=0.5 (no effect) and σ=0.1 (made things worse).
-    // Even with correct frame rotation, velocity factor doesn't effectively
-    // correct heading because V(i) ↔ X(i) coupling through IMUFactor is weak.
-    // Replaced by explicit yaw factor below (Experiment 3B).
-    /*
-    if (it->velocity.norm() > 1e-6) {
-      double vel_sigma = params->gps_velocity_noise_std;
-      if (!it->is_rtk_fixed) {
-        vel_sigma *= 2.0;
-      }
-      auto vel_noise = gtsam::noiseModel::Isotropic::Sigma(3, vel_sigma);
-      gtsam::Vector3_ v_last_expr(V(last));
-      gtsam::Vector3_ v_curr_expr(V(current));
-      gtsam::Vector3_ v_interp_expr = (1.0 - tau) * v_last_expr + tau * v_curr_expr;
-      factors.addExpressionFactor(vel_noise, it->velocity, v_interp_expr);
-    }
-    */
+    Callbacks::on_gnss_factor_created(gnss_id++, current, p_base_at_current);
 
-    // === YAW FACTOR FROM GNSS DOPPLER HEADING (EXPERIMENT 3B) ===
-    // When vehicle speed > 3 m/s, heading = atan2(vel_y, vel_x) is accurate to ~1-2°
-    // This directly constrains the yaw of the interpolated pose, providing
-    // explicit heading correction that the velocity factor couldn't achieve.
-    double speed_xy = std::sqrt(it->velocity.x() * it->velocity.x() +
-                                it->velocity.y() * it->velocity.y());
-    if (speed_xy > 3.0) {
-      double gnss_yaw = std::atan2(it->velocity.y(), it->velocity.x());
-
-      // Create a Rot3 from the GNSS-derived yaw (roll=0, pitch=0)
-      gtsam::Rot3 gnss_rotation = gtsam::Rot3::Rz(gnss_yaw);
-
-      // Yaw noise: ~2° at high speed, ~5° at lower speed
-      double yaw_sigma_deg = (speed_xy > 5.0) ? 2.0 : 5.0;
-      double yaw_sigma_rad = yaw_sigma_deg * M_PI / 180.0;
-      auto yaw_noise = gtsam::noiseModel::Isotropic::Sigma(3, yaw_sigma_rad);
-
-      // Extract rotation from interpolated pose using expression
-      gtsam::Pose3_ interp_pose_expr(gnss_key);
-      gtsam::Rot3_ interp_rot_expr = gtsam::rotation(interp_pose_expr);
-
-      // Add prior on rotation: constrains the interpolated pose's orientation
-      // to match the GNSS-derived heading
-      factors.addExpressionFactor(yaw_noise, gnss_rotation, interp_rot_expr);
-
-      logger->debug("GNSS yaw factor: yaw={:.1f}°, speed={:.1f}m/s, sigma={:.1f}°",
-                     gnss_yaw * 180.0 / M_PI, speed_xy, yaw_sigma_deg);
-    }
-
-    // Notify viewer about the new GNSS factor for visualization
-    Callbacks::on_gnss_factor_created(gnss_id - 1, T_world_base_gnss.translation(), it->position);
-
-    // Store GNSS data in current frame for backend propagation (SubMapping/GlobalMapping)
-    // We store the last processed GNSS (closest to current frame timestamp)
-    auto gnss_data = std::make_shared<GNSSData>(it->stamp, it->position, it->velocity, it->variance, it->is_rtk_fixed);
+    // Store world-frame base position in frame for SubMapping/GlobalMapping propagation
+    // p_base_at_current is already in world frame (ENU→world transform + lever arm applied)
+    auto gnss_data = std::make_shared<GNSSData>(it->stamp, p_base_at_current, it->velocity, it->variance, it->is_rtk_fixed);
     frames[current]->custom_data["gnss"] = gnss_data;
 
     it = gnss_buffer.erase(it);
@@ -392,12 +377,17 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   const gtsam::NavState last_nav_world_base(last_T_world_base, last_v_world_imu);
 
   // IMU integration between LiDAR scans (inter-scan)
-  int num_imu_integrated = 0;
-  const int imu_read_cursor = imu_integration->integrate_imu(last_stamp, raw_frame->stamp, last_imu_bias, &num_imu_integrated);
+  // NavState overload fills imu_measurements (for ImuFactor) AND records the full
+  // IMU trajectory in [t_last, t_current] — used by create_gnss_factor() below.
+  std::vector<double> gnss_pred_times;
+  std::vector<Eigen::Isometry3d> gnss_pred_poses;
+  const int imu_read_cursor = imu_integration->integrate_imu(last_stamp, raw_frame->stamp, last_nav_world_base, last_imu_bias, gnss_pred_times, gnss_pred_poses);
+  // pred_times layout: [t_last, imu_0, imu_1, ..., t_current] → N IMU steps = size - 2
+  const int num_imu_integrated = std::max(0, (int)gnss_pred_times.size() - 2);
   imu_integration->erase_imu_data(imu_read_cursor);
   logger->trace("num_imu_integrated={}", num_imu_integrated);
 
-  // IMU state prediction
+  // IMU state prediction (imu_measurements already filled by integrate_imu above)
   const gtsam::NavState predicted_nav_world_base = imu_integration->integrated_measurements().predict(last_nav_world_base, last_imu_bias);
   gtsam::Pose3 predicted_T_world_base = predicted_nav_world_base.pose();
   gtsam::Vector3 predicted_v_world_base = predicted_nav_world_base.velocity();
@@ -491,7 +481,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   new_factors.add(create_factors(current, imu_factor, new_values));
 
   // GNSS factors
-  auto gnss_factors = create_gnss_factor(current, new_values, new_stamps);
+  auto gnss_factors = create_gnss_factor(current, new_values, gnss_pred_times, gnss_pred_poses);
   if (gnss_factors.size()) {
     new_factors.add(gnss_factors);
   }

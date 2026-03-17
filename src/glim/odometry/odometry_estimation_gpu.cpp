@@ -193,7 +193,7 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int curr
     double span = frames[current]->stamp - keyframe->stamp;
     if (span > params->smoother_lag - 0.1 || !frames[keyframe->id]) {
       // Create unary factor
-      const gtsam::Pose3 key_T_world_base(keyframe->T_world_imu.matrix());
+      const gtsam::Pose3 key_T_world_base(keyframe->T_world_base.matrix());
       create_unary_factor(factors, key_T_world_base, X(current), keyframe, frames[current]);
     } else {
       // Create binary factor

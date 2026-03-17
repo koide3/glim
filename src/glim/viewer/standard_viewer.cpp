@@ -170,18 +170,16 @@ void StandardViewer::set_callbacks() {
     });
   });
 
-  // GNSS factor created callback - stores RTK measurement position for visualization
-  OdometryEstimationCallbacks::on_gnss_factor_created.add([this](const int gnss_id, const Eigen::Vector3d& gnss_node_pos, const Eigen::Vector3d& rtk_measurement) {
-    invoke([this, gnss_id, gnss_node_pos, rtk_measurement] {
-      // Store RTK measurement position for later visualization
+  // GNSS factor created: store which X frame the GPSFactor is on + the target position
+  OdometryEstimationCallbacks::on_gnss_factor_created.add([this](const int gnss_id, const int x_frame_idx, const Eigen::Vector3d& rtk_measurement) {
+    invoke([this, gnss_id, x_frame_idx, rtk_measurement] {
+      gnss_x_frame_idx[gnss_id] = x_frame_idx;
       rtk_measurements[gnss_id] = rtk_measurement.cast<float>();
 
-      auto viewer = guik::LightViewer::instance();
-
-      // Draw sphere at RTK measurement position (cyan color for raw RTK)
+      // Cyan sphere at the GNSS target position (fixed measurement, world frame)
       Eigen::Isometry3f rtk_pose = Eigen::Isometry3f::Identity();
       rtk_pose.translation() = rtk_measurement.cast<float>();
-      viewer->update_drawable(
+      guik::LightViewer::instance()->update_drawable(
         "rtk_meas_" + std::to_string(gnss_id),
         glk::Primitives::sphere(),
         guik::FlatColor(0.0f, 1.0f, 1.0f, 0.7f, rtk_pose * Eigen::UniformScaling<float>(0.15f)));
@@ -296,6 +294,28 @@ void StandardViewer::set_callbacks() {
           drawable.first->add<Eigen::Matrix4f>("model_matrix", pose.matrix());
         }
       }
+
+      // Redraw GNSS residual lines using updated optimized poses
+      std::vector<Eigen::Vector3f> gnss_rtk_line_vertices;
+      std::vector<Eigen::Vector4f> gnss_rtk_line_colors;
+      for (const auto& [gid, x_idx] : gnss_x_frame_idx) {
+        const auto found_x = odometry_poses.find((uint64_t)x_idx);
+        const auto found_rtk = rtk_measurements.find(gid);
+        if (found_x == odometry_poses.end() || found_rtk == rtk_measurements.end()) {
+          continue;
+        }
+        viewer->update_drawable(
+          "gnss_opt_sphere_" + std::to_string(gid),
+          glk::Primitives::sphere(),
+          guik::FlatColor(1.0f, 0.5f, 0.0f, 0.8f, found_x->second * Eigen::UniformScaling<float>(0.12f)));
+        gnss_rtk_line_vertices.push_back(found_x->second.translation());
+        gnss_rtk_line_vertices.push_back(found_rtk->second);
+        gnss_rtk_line_colors.push_back(Eigen::Vector4f(1.0f, 0.5f, 0.0f, 0.8f));
+        gnss_rtk_line_colors.push_back(Eigen::Vector4f(0.0f, 1.0f, 1.0f, 0.8f));
+      }
+      if (!gnss_rtk_line_vertices.empty()) {
+        viewer->update_drawable("gnss_rtk_connections", std::make_shared<glk::ThinLines>(gnss_rtk_line_vertices, gnss_rtk_line_colors), guik::VertexColor().set_alpha(0.8f));
+      }
     });
   });
 
@@ -327,22 +347,7 @@ void StandardViewer::set_callbacks() {
                                                         gtsam::NonlinearFactorGraph& new_factors,
                                                         gtsam::Values& new_values,
                                                         std::map<std::uint64_t, double>& new_stamps) {
-    // Process new values for visualization
-    std::vector<int> update_gnss_ids;
-    for (const auto& [key, value] : new_values) {
-      const gtsam::Symbol symbol(key);
-
-      if (symbol.chr() == 'g') {
-        const auto gnss_pose = value.cast<gtsam::Pose3>();
-        gnss_poses[symbol.index()] = gnss_pose.matrix().cast<float>();
-        update_gnss_ids.push_back(symbol.index());
-        
-        // Store odom-frame pose for later re-transform when global optimization updates
-        GNSSNodeInfo info;
-        info.T_odom_gnss = gnss_pose.matrix().cast<float>();
-        gnss_node_info[symbol.index()] = info;
-      }
-    }
+    // (G(i) virtual GNSS nodes removed — GPSFactor attaches directly to X(i))
 
     // Process new factors for visualization
     std::vector<std::pair<std::weak_ptr<gtsam::NonlinearFactor>, FactorLineGetter>> new_factor_lines;
@@ -427,28 +432,11 @@ void StandardViewer::set_callbacks() {
         const gtsam::Symbol symbol1(factor->keys()[1]);  // X_current
         const gtsam::Symbol symbol2(factor->keys()[2]);  // G_gnss
 
-        if (symbol0.chr() == 'x' && symbol1.chr() == 'x' && symbol2.chr() == 'g') {
-          const int idx0 = symbol0.index();
-          const int idx1 = symbol1.index();
-          const int idx2 = symbol2.index();
-
-          const auto l = [this, idx0, idx1, idx2](const gtsam::NonlinearFactor*) -> std::optional<FactorLine> {
-            const auto found0 = odometry_poses.find(idx0);
-            const auto found1 = odometry_poses.find(idx1);
-            const auto found_gnss = gnss_poses.find(idx2);
-
-            if (found0 == odometry_poses.end() || found1 == odometry_poses.end() || found_gnss == gnss_poses.end()) return std::nullopt;
-
-            Eigen::Vector3f mid_x = (found0->second.translation() + found1->second.translation()) / 2.0f;
-            return std::make_tuple(mid_x, found_gnss->second.translation(), Eigen::Vector4f(0.0f, 1.0f, 0.0f, factors_alpha), Eigen::Vector4f(1.0f, 0.0f, 0.0f, factors_alpha));
-          };
-
-          new_factor_lines.emplace_back(factor, l);
-        }
+        // (G(i) interpolation factors removed — GPSFactor on X(i) directly)
       }
     }
 
-    invoke([this, new_factor_lines, update_gnss_ids] {
+    invoke([this, new_factor_lines] {
       auto remove_loc = std::remove_if(odometry_factor_lines.begin(), odometry_factor_lines.end(), [](const auto& factor) { return factor.first.expired(); });
       odometry_factor_lines.erase(remove_loc, odometry_factor_lines.end());
       odometry_factor_lines.insert(odometry_factor_lines.end(), new_factor_lines.begin(), new_factor_lines.end());
@@ -478,33 +466,29 @@ void StandardViewer::set_callbacks() {
 
       auto viewer = guik::viewer();
 
-      // Draw GNSS nodes and connections to RTK measurements
+      // Draw GNSS residual lines: X(i) optimized position → RTK target (cyan sphere)
+      // Both endpoints update as the smoother optimizes X poses.
       std::vector<Eigen::Vector3f> gnss_rtk_line_vertices;
       std::vector<Eigen::Vector4f> gnss_rtk_line_colors;
 
-      for (int gnss_id : update_gnss_ids) {
-        if (gnss_poses.count(gnss_id)) {
-          // Draw cube for optimized GNSS node position (larger size: 0.3)
-
-          // const auto pos = gnss_poses[gnss_id].translation();
-          // logger->info("Optimized GNSS node {} position: [{:.3f}, {:.3f}, {:.3f}]", gnss_id, pos.x(), pos.y(), pos.z());
-
-          viewer->update_drawable(
-            "opt_gnss_" + std::to_string(gnss_id),
-            glk::Primitives::cube(),
-            guik::FlatColor(1.0f, 0.3f, 0.0f, 0.9f, gnss_poses[gnss_id] * Eigen::UniformScaling<float>(0.3f)));
-
-          // Draw line from optimized G node to RTK measurement if available
-          if (rtk_measurements.count(gnss_id)) {
-            gnss_rtk_line_vertices.push_back(gnss_poses[gnss_id].translation());
-            gnss_rtk_line_vertices.push_back(rtk_measurements[gnss_id]);
-            gnss_rtk_line_colors.push_back(Eigen::Vector4f(1.0f, 0.5f, 0.0f, 0.8f));  // Orange from G node
-            gnss_rtk_line_colors.push_back(Eigen::Vector4f(0.0f, 1.0f, 1.0f, 0.8f));  // Cyan to RTK
-          }
+      for (const auto& [gid, x_idx] : gnss_x_frame_idx) {
+        const auto found_x = odometry_poses.find((uint64_t)x_idx);
+        const auto found_rtk = rtk_measurements.find(gid);
+        if (found_x == odometry_poses.end() || found_rtk == rtk_measurements.end()) {
+          continue;
         }
+        // Orange sphere at optimized X(i) position
+        viewer->update_drawable(
+          "opt_gnss_" + std::to_string(gid),
+          glk::Primitives::sphere(),
+          guik::FlatColor(1.0f, 0.5f, 0.0f, 0.8f, found_x->second * Eigen::UniformScaling<float>(0.12f)));
+        // Line: orange (X optimized) → cyan (GNSS target)
+        gnss_rtk_line_vertices.push_back(found_x->second.translation());
+        gnss_rtk_line_vertices.push_back(found_rtk->second);
+        gnss_rtk_line_colors.push_back(Eigen::Vector4f(1.0f, 0.5f, 0.0f, 0.8f));
+        gnss_rtk_line_colors.push_back(Eigen::Vector4f(0.0f, 1.0f, 1.0f, 0.8f));
       }
 
-      // Draw connecting lines between G nodes and RTK measurements
       if (!gnss_rtk_line_vertices.empty()) {
         viewer->update_drawable("gnss_rtk_connections", std::make_shared<glk::ThinLines>(gnss_rtk_line_vertices, gnss_rtk_line_colors), guik::VertexColor().set_alpha(0.8f));
       }
@@ -723,18 +707,6 @@ void StandardViewer::set_callbacks() {
         const double stamp_endpoint_R = latest_submap->odom_frames.back()->stamp;
         const Eigen::Isometry3d T_world_endpoint_R = submap_poses.back().cast<double>() * latest_submap->T_origin_endpoint_R;
         trajectory->update_anchor(stamp_endpoint_R, T_world_endpoint_R);
-      }
-
-      // Re-transform all GNSS node poses using updated T_world_odom
-      const Eigen::Isometry3f T_world_odom = trajectory->get_T_world_odom().cast<float>();
-      for (auto& [gnss_id, info] : gnss_node_info) {
-        gnss_poses[gnss_id] = T_world_odom * info.T_odom_gnss;
-        
-        // Update GNSS node drawable position
-        viewer->update_drawable(
-          "opt_gnss_" + std::to_string(gnss_id),
-          glk::Primitives::cube(),
-          guik::FlatColor(1.0f, 0.3f, 0.0f, 0.9f, gnss_poses[gnss_id] * Eigen::UniformScaling<float>(0.3f)));
       }
 
       Eigen::Vector2f z = z_range;

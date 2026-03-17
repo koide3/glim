@@ -66,7 +66,7 @@ public:
   double gps_noise_std;            // Standard deviation for GPS position noise (m)
   double gps_velocity_noise_std;   // Standard deviation for GPS velocity noise (m/s)
   double rtk_loss_position_scale;  // Scale factor for position noise when RTK lost
-  double interpolation_noise_std;  // Standard deviation for interpolation constraint
+  double gps_z_sigma_min;          // Minimum Z sigma for GPS altitude constraint (m), prevents over-constraining
 
   // Logging params
   bool save_imu_rate_trajectory;
@@ -93,7 +93,11 @@ public:
 protected:
   virtual void create_frame(EstimationFrame::Ptr& frame) {}
   virtual gtsam::NonlinearFactorGraph create_factors(const int current, const std::shared_ptr<gtsam::ImuFactor>& imu_factor, gtsam::Values& new_values) = 0;
-  virtual gtsam::NonlinearFactorGraph create_gnss_factor(const int current, gtsam::Values& new_values, std::map<std::uint64_t, double>& new_stamp);
+  virtual gtsam::NonlinearFactorGraph create_gnss_factor(
+    const int current,
+    gtsam::Values& new_values,
+    const std::vector<double>& imu_pred_times,
+    const std::vector<Eigen::Isometry3d>& imu_pred_poses);
 
   virtual void fallback_smoother() {}
   virtual void update_frames(const int current, const gtsam::NonlinearFactorGraph& new_factors);
@@ -127,6 +131,17 @@ protected:
   Eigen::Isometry3d T_lidar_imu;
   Eigen::Isometry3d T_imu_lidar;
   Eigen::Vector3d t_base_gnss;
+
+  // ENU→World calibration (FLU world frame vs ENU GNSS frame).
+  // GLIM world = FLU (X=Forward, Y=Left, Z=Up).
+  // GNSS output = ENU (X=East, Y=North, Z=Up).
+  // Calibrated once via velocity matching when speed > 1.5 m/s:
+  //   R_world_enu = Rz(-enu_yaw_world_x_)   [yaw of vehicle heading in ENU]
+  //   t_world_enu_                            [ENU origin in world frame]
+  // Before calibration, GNSS factors are skipped.
+  bool enu_calibrated_{false};
+  double enu_yaw_world_x_{0.0};          // ENU heading of world-X axis (rad, CCW from East)
+  Eigen::Vector3d t_world_enu_{0, 0, 0}; // ENU origin expressed in world frame
 
   // Frames & keyframes
   int marginalized_cursor;

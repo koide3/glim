@@ -84,14 +84,8 @@ private:
 
   int gnss_id{0};
   int inserted_gnss_id{0};
-  std::map<int, Eigen::Isometry3f> gnss_poses;
-  std::map<int, Eigen::Vector3f> rtk_measurements;  // Raw RTK positions for each GNSS node
-
-  // Track GNSS node odom-frame pose for re-transform after global optimization
-  struct GNSSNodeInfo {
-    Eigen::Isometry3f T_odom_gnss;   // Pose in odometry frame (before world transform)
-  };
-  std::map<int, GNSSNodeInfo> gnss_node_info;
+  std::map<int, int> gnss_x_frame_idx;           // gnss_id → odometry frame id (X node)
+  std::map<int, Eigen::Vector3f> rtk_measurements;  // gnss_id → GNSS target pos in world frame
 
   using FactorLine = std::tuple<Eigen::Vector3f, Eigen::Vector3f, Eigen::Vector4f, Eigen::Vector4f>;
   using FactorLineGetter = std::function<std::optional<FactorLine>(const gtsam::NonlinearFactor*)>;

@@ -1,5 +1,6 @@
 #include <glim/viewer/offline_viewer.hpp>
 
+#include <fstream>
 #include <boost/filesystem.hpp>
 #include <gtsam_points/config.hpp>
 #include <gtsam_points/optimizers/linearization_hook.hpp>
@@ -181,7 +182,17 @@ void OfflineViewer::main_menu() {
 std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInterface& progress, const std::string& path, std::shared_ptr<GlobalMapping> global_mapping) {
   progress.set_title("Load map");
   progress.set_text("Now loading");
-  progress.set_maximum(1);
+
+  // Pre-read num_submaps from graph.txt to set progress maximum
+  int num_submaps = 1;
+  {
+    std::ifstream ifs(path + "/graph.txt");
+    if (ifs) {
+      std::string token;
+      ifs >> token >> num_submaps;
+    }
+  }
+  progress.set_maximum(num_submaps);
 
   if (global_mapping == nullptr) {  // if no map is loaded yet initialize new GlobalMapping
     glim::GlobalMappingParams params;
@@ -195,7 +206,7 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
     global_mapping.reset(new glim::GlobalMapping(params));
   }
 
-  if (!global_mapping->load(path)) {
+  if (!global_mapping->load(path, [&progress] { progress.increment(); })) {
     logger->error("failed to load {}", path);
     return nullptr;
   }
