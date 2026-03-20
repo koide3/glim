@@ -143,7 +143,7 @@ void GlobalMapping::insert_submap(const SubMap::Ptr& submap) {
 
     const Eigen::Isometry3d T_origin0_endpointR0 = submaps[last]->T_origin_endpoint_R;
     const Eigen::Isometry3d T_origin1_endpointL1 = submaps[current]->T_origin_endpoint_L;
-    const Eigen::Isometry3d T_endpointR0_endpointL1 = submaps[last]->odom_frames.back()->T_world_sensor().inverse() * submaps[current]->odom_frames.front()->T_world_sensor();
+    const Eigen::Isometry3d T_endpointR0_endpointL1 = submaps[last]->frames.back()->T_world_sensor().inverse() * submaps[current]->frames.front()->T_world_sensor();
     const Eigen::Isometry3d T_origin0_origin1 = T_origin0_endpointR0 * T_endpointR0_endpointL1 * T_origin1_endpointL1.inverse();
 
     current_T_world_submap = last_T_world_submap * gtsam::Pose3(T_origin0_origin1.matrix());
