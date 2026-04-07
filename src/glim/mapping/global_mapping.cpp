@@ -969,7 +969,7 @@ std::pair<gtsam::NonlinearFactorGraph, gtsam::Values> GlobalMapping::recover_gra
     if (connectivity_map[X(i)].count(X(i + 1)) == 0 && i != submaps.size() - 1) {
       logger->warn("X{} -> X{} is missing", i, i + 1);
 
-      const Eigen::Isometry3d delta = submaps[i]->origin_odom_frame()->T_world_sensor().inverse() * submaps[i + 1]->origin_odom_frame()->T_world_sensor();
+      const Eigen::Isometry3d delta = submaps[i]->origin_frame()->T_world_sensor().inverse() * submaps[i + 1]->origin_frame()->T_world_sensor();
       new_factors.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(X(i), X(i + 1), gtsam::Pose3(delta.matrix()), prior_noise6);
     }
 
