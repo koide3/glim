@@ -35,6 +35,11 @@ CloudPreprocessorParams::CloudPreprocessorParams() {
   outlier_removal_k = config.param<int>("preprocess", "outlier_removal_k", 10);
   outlier_std_mul_factor = config.param<double>("preprocess", "outlier_std_mul_factor", 2.0);
 
+  if (config.has_param("preprocess", "enable_cropbox_filter") && config.param<bool>("preprocess", "enable_cropbox_filter", false)) {
+    spdlog::warn("The cropbox filter parameters in config_preprocess.json are deprecated. This will be removed in future versions.");
+    spdlog::warn("Please use bbox_filter_module in glim_ext for cropbox filtering.");
+  }
+
   enable_cropbox_filter = config.param<bool>("preprocess", "enable_cropbox_filter", false);
   crop_bbox_frame = "lidar";
   crop_bbox_min.setZero();
