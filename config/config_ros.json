@@ -11,6 +11,7 @@
   // --- IMU config ---
   // imu_time_offset        : Time offset for IMU data (in seconds)
   // acc_scale              : Accelerometer scale factor (Set to 9.80665 for Livox sensors)
+  // ang_scale              : Gyroscope scale factor (Set to 0.017453 [pi/180] for Hesai sensors)
   //
   // --- TF config ---
   // GLIM publishes TF subtrees "map -> odom -> base_frame" and "imu -> lidar".
@@ -53,6 +54,7 @@
     "imu_time_offset": 0.0,
     "points_time_offset": 0.0,
     "acc_scale": 0.0, // Auto-detect if zero
+    "ang_scale": 1.0,
     // TF config
     "imu_frame_id": "", // Auto-detect if blank
     "lidar_frame_id": "", // Auto-detect if blank
