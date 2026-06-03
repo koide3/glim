@@ -37,6 +37,9 @@ If you find this package useful for your project, please consider leaving a comm
 - **恶劣环境**: 20cm 水深，湿滑/弱光/狭长通道等工况下的稳定通行。
 - **续航要求与数据采集**: ≥5km 连续巡检续航，包括数据采集。
 
+## 项目成员
+
+
 ## Dependencies
 ### Mandatory
 - [Eigen](https://eigen.tuxfamily.org/index.php)
