@@ -28,7 +28,7 @@ If you find this package useful for your project, please consider leaving a comm
 - 2026/01/24 : v1.2.0 released. Added Support for both **GTSAM 4.2a9** and **GTSAM 4.3a0**, and **CUDA 13.1**. Added intensity visualization support.
 - 2025/06/15 : The base GTSAM version has been changed. Make sure you have rebuilt and installed **GTSAM 4.3a0** and **gtsam_points 1.2.0**.
 
-## New Features - 隧道/井下巡检车目标 (揭榜挂帅)
+## 项目目标 - 隧道/井下巡检车 (揭榜挂帅)
 
 - **多传感器融合感知**: 可以完成涵洞巡检工作，包括环境感知。 具体感知目标XXXX。
 - **多传感器融合导航**: 建图完整，途径点位姿误差（相对于先验地图的全局定位误差）≤ 路径长度的 0.5% 且不超过 2 m；具备异常处置（失联保护、自动回收/返航、避障）无盲区。
