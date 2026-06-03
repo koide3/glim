@@ -28,6 +28,11 @@ If you find this package useful for your project, please consider leaving a comm
 - 2026/01/24 : v1.2.0 released. Added Support for both **GTSAM 4.2a9** and **GTSAM 4.3a0**, and **CUDA 13.1**. Added intensity visualization support.
 - 2025/06/15 : The base GTSAM version has been changed. Make sure you have rebuilt and installed **GTSAM 4.3a0** and **gtsam_points 1.2.0**.
 
+- **多传感器融合建图(加分项)**:支持无先验地图自主探索建图。
+- **电气与软件安全**: 急停/限速/防护、数据完整性与抗干扰能力等。
+- **恶劣环境**: 20cm 水深，湿滑/弱光/狭长通道等工况下的稳定通行。
+- **续航要求与数据采集**: ≥5km 连续巡检续航，包括数据采集。
+
 ## Dependencies
 ### Mandatory
 - [Eigen](https://eigen.tuxfamily.org/index.php)
