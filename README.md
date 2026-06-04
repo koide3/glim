@@ -46,7 +46,7 @@ If you find this package useful for your project, please consider leaving a comm
     - 赵瑶池 海南大学，副教授
 - 成员：
     - 李若晴 海南大学，人工智能专业博士在读
-    - 万子元 上海煤科，研究员
+    - 万子元 上海煤科，工程师
     - 薛慧鸿 海南大学，新一代电子信息技术专业研究生在读
     - 陈锋   海南大学，通信工程专业研究生在读
     - 雷增   海南大学，通信工程专业本科在读
