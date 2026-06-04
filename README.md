@@ -30,6 +30,23 @@ If you find this package useful for your project, please consider leaving a comm
 - 2026/01/24 : v1.2.0 released. Added Support for both **GTSAM 4.2a9** and **GTSAM 4.3a0**, and **CUDA 13.1**. Added intensity visualization support.
 - 2025/06/15 : The base GTSAM version has been changed. Make sure you have rebuilt and installed **GTSAM 4.3a0** and **gtsam_points 1.2.0**.
 
+## 项目目标 - 隧道/井下巡检车 (揭榜挂帅)
+
+- **多传感器融合感知**: 完成涵洞巡检的在线环境感知工作。环境感知包括可通行区域、障碍物、地面湿滑/积水与水深判别。
+- **高精度无死角录像与离线缺陷回溯**: 相机覆盖涵洞全内壁（壁/顶/底）并配主动照明保证弱光成像；离线对录像做实例分割缺陷检测，并将缺陷定位到 3D 彩色地图。缺陷包括结构裂缝、渗水/积水、衬砌剥落与变形等结构健康隐患。
+- **多传感器融合导航**: 建图完整无盲区，途径点位姿误差（相对于先验地图的全局定位误差）≤ 路径长度的 0.5% 且不超过 2 m；具备异常处置（失联保护、自动回收/返航、避障）。
+- **多传感器融合建图(加分项)**: 支持无先验地图自主探索建图，输出轨迹、里程计与彩色点云地图。
+- **数据管理与巡检报告**: 采集数据（rosbag/点云/图像视频/检测清单）归档与完整性校验，自动生成含缺陷空间定位与量化指标的巡检报告。
+- **电气与软件安全**: 急停/限速/防护、系统自检/故障降级/安全回收、数据完整性与抗干扰能力。
+- **恶劣环境**: 20cm 水深稳定涉水通行；湿滑/弱光/狭长通道/高湿等工况下稳定通行（底盘防水、防凝露、传感器密封）。
+- **续航与数据采集**: ≥5km 连续巡检续航，全程完成巡检数据采集。
+- **工程化与可靠性(创新/加分)**: 模块化设计、快速部署、低成本高可靠、防护与维护便捷。
+
+## 项目成员
+
+
+## Framework
+
 ## Dependencies
 ### Mandatory
 - [Eigen](https://eigen.tuxfamily.org/index.php)
