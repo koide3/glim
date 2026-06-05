@@ -42,7 +42,66 @@ If you find this package useful for your project, please consider leaving a comm
 > 📐 系统级详细设计（架构、子系统、接口、测试与开发计划）见：[隧道巡检车系统详细设计](docs/隧道巡检/详细设计.md)
 
 ## 数据集
-- [Glim Dataset](https://github.com/meitiever82/glim_dataset)
+- [Dataset](https://github.com/meitiever82/dataset)
+
+数据集采集自隧道/井下巡检场景，使用 **RoboSense Airy** LiDAR（含内置 IMU），以 **ROS2 rosbag2**（`.db3` / `.mcap`）格式录制，主要话题：
+
+| 话题 | 类型 | 说明 |
+|---|---|---|
+| `/rslidar_points` | `sensor_msgs/msg/PointCloud2` | LiDAR 点云（带 `time`/`intensity` 字段） |
+| `/rslidar_imu_data` | `sensor_msgs/msg/Imu` | LiDAR 内置 IMU 数据 |
+
+下载并解压到本地后，通过 `ros2 bag play <bag_dir>` 回放，再配合下文的 launch 启动 GLIM 即可建图。话题名称、TF 帧与传感器外参可在 `config/casbot_mapping` 配置目录中调整。
+
+## 运行环境
+Ubuntu 22.04 (ROS2 Humble) / 24.04 (ROS2 Jazzy)，可选 CUDA 12.2 / 12.6 / 13.1（GPU 里程计与全局优化需要）。
+
+### install dependencies
+GLIM 依赖 GTSAM 4.3a0、gtsam_points (≥1.2.0)、Iridescence（可视化）等，这些**不通过 colcon 构建**，需先从源码编译安装：
+
+```bash
+# 公共依赖
+sudo apt install -y libomp-dev libboost-all-dev libmetis-dev \
+                    libfmt-dev libspdlog-dev \
+                    libglm-dev libglfw3-dev libpng-dev libjpeg-dev
+
+# GTSAM 4.3a0
+git clone https://github.com/borglab/gtsam
+cd gtsam && git checkout 4.3a0 && mkdir build && cd build
+cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_BUILD_TESTS=OFF \
+         -DGTSAM_WITH_TBB=OFF -DGTSAM_USE_SYSTEM_EIGEN=ON \
+         -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF
+make -j$(nproc) && sudo make install && cd ../..
+
+# Iridescence（可视化，可选但强烈推荐）
+git clone https://github.com/koide3/iridescence --recursive
+mkdir iridescence/build && cd iridescence/build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc) && sudo make install && cd ../..
+
+# gtsam_points（GPU 里程计需 -DBUILD_WITH_CUDA=ON）
+git clone https://github.com/koide3/gtsam_points
+mkdir gtsam_points/build && cd gtsam_points/build
+cmake .. -DBUILD_WITH_CUDA=ON
+make -j$(nproc) && sudo make install && cd ../..
+
+sudo ldconfig
+```
+
+> 此外还需安装 ROS2（Humble / Jazzy），以及 RoboSense 驱动所需的 `libpcap-dev`、`libyaml-cpp-dev` 等。详见 [docs/installation.md](docs/installation.md)。
+
+### build & run
+```bash
+cd ~
+mkdir -p mapping_ws/src
+cd mapping_ws/src
+git clone https://github.com/meitiever82/glim_ext.git
+git clone https://github.com/meitiever82/glim.git
+git clone https://github.com/meitiever82/glim_ros2.git
+cd .. && colcon build
+source install/setup.bash
+ros2 launch glim_ros2 glim_robosense_airy.launch.py
+```
 
 ## 项目成员
 - 指导老师：
