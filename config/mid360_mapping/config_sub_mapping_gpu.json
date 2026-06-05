@@ -1,0 +1,56 @@
+{
+  /*** SubMapping ***
+  // --- General settings ---
+  // enable_imu                     : If true, create IMU preintegration factors
+  // enable_optimization            : If false, do not submap optimization (use only odom data)
+  //
+  // --- Keyframe management ---
+  // max_num_keyframes              : Maximum number of keyframes in a submap
+  // keyframe_update_strategy       : "DISPLACEMENT" or "OVERLAP"
+  // keyframe_update_min_points     : If a point cloud has fewer points than this, it is not considered as a keyframe
+  // keyframe_update_interval_*     : Threshold for "DISPLACEMENT" strategy
+  // max_keyframe_overlap           : Threshold for "OVERLAP" strategy
+  //
+  // --- Relative pose factors ---
+  // create_between_factors         : If true, create SE3 relative pose factors between consecutive frames (i.e., odom_factor)
+  // between_registration_type      : Registration factor type for information matrix evaluation of relative pose factors ("NONE" / "GICP")
+  //
+  // --- Registration error factors ---
+  // registration_error_factor_type   : Registration factor type for matching cost minimization (VGICP/VGICP_GPU)
+  // keyframe_randomsampling_rate     : Random sampling rate for registration error factors (1.0 = use all points)
+  // keyframe_voxel_resolution        : Voxel resolution for registration error factors
+  // keyframe_voxelmap_levels         : Multi-resolution voxelmap levels (must be >= 1)
+  // keyframe_voxelmap_scaling_factor : Multi-resolution voxelmap scaling factor
+  //
+  // --- Post processing ---
+  // submap_downsample_resolution   : Resolution of voxel grid downsampling for created submaps
+  // submap_voxel_resolution        : [deprecated] Resolution of VGICP voxels for created submaps (used in global mapping)
+  // submap_target_num_points       : Downsampling target number of points for created submaps (disabled when < 0)
+  */
+  "sub_mapping": {
+    "so_name": "libsub_mapping.so",
+    // General settings
+    "enable_imu": true,
+    "enable_optimization": false,
+    // Keyframe update strategy
+    "max_num_keyframes": 15,
+    "keyframe_update_strategy": "OVERLAP",
+    "keyframe_update_min_points": 500,
+    "keyframe_update_interval_rot": 3.14,
+    "keyframe_update_interval_trans": 1.0,
+    "max_keyframe_overlap": 0.6,
+    // Relative pose factors
+    "create_between_factors": false,
+    "between_registration_type": "GICP",
+    // Registration error factors
+    "registration_error_factor_type": "VGICP_GPU",
+    "keyframe_randomsampling_rate": 1.0,
+    "keyframe_voxel_resolution": 0.25,
+    "keyframe_voxelmap_levels": 2,
+    "keyframe_voxelmap_scaling_factor": 2.0,
+    // Post processing
+    "submap_downsample_resolution": 0.1,
+    "submap_voxel_resolution": 0.5,
+    "submap_target_num_points": 50000
+  }
+}

@@ -1,0 +1,97 @@
+{
+  /*** SubMapping ***
+  ## 5. 子地图配置 config_sub_mapping_cpu.json
+
+  ### 5.1 基础参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `enable_imu` | 启用 IMU | `true` |
+  | `enable_optimization` | 启用优化 | `true` |
+
+  ### 5.2 关键帧策略
+
+  | 参数 | 说明 | 默认值 | 调参建议 |
+  |------|------|--------|----------|
+  | `max_num_keyframes` | 最大关键帧数 | `1500` | 大场景适当增大 |
+  | `keyframe_update_strategy` | 更新策略 | `"OVERLAP"` | - |
+  | `keyframe_update_min_points` | 最小点数 | `500` | - |
+  | `keyframe_update_interval_rot` | 旋转间隔（弧度） | `3.14` | - |
+  | `keyframe_update_interval_trans` | 平移间隔（米） | `1.0` | 快速运动时减小 |
+  | `max_keyframe_overlap` | 最大重叠率 | `0.6` | - |
+
+  **更新策略**:
+  - `OVERLAP`: 基于点云重叠度判断，当与上一关键帧重叠率低于阈值时添加新关键帧
+  - `DISTANCE`: 基于距离和角度判断，当移动/旋转超过阈值时添加新关键帧
+  - `max_num_keyframes`: 单个子地图中能够容纳的最大关键帧数量。当关键帧数量达到上限时，会触发子地图合并，生成新的子地图
+  - `keyframe_update_min_points`: 点数少于此值的帧不会被选为关键帧（避免低质量帧）
+
+  ### 5.3 配准因子参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `create_between_factors` | 创建帧间因子 | `true` |
+  | `between_registration_type` | 帧间配准类型 | `"GICP"` |
+  | `registration_error_factor_type` | 误差因子类型 | `"VGICP"` |
+
+  ### 5.4 关键帧体素参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `keyframe_randomsampling_rate` | 随机采样率 | `1.0` |
+  | `keyframe_voxel_resolution` | 体素分辨率 | `0.25` |
+  | `keyframe_voxelmap_levels` | 体素地图层级 | `2` |
+  | `keyframe_voxelmap_scaling_factor` | 缩放因子 | `2.0` |
+  **说明**: 
+  - `keyframe_randomsampling_rate`: 关键帧随机采样率。在创建体素地图前，对关键帧点云进行随机采样。
+  1.0 保留全部点（不采样）
+  0.5 保留50% 的点
+  - `keyframe_voxel_resolution`: VGICP 配准时体素网格的大小。
+  0.25 更精细，配准精度高，计算量大
+  0.5 更粗糙，速度快，精度降低
+  - `keyframe_voxelmap_levels`: 多分辨率体素地图层级数。VGICP 使用多分辨率策略加速配准。
+  1	单层，只用基础分辨率
+  2	双层，粗→细两级配准
+  3	三层，更多层级
+  - `keyframe_voxelmap_scaling_factor`: 层级缩放因子。相邻层级之间分辨率的倍数关系。 当 levels=2, scaling_factor=2.0, resolution=0.25 时：
+  第1层（粗）：0.25 × 2 = 0.5m
+  第2层（细）：0.25m
+
+  ### 5.5 后处理参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `submap_downsample_resolution` | 子地图降采样分辨率 | `0.3` |
+  合并多个关键帧生成子地图时的体素网格大小
+  | `submap_voxel_resolution` | 子地图体素分辨率 | `0.5` |
+  子地图用于配准和存储的体素网格大小
+  | 参数                         |    修改    | 理解        |
+  |------------------------------|-----------|------------|
+  | submap_downsample_resolution | 0.3 → 0.2 | 越小越密集 ✓ |
+  | submap_voxel_resolution      | 0.5 → 0.3 | 越小越密集 ✓ |
+  */
+  "sub_mapping": {
+    "so_name": "libsub_mapping.so",
+    "enable_imu": false,
+    "enable_optimization": true,
+    // Keyframe update strategy
+    "max_num_keyframes": 15,
+    "keyframe_update_strategy": "OVERLAP",
+    "keyframe_update_min_points": 500,
+    "keyframe_update_interval_rot": 3.14,
+    "keyframe_update_interval_trans": 0.5,
+    "max_keyframe_overlap": 0.6,
+    // Relative pose factors
+    "create_between_factors": true,
+    "between_registration_type": "GICP",
+    // Registration error factors
+    "registration_error_factor_type": "VGICP",
+    "keyframe_randomsampling_rate": 1.0,
+    "keyframe_voxel_resolution": 0.15,
+    "keyframe_voxelmap_levels": 2,
+    "keyframe_voxelmap_scaling_factor": 2.0,
+    // Post processing
+    "submap_downsample_resolution": 0.2,
+    "submap_voxel_resolution": 0.3
+  }
+}

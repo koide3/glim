@@ -1,0 +1,26 @@
+{
+  /*** GlobalMapping ***
+  // See config_global_mapping_gpu.json for the full description of the parameters.
+  */
+  "global_mapping": {
+    "so_name": "libglobal_mapping.so",
+    "enable_imu": true,
+    "enable_optimization": true,
+    "init_pose_damping_scale": 1e10,
+    // Relative pose factors
+    "create_between_factors": true,
+    "between_registration_type": "GICP",
+    // Registration error factors
+    "registration_error_factor_type": "VGICP",
+    "randomsampling_rate": 0.2,
+    "submap_voxel_resolution": 0.5,
+    "submap_voxelmap_levels": 1,
+    "submap_voxelmap_scaling_factor": 2.0,
+    "max_implicit_loop_distance": 100.0,
+    "min_implicit_loop_overlap": 0.2,
+    // Optimizer settings
+    "use_isam2_dogleg": false,
+    "isam2_relinearize_skip": 1,
+    "isam2_relinearize_thresh": 0.1
+  }
+}

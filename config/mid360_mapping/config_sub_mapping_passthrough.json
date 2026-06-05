@@ -1,0 +1,33 @@
+{
+  /*** SubMappingPassthrough ***
+  // --- Keyframe management ---
+  // keyframe_update_interval_*   : Displacement-based keyframe insertion threshold 
+  //
+  // --- Submap issue criteria ---
+  // When any of the following criteria is met, a new submap is created. Each criterion can be disabled by setting the value to -1.
+  // max_num_keyframes            : Maximum number of keyframes in a submap
+  // max_num_voxels               : Maximum number of voxels in a submap
+  // adaptive_max_num_voxels      : Maximum number of voxels with respect to the first three keyframes in a submap
+  //
+  // --- Submap creation ---
+  // submap_voxel_resolution      : Resolution of submap voxels for downsampling
+  // min_dist_in_voxel            : Minimum distance between points in a voxel
+  // max_num_points_in_voxel      : Maximum number of points in a voxel
+  // submap_target_num_points     : Final target number of points for a submap (disabled when < 0)
+  */
+  "sub_mapping": {
+    "so_name": "libsub_mapping_passthrough.so",
+    // Keyframe insertion params
+    "keyframe_update_interval_rot": 0.01,
+    "keyframe_update_interval_trans": 0.1,
+    // Submap issue criteria
+    "max_num_keyframes": 50,
+    "max_num_voxels": -1,
+    "adaptive_max_num_voxels": 2.5,
+    // Submap creation params
+    "submap_voxel_resolution": 0.5,
+    "min_dist_in_voxel": 0.2,
+    "max_num_points_in_voxel": 100,
+    "submap_target_num_points": 50000
+  }
+}
