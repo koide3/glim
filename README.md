@@ -13,7 +13,7 @@
     - RGB-D camera (e.g., Microsoft Azure Kinect)
 - ***Extensibility:*** GLIM provides the global callback slot mechanism that allows to access the internal states of the mapping process and insert additional constraints to the factor graph. We also release [glim_ext](https://github.com/koide3/glim_ext) that offers example implementations of several extension functions (e.g., explicit loop detection, LiDAR-Visual-Inertial odometry estimation).
 
-**Related packages:** [gtsam_points](https://github.com/koide3/gtsam_points), [glim](https://github.com/meitiever82/glim_underground), ~~[glim_ros1](https://github.com/koide3/glim_ros1),~~ [glim_ros2](https://github.com/meitiever/glim_ros2), [glim_ext](https://github.com/meitiever82/glim_ext)
+**Related packages:** [gtsam_points](https://github.com/koide3/gtsam_points), [glim](https://github.com/meitiever82/glim_underground), ~~[glim_ros1](https://github.com/koide3/glim_ros1),~~ [glim_ros2](https://github.com/meitiever82/glim_ros2), [glim_ext](https://github.com/meitiever82/glim_ext)
 
 Tested on Ubuntu 22.04 / 24.04 with CUDA 12.2 / 12.6 / 13.1, and NVIDIA Jetson Orin (Jetpack 6.1).
 
