@@ -41,6 +41,9 @@ If you find this package useful for your project, please consider leaving a comm
 
 > 📐 系统级详细设计（架构、子系统、接口、测试与开发计划）见：[隧道巡检车系统详细设计](docs/隧道巡检/详细设计.md)
 
+## 数据集
+- [Glim Dataset](https://github.com/meitiever82/glim_dataset)
+
 ## 项目成员
 - 指导老师：
     - 胡祝华 海南大学，教授
