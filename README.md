@@ -42,7 +42,7 @@ If you find this package useful for your project, please consider leaving a comm
 > 📐 系统级详细设计（架构、子系统、接口、测试与开发计划）见：[隧道巡检车系统详细设计](docs/隧道巡检/详细设计.md)
 
 ## 数据集
-- [Dataset](https://github.com/meitiever82/dataset)
+- [Dataset 说明文档](docs/datasets.md)（百度网盘下载链接、话题与使用方法）
 
 数据集采集自隧道/井下巡检场景，使用 **RoboSense Airy** LiDAR（含内置 IMU），以 **ROS2 rosbag2**（`.db3` / `.mcap`）格式录制，主要话题：
 

@@ -34,7 +34,6 @@
 
 ```
 datasets/
-├── README.md
 └── <bag_name>/
     ├── metadata.yaml
     └── <bag_name>_0.db3        # 或 .mcap
