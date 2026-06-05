@@ -1,0 +1,101 @@
+{
+  /*** Preprocessing parameters ***
+  ## 3. 预处理配置 config_preprocess.json
+  ### 3.1 距离滤波
+
+  | 参数 | 说明 | 默认值 | 调参建议 |
+  |------|------|--------|----------|
+  | `distance_near_thresh` | 最近距离阈值（米） | `0.5` | 过滤车体自身反射点 |
+  | `distance_far_thresh` | 最远距离阈值（米） | `35.0` | 根据场景大小调整 |
+
+  **场景建议**:
+  | 场景 | near_thresh | far_thresh |
+  |------|-------------|------------|
+  | 室内小空间 | 0.3 | 15.0 |
+  | 室内大空间 | 0.5 | 30.0 |
+  | 室外环境 | 0.5 | 50.0+ |
+  **说明**:
+  - near_thresh: 查询雷达手册，设置这个值，可以过滤掉距离过近的点
+  - far_thresh: 查询雷达手册，设置这个值，可以过滤掉距离过远的点
+
+  ### 3.2 降采样参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `use_random_grid_downsampling` | 使用体素随机采样 | `true` |
+  | `downsample_resolution` | 体素网格分辨率（米） | `1.0` |
+  | `random_downsample_target` | 目标点数 | `15000` |
+  | `random_downsample_rate` | 采样率 | `0.1` |
+
+  **说明**: 这几个参数用于点云降采样，减少点云数量以提高处理速度。
+  当前配置效果：target=15000，意味着采样率 = 15000 / 原始点数，最终大约保留 15000 个点。
+  - `use_random_grid_downsampling`: 启用体素随机采样，在体素网格基础上按比例随机选点。
+  - `downsample_resolution`: 体素网格的边长（米）。值越大，降采样越激进。
+  - `random_downsample_target`: 目标点数。当 > 0 时，采样率 = target / 原始点数。
+  - `random_downsample_rate`: 固定采样率。仅当 target <= 0 时生效。
+
+  **调参建议**:
+  | 场景 | downsample_resolution | target |
+  |------|----------------------|--------|
+  | 高精度建图 | 0.5 | 15000 |
+  | 标准建图 | 1.0 | 10000 |
+  | 快速建图 | 1.5 | 5000 |
+
+  ### 3.3 离群点移除
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `enable_outlier_removal` | 启用离群点移除 | `false` |
+  | `outlier_removal_k` | 邻居点数 | `10` |
+  | `outlier_std_mul_factor` | 标准差乘数 | `1.0` |
+
+  **说明**: 统计离群点移除，计算每个点到其 k 近邻的平均距离，移除超过 `mean + std * factor` 的点。
+  - `enable_outlier_removal`: 对于 Robosense Airy 在正常环境下建图，保持 false 即可。如果遇到明显噪声问题再考虑启用。
+  - `outlier_removal_k`: 邻居点数，越大采样范围越广，enable_outlier_removal false 时，无效。
+  - `outlier_std_mul_factor`: 标准差乘数，越小越严格，enable_outlier_removal false 时，无效。
+
+
+  ### 3.4 裁剪框滤波
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `enable_cropbox_filter` | 启用裁剪框 | `false` |
+  | `crop_bbox_frame` | 参考坐标系 | `"lidar"` |
+  | `crop_bbox_min` | 最小边界 | `[-1, -1, -1]` |
+  | `crop_bbox_max` | 最大边界 | `[1, 1, 1]` |
+
+  **用途**: 过滤车体范围内的点云，避免车身反射干扰。
+
+  ### 3.5 其他参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `k_correspondences` | 协方差估计邻居数 | `10` |
+  | `num_threads` | 预处理线程数 | `2` |
+  */
+  "preprocess": {
+    "distance_near_thresh": 0.5,
+    "distance_far_thresh": 35.0,
+    "use_random_grid_downsampling": true,
+    "downsample_resolution": 0.3,
+    "random_downsample_target": 20000,
+    "random_downsample_rate": 0.1,
+    "enable_outlier_removal": true,
+    "outlier_removal_k": 10,
+    "outlier_std_mul_factor": 1.0,
+    "enable_cropbox_filter": true,
+    "crop_bbox_frame": "lidar",
+    "crop_bbox_min": [
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    "crop_bbox_max": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "k_correspondences": 10,
+    "num_threads": 2
+  }
+}

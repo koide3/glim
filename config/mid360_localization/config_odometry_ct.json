@@ -1,0 +1,35 @@
+{
+  /*** CT-ICP-based odometry estimation ***
+  // num_threads                    : Number of threads used for CT-ICP
+  // ivox_resolution                : Target iVox resolution
+  // ivox_min_points_dist           : Minimum distance between points in an iVox cell
+  // ivox_lru_thresh                : LRC cache threshold
+  // max_correspondence_distance    : Maximum distance for ICP correspondence search
+  // location_consistency_inf_scale : Weight for location consistency constraints
+  // constant_velocity_inf_scale    : Weight for constant velocity constraints
+  // lm_max_iterations              : Maximum number of iterations for CT-GICP optimization
+  // smoother_lag                   : Fixed-lag smoothing window [sec]
+  // use_isam2_dogleg               :
+  // isam2_relinearize_skip         :
+  // isam2_relinearize_thresh       :
+  */
+  "odometry_estimation": {
+    "so_name": "libodometry_estimation_ct.so",
+    // ivox params
+    "ivox_resolution": 1.0,
+    "ivox_min_points_dist": 0.1,
+    "ivox_lru_thresh": 200,
+    // CT-GICP params
+    "max_correspondence_distance": 2.0,
+    "location_consistency_inf_scale": 1e-3,
+    "constant_velocity_inf_scale": 1e3,
+    "lm_max_iterations": 8,
+    // smoother params
+    "smoother_lag": 1.0,
+    "use_isam2_dogleg": false,
+    "isam2_relinearize_skip": 1,
+    "isam2_relinearize_thresh": 0.1,
+    // Misc
+    "num_threads": 4
+  }
+}

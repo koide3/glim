@@ -1,0 +1,86 @@
+{
+  /*** ROS-related config ***/
+  // --- Backend modules ---
+  // If both local and global mapping are disabled, odometry estimation runs.
+  // enable_local_mapping   : Enable local mapping module
+  // enable_global_mapping  : Enable global mapping module
+  //
+  // --- Points config ---
+  // keep_raw_points        : Keep raw points in the map (required for only extension modules)
+  //
+  // --- IMU config ---
+  // imu_time_offset        : Time offset for IMU data (in seconds)
+  // acc_scale              : Accelerometer scale factor (Set to 9.80665 for Livox sensors)
+  //
+  // --- TF config ---
+  // GLIM publishes TF subtrees "map -> odom -> base_frame" and "imu -> lidar".
+  // imu_frame_id           : IMU frame ID
+  // lidar_frame_id         : LiDAR frame ID
+  // base_frame_id          : Base frame ID. If blank, IMU frame ID is used.
+  // odom_frame_id          : Odometry frame ID
+  // map_frame_id           : Map frame ID
+  // publish_imu2lidar      : If false, do not publish "imu -> lidar" TF
+  // tf_time_offset         : Time offset for TF data (in seconds)
+  //
+  // --- Extension modules ---
+  // extension_modules      : List of extension modules to load
+  //
+  // --- Topics ---
+  // imu_topic              : IMU topic
+  // points_topic           : Points topic
+  // image_topic            : Image topic (required for only extension modules)
+  //
+  // --- QoS options ---
+  // imu_qos                : QoS options for IMU topic subscription.
+  //   profile              : Builtin QoS profile name. Could be one of the following:
+  //                          default, system_default, sensor_data, services_default, parameters, parameter_events
+  //   depth                : Size of the message queue.
+  //   durability           : Durability QoS policy setting. Could be one of the following:
+  //                          system_default, transient_local, volatile
+  //   reliability          : Reliabiilty QoS policy setting. Could be one of the following:
+  //                          system_default, reliable, best_effort
+  //   history              : History QoS policy setting. Could be one of the following:
+  //                          system_default, keep_last, keep_all
+  // points_qos             : QoS options for points topic subscription. See imu_qos for details.
+  // image_qos              : QoS options for image topic subscription. See imu_qos for details.
+  "glim_ros": {
+    // Backend modules
+    "enable_local_mapping": false,
+    "enable_global_mapping": false, // Disabled due to IMU data timing issues causing ISAM2 failures
+    // Points config
+    "keep_raw_points": false,
+    // IMU config
+    "imu_time_offset": 0.0,
+    "points_time_offset": 0.0,
+    "acc_scale": 1.0,
+    // TF config
+    "imu_frame_id": "imu_link",
+    "lidar_frame_id": "rslidar",
+    "base_frame_id": "base_link",
+    "odom_frame_id": "odom",
+    "map_frame_id": "",  // 置空：禁止 GLIM 发布 map->odom（由 prior_map_localization 发布）
+    "publish_imu2lidar": true,
+    "tf_time_offset": 1e-6,
+    // Extension modules
+    "extension_modules": [
+      "libmemory_monitor.so",
+      "librviz_viewer.so",
+      "libprior_map_localization.so"
+    ],
+    // Topics
+    "imu_topic": "/rslidar_imu_data",
+    "points_topic": "/rslidar_points",
+    "image_topic": "/image",
+    // QoS options
+    "imu_qos": {
+      "profile": "sensor_data",
+      "depth": 1000
+    },
+    "points_qos": {
+      "profile": "sensor_data"
+    },
+    "image_qos": {
+      "profile": "sensor_data"
+    }
+  }
+}

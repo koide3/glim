@@ -1,0 +1,82 @@
+{
+  /*** GlobalMapping ***
+  ## 6. 全局建图配置 config_global_mapping_cpu.json
+
+  ### 6.1 基础参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `enable_imu` | 启用 IMU | `true` |
+  | `enable_optimization` | 启用优化 | `true` |
+  | `init_pose_damping_scale` | 初始位姿阻尼 | `1e10` |
+
+  ### 6.2 配准因子
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `create_between_factors` | 创建帧间因子 | `true` |
+  | `between_registration_type` | 帧间配准类型 | `"GICP"` |
+  | `registration_error_factor_type` | 误差因子类型 | `"VGICP"` |
+
+  ### 6.3 子地图体素参数
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `randomsampling_rate` | 随机采样率 | `0.2` |
+  | `submap_voxel_resolution` | 体素分辨率 | `0.5` |
+  | `submap_voxelmap_levels` | 层级数 | `1` |
+  | `submap_voxelmap_scaling_factor` | 缩放因子 | `2.0` |
+  **说明**: 
+  - `randomsampling_rate`: 子地图随机采样率。在进行子地图间配准前，对子地图点云进行随机采样。
+  - `submap_voxel_resolution`: 子地图体素分辨率（米）。全局建图中 VGICP 配准的体素大小。
+  - `submap_voxelmap_levels`: 多分辨率层级数。
+  - `submap_voxelmap_scaling_factor`: 层级缩放因子。当 levels > 1 时，相邻层级的分辨率倍数。
+
+  ### 6.4 隐式回环检测
+
+  | 参数 | 说明 | 默认值 | 调参建议 |
+  |------|------|--------|----------|
+  | `max_implicit_loop_distance` | 最大回环距离（米） | `100.0` | 大场景适当增大 |
+  | `min_implicit_loop_overlap` | 最小重叠率 | `0.2` | 值越小，越容易检测回环 |
+  **说明**: 
+  - `max_implicit_loop_distance`: 搜索范围缩小到 50 米，减少计算量。
+  - `min_implicit_loop_overlap`: 要求 30% 重叠，回环检测更严格，减少误匹配。
+
+  ### 6.5 ISAM2 优化器
+
+  | 参数 | 说明 | 默认值 |
+  |------|------|--------|
+  | `use_isam2_dogleg` | 使用 Dogleg | `false` |
+  | `isam2_relinearize_skip` | 跳过帧数 | `1` |
+  | `isam2_relinearize_thresh` | 阈值 | `0.1` |
+  **说明**: 
+  - `use_isam2_dogleg`: 搜索范围缩小到 50 米，减少计算量。
+  - `isam2_relinearize_skip`: 要求 30% 重叠，回环检测更严格，减少误匹配。
+  - `isam2_relinearize_thresh`: 阈值 | `0.1` |
+  ISAM2 通过增量式更新来避免每次都从头优化整个图：
+  - 新因子加入时，只更新受影响的部分
+  - 重线性化：当线性化点偏离太多时，需要重新线性化
+  - skip 和 thresh 控制何时触发重线性化，平衡精度和速度
+  */
+  "global_mapping": {
+    "so_name": "libglobal_mapping.so",
+    "enable_imu": true,
+    "enable_optimization": true,
+    "init_pose_damping_scale": 1e10,
+    // Relative pose factors
+    "create_between_factors": true,
+    "between_registration_type": "GICP",
+    // Registration error factors
+    "registration_error_factor_type": "VGICP",
+    "randomsampling_rate": 0.2,
+    "submap_voxel_resolution": 0.5,
+    "submap_voxelmap_levels": 1,
+    "submap_voxelmap_scaling_factor": 2.0,
+    "max_implicit_loop_distance": 50.0,
+    "min_implicit_loop_overlap": 0.3,
+    // Optimizer settings
+    "use_isam2_dogleg": false,
+    "isam2_relinearize_skip": 1,
+    "isam2_relinearize_thresh": 0.1
+  }
+}
