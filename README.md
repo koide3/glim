@@ -58,9 +58,11 @@ If you find this package useful for your project, please consider leaving a comm
 ![定位模块图](docs/assets/定位模块图.png "定位模块图")
 
 ## Hardware
+宇树G2
 ![宇树g2](docs/assets/宇树g2.png "宇树g2")
+
+PTS-100
 ![pts_100产品图](docs/assets/pts_100产品图.png "pts_100产品图")
-宇树g2 pts-100
 
 ## Dependencies
 ### Mandatory
