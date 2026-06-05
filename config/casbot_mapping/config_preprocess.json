@@ -75,9 +75,9 @@
   */
   "preprocess": {
     "distance_near_thresh": 0.5,
-    "distance_far_thresh": 35.0,
-    "use_random_grid_downsampling": true,
-    "downsample_resolution": 0.3,
+    "distance_far_thresh": 30.0,
+    "use_random_grid_downsampling": false,
+    "downsample_resolution": 0.08,
     "random_downsample_target": 20000,
     "random_downsample_rate": 0.1,
     "enable_outlier_removal": true,
@@ -85,17 +85,9 @@
     "outlier_std_mul_factor": 1.0,
     "enable_cropbox_filter": true,
     "crop_bbox_frame": "lidar",
-    "crop_bbox_min": [
-      -1.0,
-      -1.0,
-      -1.0
-    ],
-    "crop_bbox_max": [
-      1.0,
-      1.0,
-      1.0
-    ],
-    "k_correspondences": 10,
+    "crop_bbox_min": [-1.0, -1.0, -1.0],
+    "crop_bbox_max": [1.0, 1.0, 1.0],
+    "k_correspondences": 15,
     "num_threads": 2
   }
 }

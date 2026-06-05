@@ -36,30 +36,34 @@
   // num_threads                  : Number of threads for odometry estimation
   */
   "odometry_estimation": {
-    "so_name": "libodometry_estimation_cpu.so",
+    "so_name": "libodometry_estimation_gpu.so",
     // Initialization params
     "initialization_mode": "LOOSE",
     "initialization_window_size": 3.0,
     "init_pose_damping_scale": 1e10,
-    // Optimizer params
-    "smoother_lag": 10.0,
+    // Optimization params
+    "smoother_lag": 5.0,
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
     "fix_imu_bias": false,
-    // Registration settings
-    "registration_type": "VGICP",
-    "max_iterations": 15,
-    "lru_thresh": 100,
-    "target_downsampling_rate": 0.7,
-    // GICP + iVox params
-    "ivox_resolution": 0.5,
-    "ivox_min_dist": 0.1,
-    // VGICP params
-    "vgicp_resolution": 0.25,
-    "vgicp_voxelmap_levels": 3,
-    "vgicp_voxelmap_scaling_factor": 2.0,
-    // Optimizer params
+    // Voxel params
+    "voxel_resolution": 0.25,
+    "voxel_resolution_max": 0.5,
+    "voxel_resolution_dmin": 5.0,
+    "voxel_resolution_dmax": 20.0,
+    "voxelmap_levels": 2,
+    "voxelmap_scaling_factor": 2.0,
+    "full_connection_window_size": 2,
+    // Keyframe params
+    "keyframe_update_strategy": "OVERLAP",
+    "max_num_keyframes": 15,
+    "keyframe_min_overlap": 0.01,
+    "keyframe_max_overlap": 0.7,
+    "keyframe_delta_trans": 2.0,
+    "keyframe_delta_rot": 0.5,
+    "keyframe_entropy_thresh": 0.99,
+    // MISC
     "save_imu_rate_trajectory": true,
     "num_threads": 2
   }

@@ -1,0 +1,51 @@
+{
+  /*** GlobalMapping ***
+  // --- General settings ---
+  // enable_imu                     : If true, create IMU preintegration factors
+  // enable_optimization            : If false, do not submap optimization (use only odom data)
+  // init_pose_damping_scale        : Damping scale for initial pose (to fix the gauge freedom)
+  //
+  // --- Relative pose factors ---
+  // create_between_factors         : If true, create relative pose factors between consecutive frames (i.e., odom_factor)
+  // between_registration_type      : Registration factor type for information matrix evaluation of relative pose factors ("NONE" / "GICP")
+  //
+  // --- Registration error factors ---
+  // registration_error_factor_type : Registration factor type for matching cost minimization ("VGICP" or "VGICP_GPU")
+  // randomsampling_rate            : Random sampling rate for registration error factors (1.0 = use all points)
+  // submap_voxel_resolution        : Base voxel resolution of submaps
+  // submp_voxelmap_levels          : Multi-resolution voxelmap levels (must be >= 1)
+  // submap_voxelmap_scaling_factor : Multi-resolution voxelmap scaling factor
+  // max_implicit_loop_distance     : Maximum distance between submaps for factor creation
+  // min_implicit_loop_overlap      : Overlap threshold for factor creation (smaller = more factors)
+  //
+  // --- Optimizer settings (see https://gtsam.org/doxygen/4.0.0/a03679.html) ---
+  // use_isam2_dogleg               : If true, use dogleg optimizer (robust but slow)
+  // isam2_relinearize_skip         : Relinearization is performed every $isam2_relinearize_skip optimization calls
+  // isam2_relinearize_thresh       : Relinearization is performed only when linear delta gets larger than this
+  */
+  "global_mapping": {
+    "so_name": "libglobal_mapping.so",
+    // General settings
+    "enable_imu": true,
+    "enable_optimization": true,
+    "init_pose_damping_scale": 1e10,
+    // Relative pose factors
+    "create_between_factors": false,
+    "between_registration_type": "GICP",
+    // Registration error factors
+    "registration_error_factor_type": "VGICP_GPU",
+    "randomsampling_rate": 1.0,
+    "submap_voxel_resolution": 0.5,
+    "submap_voxel_resolution_max": 1.0,
+    "submap_voxel_resolution_dmin": 5.0,
+    "submap_voxel_resolution_dmax": 20.0,
+    "submap_voxelmap_levels": 2,
+    "submap_voxelmap_scaling_factor": 2.0,
+    "max_implicit_loop_distance": 100.0,
+    "min_implicit_loop_overlap": 0.2,
+    // Optimizer settings
+    "use_isam2_dogleg": false,
+    "isam2_relinearize_skip": 1,
+    "isam2_relinearize_thresh": 0.1
+  }
+}

@@ -18,7 +18,8 @@
     "point_size_metric": false,
     "point_size": 0.025,
     "points_alpha": 0.5,
-    "factors_alpha": 0.5
+    "factors_alpha": 0.5,
+    "font_scale": 2.0
   },
   "interactive_viewer": {
     "viewer_width": 2560,
