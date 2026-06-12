@@ -368,7 +368,13 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     for (int i = 0; i < frame->size(); i++) {
       frame->points[i] = odom_frame->T_lidar_imu.inverse() * frame->points[i];
     }
-    frame->add_covs(covariance_estimation->estimate(frame->points_storage, odom_frame->raw_frame->neighbors));
+
+    std::vector<Eigen::Vector4d> normals;
+    std::vector<Eigen::Matrix4d> covs;
+    covariance_estimation->estimate(frame->points_storage, odom_frame->raw_frame->neighbors, normals, covs);
+    frame->add_normals(normals);
+    frame->add_covs(covs);
+
     if (!odom_frame->raw_frame->intensities.empty()) {
       frame->add_intensities(odom_frame->raw_frame->intensities);
     }
@@ -487,15 +493,9 @@ SubMap::Ptr SubMapping::create_submap(bool force_create) const {
 #endif
 
   if (submap->frame == nullptr) {
-    submap->frame = gtsam_points::merge_frames_auto(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution);
+    submap->frame = gtsam_points::merge_frames(poses_to_merge, keyframes_to_merge, params.submap_downsample_resolution, params.submap_target_num_points);
   }
   logger->debug("|merged_submap|={}", submap->frame->size());
-
-  if (params.submap_target_num_points > 0 && submap->frame->size() > params.submap_target_num_points) {
-    std::mt19937 mt(submap_count * 643145 + submap->frame->size() * 4312);  // Just a random-like seed
-    submap->frame = gtsam_points::random_sampling(submap->frame, static_cast<double>(params.submap_target_num_points) / submap->frame->size(), mt);
-    logger->debug("|subsampled_submap|={}", submap->frame->size());
-  }
 
   return submap;
 }

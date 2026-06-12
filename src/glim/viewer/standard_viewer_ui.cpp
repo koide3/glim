@@ -220,6 +220,20 @@ void StandardViewer::drawable_selection() {
   ImGui::SetNextItemWidth(60);
   ImGui::DragInt("Budget", &partial_rendering_budget, 1, 1, 1000000);
 
+  if (ImGui::Checkbox("Backface cull", &enable_backface_culling)) {
+    if (enable_backface_culling) {
+      viewer->enable_backface_culling();
+    } else {
+      viewer->disable_backface_culling();
+    }
+  }
+
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(120);
+  if (ImGui::DragFloatRange2("Range", &backface_culling_range[0], &backface_culling_range[1], 0.01f, -1.1f, 1.1f)) {
+    viewer->set_backface_culling_range(backface_culling_range);
+  }
+
   ImGui::End();
 
   if (show_odometry_status) {
