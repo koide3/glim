@@ -15,6 +15,7 @@ struct IMUIntegrationParams {
   ~IMUIntegrationParams();
 
   bool upright;       // If true, +Z = up
+  double gravity_magnitude;  // Gravity magnitude used by GTSAM IMU preintegration
   double acc_noise;   // Linear acceleration noise
   double gyro_noise;  // Angular velocity noise
   double int_noise;   // Integration noise

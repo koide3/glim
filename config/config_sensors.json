@@ -1,6 +1,7 @@
 {
   /*** Sensor configurations ***
   // --- IMU config ---
+  // imu_gravity_magnitude       : Gravity magnitude used for IMU preintegration
   // imu_acc_noise               : Accelerometer noise
   // imu_gyro_noise              : Gyroscope noise
   // imu_int_noise               : Integration noise
@@ -44,6 +45,7 @@
   */
   "sensors": {
     // IMU config
+    "imu_gravity_magnitude": 9.80665,
     "imu_acc_noise": 0.05,
     "imu_gyro_noise": 0.02,
     "imu_int_noise": 0.001,
