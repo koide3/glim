@@ -9,7 +9,6 @@
 namespace gtsam {
 class Values;
 class NonlinearFactorGraph;
-class PreintegratedImuMeasurements;
 }  // namespace gtsam
 
 namespace glim {

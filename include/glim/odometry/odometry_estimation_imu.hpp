@@ -5,13 +5,13 @@
 #include <random>
 
 #include <glim/odometry/odometry_estimation_base.hpp>
+#include <gtsam/navigation/ImuFactor.h>
 #include <gtsam_points/util/gtsam_migration.hpp>
 #include <gtsam_points/util/indexed_sliding_window.hpp>
 
 namespace gtsam {
 class Pose3;
 class Values;
-class ImuFactor;
 class NonlinearFactorGraph;
 }  // namespace gtsam
 
