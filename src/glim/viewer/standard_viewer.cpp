@@ -93,6 +93,9 @@ StandardViewer::StandardViewer() : logger(create_module_logger("viewer")) {
 
   trajectory.reset(new TrajectoryManager);
 
+  enable_backface_culling = false;
+  backface_culling_range = Eigen::Vector2f(0.0f, 1.1f);
+
   enable_partial_rendering = config.param("standard_viewer", "enable_partial_rendering", false);
   partial_rendering_budget = config.param("standard_viewer", "partial_rendering_budget", 1024);
 
