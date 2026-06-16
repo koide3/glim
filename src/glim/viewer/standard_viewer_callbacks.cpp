@@ -118,7 +118,7 @@ void StandardViewer::set_callbacks() {
       const Eigen::Isometry3f pose = resolve_pose(new_frame);
 
       if (track) {
-        viewer->lookat(pose.translation());
+        viewer->lookat(pose);
       }
 
       guik::ShaderSetting shader_setting = guik::FlatColor(1.0f, 0.5f, 0.0f, 1.0f, pose);

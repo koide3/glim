@@ -131,6 +131,26 @@ void StandardViewer::drawable_selection() {
 
   ImGui::Separator();
 
+  std::vector<const char*> camera_modes = {"STANDARD", "FPS", "TPS", "TOPDOWN"};
+  ImGui::SetNextItemWidth(92);
+  if (ImGui::Combo("camera_mode", &camera_mode, camera_modes.data(), camera_modes.size())) {
+    switch (camera_mode) {
+      default:
+      case 0:
+        viewer->use_orbit_camera_control();
+        break;
+      case 1:
+        viewer->use_sensor_view_camera_control(Eigen::Translation3f(-0.05f, 0.0f, 0.0f) * Eigen::Isometry3f::Identity(), 1e-3, 1e-3);
+        break;
+      case 2:
+        viewer->use_sensor_view_camera_control();
+        break;
+      case 3:
+        viewer->use_topdown_camera_control();
+        break;
+    }
+  }
+
   std::vector<const char*> odom_color_modes = {"FLAT", "INTENSITY", "NORMAL"};
   ImGui::SetNextItemWidth(92);
   ImGui::Combo("odom_color_mode", &odom_color_mode, odom_color_modes.data(), odom_color_modes.size());

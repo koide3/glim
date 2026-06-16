@@ -64,6 +64,7 @@ private:
   bool track;
   bool show_current_coord;
   bool show_current_points;
+  int camera_mode;
   int odom_color_mode;
   int submap_color_mode;
 
