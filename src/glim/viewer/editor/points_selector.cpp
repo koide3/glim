@@ -222,7 +222,7 @@ void PointsSelector::draw_ui() {
   }
 
   // Preferences window
-  if (show_preferences_window && ImGui::Begin("Preferenecs", &show_preferences_window, ImGuiWindowFlags_AlwaysAutoResize)) {
+  if (show_preferences_window && ImGui::Begin("Preferences", &show_preferences_window, ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::DragInt("Num threads", &num_threads, 1, 1, std::thread::hardware_concurrency()) || show_note("Number of threads for processing");
 
     ImGui::Separator();
@@ -421,7 +421,7 @@ void PointsSelector::draw_ui() {
         float background_mask_radius = min_cut_params.background_mask_radius;
 
         ImGui::DragFloat("Distance sigma", &distance_sigma, 0.01f, 0.01f, 10.0f);
-        show_note("Disance proximity width [m]");
+        show_note("Distance proximity width [m]");
         ImGui::DragFloat("Angle sigma", &angle_sigma, 0.01f, 0.01f, 180.0f);
         show_note("Angle proximity width [deg]");
         ImGui::DragFloat("Foreground radius", &foreground_mask_radius, 0.01f, 0.01f, 100.0f);
@@ -429,7 +429,7 @@ void PointsSelector::draw_ui() {
         ImGui::DragFloat("Background radius", &background_mask_radius, 0.01f, 0.01f, 100.0f);
         show_note("Points out of this radius are marked as background");
         ImGui::DragInt("K neighbors", &min_cut_params.k_neighbors, 1, 1, 100);
-        show_note("Number of neighbors for mincut graph contruction");
+        show_note("Number of neighbors for mincut graph construction");
 
         min_cut_params.distance_sigma = distance_sigma;
         min_cut_params.angle_sigma = angle_sigma * M_PI / 180.0;
@@ -446,7 +446,7 @@ void PointsSelector::draw_ui() {
         ImGui::DragFloat("Angle threshold", &angle_threshold, 0.01f, 0.01f, 180.0f);
         show_note("Points connection angle threshold [deg]");
         ImGui::DragFloat("Dilation radius", &dilation_radius, 0.01f, 0.01f, 100.0f);
-        show_note("After performing region growing, the extracted region will be dilated by this radius to fill halls");
+        show_note("After performing region growing, the extracted region will be dilated by this radius to fill holes");
 
         region_growing_params.distance_threshold = distance_threshold;
         region_growing_params.angle_threshold = angle_threshold * M_PI / 180.0;

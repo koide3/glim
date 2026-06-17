@@ -84,7 +84,7 @@ gtsam::NonlinearFactor::shared_ptr BundleAdjustmentModal::run() {
 
     if (submaps.size() < 2) {
       ImGui::Text("The number of selected submaps is smaller than 2!!");
-      ImGui::Text("Close this modal an reselect a point!!");
+      ImGui::Text("Close this modal and reselect a point!!");
     }
 
     ImGui::DragFloat("Radius", &radius, 0.01f, min_radius, max_radius);

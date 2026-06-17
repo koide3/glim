@@ -20,11 +20,11 @@ public:
 public:
   double distance_near_thresh;        ///< Minimum distance threshold
   double distance_far_thresh;         ///< Maximum distance threshold
-  bool global_shutter;                ///< Assume all points in a scan are takes at the same moment and replace per-point timestamps with zero (disable deskewing)
+  bool global_shutter;                ///< Assume all points in a scan are taken at the same moment and replace per-point timestamps with zero (disable deskewing)
   bool use_random_grid_downsampling;  ///< If true, use random grid downsampling, otherwise, use the conventional voxel grid
   double downsample_resolution;       ///< Downsampling resolution
   int downsample_target;              ///< Target number of points for downsampling
-  double downsample_rate;             ///< Downsamping rate (used for random grid downsampling)
+  double downsample_rate;             ///< Downsampling rate (used for random grid downsampling)
   bool enable_outlier_removal;        ///< If true, apply statistical outlier removal
   int outlier_removal_k;              ///< Number of neighbors used for outlier removal
   double outlier_std_mul_factor;      ///< Statistical outlier removal std dev threshold multiplication factor

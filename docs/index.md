@@ -6,7 +6,7 @@
 
 **GLIM** is a versatile and extensible range-based 3D mapping framework.
 
-- ***Accuracy:*** GLIM is based on direct multi-scan registration error minimization on factor graphs that enables to accurately retain the consistency of mappint results. GPU acceleration is supported to maximize the mapping speed and quality.
+- ***Accuracy:*** GLIM is based on direct multi-scan registration error minimization on factor graphs that enables to accurately retain the consistency of mapping results. GPU acceleration is supported to maximize the mapping speed and quality.
 - ***Easy-to-use:*** GLIM offers an interactive map correction interface that enables the user to manually correct mapping failures and easily refine mapping results.
 - ***Versatility:*** As we eliminated sensor-specific processes, GLIM can be applied to any kind of range sensors including:
     - Spinning-type LiDAR (e.g., Velodyne HDL32e and Ouster OS1)

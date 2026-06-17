@@ -20,7 +20,7 @@ void serializeToBinaryFile(const gtsam::NonlinearFactorGraph& graph, const std::
     }
   }
 
-  spdlog::warn("retyring to serialize factor graph with only serializable factor types");
+  spdlog::warn("retrying to serialize factor graph with only serializable factor types");
 
   gtsam::NonlinearFactorGraph ser;
   for (const auto& factor : graph) {
@@ -48,7 +48,7 @@ void serializeToBinaryFile(const gtsam::Values& values, const std::string& path,
     }
   }
 
-  spdlog::warn("retyring to serialize values with only serializable value types");
+  spdlog::warn("retrying to serialize values with only serializable value types");
 
   gtsam::Values ser;
   for (const auto& value : values) {
