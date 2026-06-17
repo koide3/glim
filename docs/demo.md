@@ -68,4 +68,4 @@ ros2 run glim_ros glim_rosbag --ros-args -p config_path:=$(realpath config/kinec
     - Only odometry estimation was performed, no global optimization.
     - Visualization was run on another PC that received points and pose messages via ethernet.  
       (rviz took about a half of Jetson Nano's computation capability without rendering anything!!)
-    - (2024/07/04) The current version of GLIM does not support CUDA 11 and older. Some minor midifications are expected to be necessary.
+    - (2024/07/04) The current version of GLIM does not support CUDA 11 and older. Some minor modifications are expected to be necessary.

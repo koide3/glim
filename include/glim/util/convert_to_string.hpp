@@ -8,7 +8,7 @@
 
 namespace glim {
 
-// Convertion to string
+// Conversion to string
 
 template <typename T>
 std::string convert_to_string(const T& value) {

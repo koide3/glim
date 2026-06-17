@@ -1,7 +1,7 @@
 # Important parameters
 
 !!! info
-    See the [sensor setup buide](https://github.com/koide3/glim/wiki/Sensor-setup-guide) for configurations of popular sensors (including Livox MID360 and Azure Kinect).
+    See the [sensor setup guide](https://github.com/koide3/glim/wiki/Sensor-setup-guide) for configurations of popular sensors (including Livox MID360 and Azure Kinect).
 
 !!! info
     See the Configuration files section in [Getting started](quickstart.md) to change the location of configuration files.
@@ -41,7 +41,7 @@
         - **ivox_resolution** (default 0.5 m) : Resolution of iVox voxels used for GICP scan matching. This parameter also controls the maximum corresponding distance and should be set to a large value in outdoor environments (e.g., 1.0 m).
 
     - *"VGICP"* uses voxelized GICP scan matching that is faster but requires tuning **vgicp_resolution** parameter for good estimation in indoor environments.
-        - **vgicp_resolution** (default 0.5 m) : Resolution of VIGP voxels used for VGICP scan matching. Use a small value for indoor environments (e.g., 0.25 ~ 0.5 m) and a large value for outdoor environments (0.5 ~ 2.0 m).
+        - **vgicp_resolution** (default 0.5 m) : Resolution of VGICP voxels used for VGICP scan matching. Use a small value for indoor environments (e.g., 0.25 ~ 0.5 m) and a large value for outdoor environments (0.5 ~ 2.0 m).
 
 ## LiDAR-only Odometry Estimation (config_odometry_ct.json)
 
