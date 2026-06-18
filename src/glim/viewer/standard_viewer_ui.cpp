@@ -138,15 +138,21 @@ void StandardViewer::drawable_selection() {
       default:
       case 0:
         viewer->use_orbit_camera_control();
+        viewer->use_perspective_projection_control(30.0f, 1.0, 1000.0f);
         break;
       case 1:
         viewer->use_sensor_view_camera_control(Eigen::Translation3f(-0.05f, 0.0f, 0.0f) * Eigen::Isometry3f::Identity(), 1e-3, 1e-3);
+        viewer->use_perspective_projection_control(90.0f, 0.1f, 500.0f);
+        viewer->disable_xy_grid();
         break;
       case 2:
         viewer->use_sensor_view_camera_control();
+        viewer->use_perspective_projection_control(45.0f, 0.1f, 500.0f);
+        viewer->disable_xy_grid();
         break;
       case 3:
         viewer->use_topdown_camera_control();
+        viewer->use_perspective_projection_control(30.0f, 1.0, 1000.0f);
         break;
     }
   }
