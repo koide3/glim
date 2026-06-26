@@ -100,7 +100,7 @@ git clone https://github.com/meitiever82/glim.git
 git clone https://github.com/meitiever82/glim_ros2.git
 cd .. && colcon build
 source install/setup.bash
-ros2 launch glim_ros2 glim_robosense_airy.launch.py
+ros2 launch glim_ros glim_robosense_airy.launch.py
 ```
 
 ## 项目成员
