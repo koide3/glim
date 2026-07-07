@@ -48,6 +48,7 @@ OdometryEstimationCTParams::OdometryEstimationCTParams() {
   use_isam2_dogleg = config.param<bool>("odometry_estimation", "use_isam2_dogleg", false);
   isam2_relinearize_skip = config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1);
   isam2_relinearize_thresh = config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1);
+  compute_covs = config.param<bool>("odometry_estimation", "compute_covs", false);
 }
 
 OdometryEstimationCTParams::~OdometryEstimationCTParams() {}
