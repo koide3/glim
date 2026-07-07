@@ -4,6 +4,7 @@
   // ivox_resolution                : Target iVox resolution
   // ivox_min_points_dist           : Minimum distance between points in an iVox cell
   // ivox_lru_thresh                : LRC cache threshold
+  // compute_covs                   : If true, compute marginal covariances of the latest frame (takes a few milliseconds per frame)
   // max_correspondence_distance    : Maximum distance for ICP correspondence search
   // location_consistency_inf_scale : Weight for location consistency constraints
   // constant_velocity_inf_scale    : Weight for constant velocity constraints
@@ -29,6 +30,7 @@
     "use_isam2_dogleg": false,
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
+    "compute_covs": false,
     // Misc
     "num_threads": 4
   }

@@ -134,6 +134,14 @@ struct OdometryEstimationCallbacks {
    * @note  We should not forget that FixedLagSmoothers are in "gtsam_unstable" directory!!
    */
   static CallbackSlot<void(double)> on_smoother_corruption;
+
+  /**
+   * @brief Request to compute marginal covariances of the latest frame (X(i), V(i), B(i)).
+   * @note  This persists throughout the lifecycle of the odometry estimation instance.
+   * @note  This should only be called in the initialization of extension modules.
+   *        Calling this while the odometry estimation is running may lead to undefined behavior.
+   */
+  static CallbackSlot<void()> request_to_compute_covariances;
 };
 
 }  // namespace glim

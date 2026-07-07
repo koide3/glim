@@ -4,6 +4,18 @@
 
 namespace glim {
 
+EstimationFrame::EstimationFrame() {
+  id = -1;       ///< Frame ID
+  stamp = -1.0;  ///< Timestamp
+
+  cov_computed = false;
+  pose_cov.setZero();
+  vel_cov.setZero();
+  bias_cov.setZero();
+}
+
+EstimationFrame::~EstimationFrame() {}
+
 EstimationFrame::Ptr EstimationFrame::clone() const {
   EstimationFrame::Ptr cloned(new EstimationFrame);
   *cloned = *this;

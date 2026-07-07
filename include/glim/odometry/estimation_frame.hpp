@@ -23,6 +23,9 @@ struct EstimationFrame {
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  EstimationFrame();
+  ~EstimationFrame();
+
   /**
    * @brief Make a clone of the estimation frame. (Points data are shallow copied)
    * @return EstimationFrame::Ptr   Cloned frame
@@ -82,12 +85,16 @@ public:
   long id;       ///< Frame ID
   double stamp;  ///< Timestamp
 
-  Eigen::Isometry3d T_lidar_imu;    ///< LiDAR-IMU transformation
-  Eigen::Isometry3d T_world_lidar;  ///< LiDAR pose in the world space
-  Eigen::Isometry3d T_world_imu;    ///< IMU pose in the world space
-
+  Eigen::Isometry3d T_lidar_imu;         ///< LiDAR-IMU transformation
+  Eigen::Isometry3d T_world_lidar;       ///< LiDAR pose in the world space
+  Eigen::Isometry3d T_world_imu;         ///< IMU pose in the world space
   Eigen::Vector3d v_world_imu;           ///< IMU velocity in the world frame
   Eigen::Matrix<double, 6, 1> imu_bias;  ///< IMU bias
+
+  bool cov_computed;                     ///< Whether the covariances have been computed
+  Eigen::Matrix<double, 6, 6> pose_cov;  ///< Pose covariance (X(i) in the graph. The reference frame depends on frame_id)
+  Eigen::Matrix<double, 3, 3> vel_cov;   ///< Velocity covariance (V(i) in the graph)
+  Eigen::Matrix<double, 6, 6> bias_cov;  ///< IMU bias covariance (B(i) in the graph)
 
   PreprocessedFrame::ConstPtr raw_frame;             ///< Raw input point cloud (LiDAR frame)
   Eigen::Matrix<double, 8, -1> imu_rate_trajectory;  ///< IMU-rate trajectory 8 x N  [t, x, y, z, qx, qy, qz, qw]

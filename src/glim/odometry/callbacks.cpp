@@ -29,4 +29,6 @@ CallbackSlot<void(gtsam_points::IncrementalFixedLagSmootherExtWithFallback& smoo
 
 CallbackSlot<void(double)> OdometryEstimationCallbacks::on_smoother_corruption;
 
+CallbackSlot<void()> OdometryEstimationCallbacks::request_to_compute_covariances;
+
 }  // namespace glim
