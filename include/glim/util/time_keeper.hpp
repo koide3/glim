@@ -13,7 +13,7 @@ public:
 
   bool autoconf;       ///< If true, load parameters from config file
   bool relative_time;  ///< If true, per-point timestamps are relative to the first point. Otherwise, absolute.
-  /// @brief If true, frame timestamp will never be overwritten by antyhing.
+  /// @brief If true, frame timestamp will never be overwritten by anything.
   ///        If false,
   ///          when per-point timestamps are absolute, overwrite the frame timestamp with the first point timestamp.
   ///          when per-point timestamps are relative and negative, add an offset to the frame timestamp to make per-point ones positive.
@@ -22,7 +22,7 @@ public:
 };
 
 /**
- * @brief Utility class to unify timestamp convension
+ * @brief Utility class to unify timestamp convention
  */
 class TimeKeeper {
 public:

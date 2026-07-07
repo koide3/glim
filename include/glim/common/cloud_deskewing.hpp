@@ -6,7 +6,7 @@
 namespace glim {
 
 /**
- * @brief Dewsking point cloud
+ * @brief Deskewing point cloud
  */
 class CloudDeskewing {
 public:
