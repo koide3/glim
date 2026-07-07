@@ -48,6 +48,7 @@ OdometryEstimationCTParams::OdometryEstimationCTParams() {
   use_isam2_dogleg = config.param<bool>("odometry_estimation", "use_isam2_dogleg", false);
   isam2_relinearize_skip = config.param<int>("odometry_estimation", "isam2_relinearize_skip", 1);
   isam2_relinearize_thresh = config.param<double>("odometry_estimation", "isam2_relinearize_thresh", 0.1);
+  compute_covs = config.param<bool>("odometry_estimation", "compute_covs", false);
 }
 
 OdometryEstimationCTParams::~OdometryEstimationCTParams() {}
@@ -72,6 +73,11 @@ OdometryEstimationCT::OdometryEstimationCT(const OdometryEstimationCTParams& par
 #ifdef GTSAM_USE_TBB
   tbb_task_arena = std::make_shared<tbb::task_arena>(1);
 #endif
+
+  Callbacks::request_to_compute_covariances.add([this]() {
+    logger->debug("request to compute marginal covs");
+    this->params.compute_covs = true;
+  });
 }
 
 OdometryEstimationCT::~OdometryEstimationCT() {}
@@ -266,6 +272,12 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
       Callbacks::on_smoother_corruption(frames[current]->stamp);
       break;
     }
+  }
+
+  if (params.compute_covs) {
+    logger->debug("computing marginal covariances of the latest frame");
+    new_frame->cov_computed = true;
+    new_frame->pose_cov = smoother->marginalCovariance(X(current));
   }
 
   std::vector<EstimationFrame::ConstPtr> active_frames(frames.begin() + marginalized_cursor, frames.end());

@@ -12,6 +12,7 @@
   // isam2_relinearize_skip      :
   // isam2_relinearize_thresh    :
   // fix_imu_bias                : If true, disable IMU bias estimation and use the initial IMU bias
+  // compute_covs                : If true, compute marginal covariances of the latest frame (takes a few milliseconds per frame)
   //
   // --- Voxel params ---
   // voxel_resolution            : Base resolution for VGICP voxels
@@ -48,6 +49,7 @@
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
     "fix_imu_bias": false,
+    "compute_covs": false,
     // Voxel params
     "voxel_resolution": 0.25,
     "voxel_resolution_max": 0.5,

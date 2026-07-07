@@ -17,6 +17,7 @@
     "isam2_relinearize_skip": 1,
     "isam2_relinearize_thresh": 0.1,
     "fix_imu_bias": false,
+    "compute_covs": false,
     // Registration settings
     "registration_type": "GICP",
     "max_iterations": 8,

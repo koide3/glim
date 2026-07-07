@@ -51,6 +51,7 @@ public:
   bool use_isam2_dogleg;  ///< If true, use dogleg optimizer
   double isam2_relinearize_skip;
   double isam2_relinearize_thresh;
+  bool compute_covs;  ///< If true, compute marginal covariances of the latest frame.
 };
 
 /**

@@ -58,6 +58,9 @@ public:
   double isam2_relinearize_skip;
   double isam2_relinearize_thresh;
 
+  // Marginal computation params
+  bool compute_covs;  // Whether to compute marginal covariances of the latest frame (X(i), V(i), B(i))
+
   // Logging params
   bool validate_imu;
   bool save_imu_rate_trajectory;
