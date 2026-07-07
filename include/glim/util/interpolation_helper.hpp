@@ -29,7 +29,7 @@ public:
   InterpolationHelper(InterpolationHelperSearchMode search_mode = InterpolationHelperSearchMode::LINEAR) : search_mode(search_mode) {}
   ~InterpolationHelper() {}
 
-  /// @brief Check if it's emptry.
+  /// @brief Check if it's empty.
   bool empty() const { return values.empty(); }
 
   /// @brief Number of queued values.
@@ -62,7 +62,7 @@ public:
   /// @param left_ptr             [out] The closest value that is older than the target timestamp (nullptr if not needed)
   /// @param right_ptr            [out] The closest value that is newer than the target timestamp (nullptr if not needed)
   /// @param remove_cursor_ptr    [out] The index of the value that is older than the left_ptr    (nullptr if not needed)
-  /// @return                     Seach result status
+  /// @return                     Search result status
   InterpolationHelperResult find(const double stamp, StampedValue* left_ptr, StampedValue* right_ptr, int* remove_cursor_ptr) const {
     if (values.empty() || values.back().first < stamp) {
       return InterpolationHelperResult::WAITING;

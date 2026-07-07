@@ -210,7 +210,7 @@ void InteractiveViewer::drawable_selection() {
   if (ImGui::Combo("ColorMode", &color_mode, color_modes.data(), color_modes.size())) {
     update_viewer();
   }
-  show_note("Color mode for rendering submaps.\n- RAINBOW=Altitute encoding color\n- INTENSITY=Point intensity\n- SESSION=Session ID");
+  show_note("Color mode for rendering submaps.\n- RAINBOW=Altitude encoding color\n- INTENSITY=Point intensity\n- SESSION=Session ID");
 
   ImGui::Checkbox("Trajectory", &draw_traj);
   ImGui::SameLine();

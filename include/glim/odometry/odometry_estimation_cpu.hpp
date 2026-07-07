@@ -34,7 +34,7 @@ public:
   double ivox_min_dist;    ///< Minimum distance between points in an iVox cell (for GICP)
 
   double vgicp_resolution;               ///< Voxelmap resolution (for VGICP)
-  int vgicp_voxelmap_levels;             ///< Multi-resolution voxelmap levesl (for VGICP)
+  int vgicp_voxelmap_levels;             ///< Multi-resolution voxelmap levels (for VGICP)
   double vgicp_voxelmap_scaling_factor;  ///< Multi-resolution voxelmap scaling factor (for VGICP)
 };
 

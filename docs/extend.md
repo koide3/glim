@@ -7,7 +7,7 @@ In this package, the (SE3) transformation from frame B to frame A is denoted as 
 
 For instance, the transformation from a LiDAR frame to the world frame (i.e., a LiDAR pose in the world frame) is represented as ```T_world_lidar```, and a point in the LiDAR frame ```p_lidar``` is transformed into the world frame by ```p_world = T_world_lidar * p_lidar```.
 
-Similarty, ```v_A_B``` represents the velocity of frame B in frame A, and thus ```v_world_imu``` represents an IMU velocity in the world frame.
+Similarly, ```v_A_B``` represents the velocity of frame B in frame A, and thus ```v_world_imu``` represents an IMU velocity in the world frame.
 
 ## Variables
 
