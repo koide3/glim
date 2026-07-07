@@ -189,6 +189,9 @@ void StandardViewer::set_callbacks() {
         auto drawable = viewer->find_drawable(name);
         if (drawable.first == nullptr) {
           auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(keyframe->frame->points, keyframe->frame->size());
+          if (keyframe->frame->has_normals()) {
+            cloud_buffer->add_normals(keyframe->frame->normals, keyframe->frame->size());
+          }
           if (keyframe->frame->has_intensities()) {
             std::vector<float> intensities(keyframe->frame->intensities, keyframe->frame->intensities + keyframe->frame->size());
             cloud_buffer->add_colormap(intensities);
