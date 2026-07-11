@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(glim VERSION 1.2.1 LANGUAGES CXX)
+project(glim VERSION 1.2.2 LANGUAGES CXX)
 
 add_compile_options(-std=c++17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -25,7 +25,7 @@ endif()
 find_package(Boost REQUIRED serialization)
 find_package(Eigen3 REQUIRED)
 find_package(GTSAM 4.2 REQUIRED)
-find_package(gtsam_points 1.2.0 REQUIRED)
+find_package(gtsam_points 1.2.2 REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
 

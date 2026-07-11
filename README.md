@@ -27,6 +27,8 @@ If you find this package useful for your project, please consider leaving a comm
 
 ## Updates
 
+- 2026/07/12 : v1.2.2 released. Fix errors on GTSAM 4.3a1.
+- 2026/02/15 : v1.2.1 released. Backface culling support.
 - 2026/01/24 : v1.2.0 released. Added Support for both **GTSAM 4.2a9** and **GTSAM 4.3a0**, and **CUDA 13.1**. Added intensity visualization support.
 - 2025/06/15 : The base GTSAM version has been changed. Make sure you have rebuilt and installed **GTSAM 4.3a0** and **gtsam_points 1.2.0**.
 
