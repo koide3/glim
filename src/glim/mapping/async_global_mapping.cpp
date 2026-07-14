@@ -70,6 +70,7 @@ void AsyncGlobalMapping::save(const std::string& path) {
 gtsam_points::PointCloud::Ptr AsyncGlobalMapping::export_points() {
   std::lock_guard<std::mutex> lock(global_mapping_mutex);
   logger->info("exporting points");
+  logger->info("global_mapping: {}", global_mapping.get() == nullptr);
   auto points = global_mapping->export_points();
   return points;
 }

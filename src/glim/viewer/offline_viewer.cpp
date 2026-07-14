@@ -15,7 +15,7 @@
 
 namespace glim {
 
-OfflineViewer::OfflineViewer(const std::string& init_map_path) : init_map_path(init_map_path) {}
+OfflineViewer::OfflineViewer(const std::string& init_map_path, const std::string& export_map_path) : init_map_path(init_map_path), export_map_path(export_map_path) {}
 
 OfflineViewer::~OfflineViewer() {}
 
@@ -165,6 +165,21 @@ void OfflineViewer::main_menu() {
   }
   auto export_result = progress_modal->run<bool>("export");
 
+  if (async_global_mapping && !export_map_path.empty()) {
+    logger->info("Exporting map to {}", export_map_path);
+    const std::string path = export_map_path;
+    progress_modal->open<std::string>("auto_export", [this, path = path](guik::ProgressInterface& progress) {
+      export_map(progress, path);
+      return path;
+    });
+    export_map_path.clear();
+  }
+  auto auto_export_result = progress_modal->run<std::string>("auto_export");
+  if (auto_export_result) {
+    logger->info("Exported map to {}", *auto_export_result);
+    request_to_terminate = true;
+  }
+
   // close map
   if (start_close_map) {
     if (async_global_mapping) {
@@ -188,8 +203,12 @@ std::shared_ptr<glim::GlobalMapping> OfflineViewer::load_map(guik::ProgressInter
     params.isam2_relinearize_skip = 1;
     params.isam2_relinearize_thresh = 0.0;
 
-    const auto result = pfd::message("Confirm", "Do optimization?", pfd::choice::yes_no).result();
-    params.enable_optimization = (result == pfd::button::ok) || (result == pfd::button::yes);
+    if (!export_map_path.empty()) {
+      params.enable_optimization = false;
+    } else {
+      const auto result = pfd::message("Confirm", "Do optimization?", pfd::choice::yes_no).result();
+      params.enable_optimization = (result == pfd::button::ok) || (result == pfd::button::yes);
+    }
 
     logger->info("enable_optimization={}", params.enable_optimization);
     global_mapping.reset(new glim::GlobalMapping(params));
