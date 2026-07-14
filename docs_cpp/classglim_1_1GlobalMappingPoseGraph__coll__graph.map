@@ -1,0 +1,5 @@
+<map id="glim::GlobalMappingPoseGraph" name="glim::GlobalMappingPoseGraph">
+<area shape="rect" id="Node000001" title="Global mapping with the old conventional pose graph optimization." alt="" coords="5,79,232,104"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1GlobalMappingBase.html" title="Global mapping base class." alt="" coords="24,5,213,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="121,44,121,79,116,79,116,44"/>
+</map>

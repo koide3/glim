@@ -1,0 +1,17 @@
+<map id="glim::GlobalMappingCallbacks" name="glim::GlobalMappingCallbacks">
+<area shape="rect" id="Node000001" title="Global mapping&#45;related callbacks." alt="" coords="497,300,717,325"/>
+<area shape="rect" id="Node000002" href="$classCallbackSlot.html" title=" " alt="" coords="36,5,229,89"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="244,62,300,76,359,94,419,119,475,150,518,187,554,228,601,298,597,301,550,232,514,190,472,155,417,124,358,99,298,81,242,67"/>
+<area shape="rect" id="Node000003" href="$classCallbackSlot.html" title=" " alt="" coords="42,113,223,168"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="238,157,353,185,415,205,474,228,540,263,591,298,588,302,538,268,472,232,413,210,352,190,236,162"/>
+<area shape="rect" id="Node000004" href="$classCallbackSlot.html" title=" " alt="" coords="29,192,237,247"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="251,240,542,297,541,303,250,245"/>
+<area shape="rect" id="Node000005" href="$classCallbackSlot.html" title=" " alt="" coords="5,271,260,355"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="274,310,497,310,497,315,274,315"/>
+<area shape="rect" id="Node000006" href="$classCallbackSlot.html" title=" " alt="" coords="27,379,238,449"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="251,390,473,345,559,323,561,328,474,350,252,395"/>
+<area shape="rect" id="Node000007" href="$classCallbackSlot.html" title=" " alt="" coords="49,473,216,499"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="230,477,286,470,348,459,412,442,472,418,509,397,544,371,593,323,596,327,547,375,512,401,474,423,413,447,350,464,287,475,230,483"/>
+<area shape="rect" id="Node000008" href="$classCallbackSlot.html" title=" " alt="" coords="59,525,206,565"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="220,552,279,553,345,548,411,533,442,522,472,506,498,488,521,465,558,413,584,362,599,325,604,327,589,364,563,416,525,468,501,492,475,511,444,526,412,538,345,553,279,558,220,557"/>
+</map>

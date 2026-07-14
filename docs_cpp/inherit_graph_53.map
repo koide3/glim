@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classglim_1_1InitialStateEstimation.html" title="Initial sensor state estimator." alt="" coords="5,31,205,56"/>
+<area shape="rect" id="Node000001" href="$classglim_1_1LooseInitialStateEstimation.html" title=" " alt="" coords="253,5,492,31"/>
+<area shape="poly" id="edge10_Node000000_Node000001" title=" " alt="" coords="219,30,253,27,254,32,219,35"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1NaiveInitialStateEstimation.html" title="Naive initial state estimator that simply calculates a pose that aligns linear acc with the gravity d..." alt="" coords="253,55,492,80"/>
+<area shape="poly" id="edge11_Node000000_Node000002" title=" " alt="" coords="219,51,254,54,253,59,219,56"/>
+</map>

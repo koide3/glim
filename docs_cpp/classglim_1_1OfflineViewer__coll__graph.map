@@ -1,0 +1,9 @@
+<map id="glim::OfflineViewer" name="glim::OfflineViewer">
+<area shape="rect" id="Node000001" title=" " alt="" coords="604,37,751,63"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1InteractiveViewer.html" title=" " alt="" coords="380,37,555,63"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="568,47,604,47,604,53,568,53"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1ExtensionModule.html" title="Extension module to be dynamically loaded via dynamic linking." alt="" coords="41,5,212,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="226,25,380,39,379,44,226,30"/>
+<area shape="rect" id="Node000004" href="$classglim_1_1ConcurrentVector.html" title=" " alt="" coords="5,55,248,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="261,67,379,56,380,61,262,72"/>
+</map>
