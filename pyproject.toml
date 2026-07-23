@@ -1,0 +1,19 @@
+[build-system]
+requires = ["scikit-build-core >=0.10", "pybind11 >=2.10.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pyglim"
+version = "1.2.2"
+description = "Python bindings for GLIM"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Kenji Koide", email = "k.koide@aist.go.jp" }]
+requires-python = ">=3.8"
+dependencies = ["numpy"]
+
+[tool.scikit-build]
+build-dir = "build/{wheel_tag}"
+
+[tool.scikit-build.cmake.define]
+BUILD_PYTHON_BINDINGS = "ON"

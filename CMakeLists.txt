@@ -14,6 +14,7 @@ option(BUILD_WITH_CUDA_MULTIARCH "Build with GPU cross-platform support" OFF)
 option(BUILD_WITH_VIEWER "Build with visualizer" ON)
 option(BUILD_WITH_MARCH_NATIVE "Build with -march=native" OFF)
 option(BUILD_WITH_OPENCV "Build with OpenCV to support camera images" ON)
+option(BUILD_PYTHON_BINDINGS "Build python bindings" OFF)
 
 if(BUILD_WITH_MARCH_NATIVE)
   add_definitions(-march=native)
@@ -197,7 +198,7 @@ endif()
 ## Install ##
 #############
 
-if(DEFINED ENV{ROS_VERSION})
+if(DEFINED ENV{ROS_VERSION} AND NOT DEFINED SKBUILD_PROJECT_NAME)
   if($ENV{ROS_VERSION} EQUAL 1)
     # No idea
     set(CMAKE_INSTALL_INCLUDEDIR "include/glim")
@@ -251,10 +252,44 @@ install(FILES
   DESTINATION ${CMAKE_CONFIG_INSTALL_DIR}
 )
 
+#####################
+## Python bindings ##
+#####################
+if(BUILD_PYTHON_BINDINGS)
+  find_package(Python COMPONENTS Interpreter Development REQUIRED)
+  find_package(pybind11 REQUIRED)
+
+  pybind11_add_module(pyglim
+    src/python/main.cpp
+    src/python/util.cpp
+    src/python/preprocess.cpp
+    src/python/odometry.cpp
+    src/python/mapping.cpp
+  )
+  target_link_libraries(pyglim PRIVATE glim)
+  target_compile_definitions(pyglim PRIVATE VERSION_INFO=${PROJECT_VERSION})
+  if(BUILD_WITH_CUDA)
+    target_compile_definitions(pyglim PRIVATE PYGLIM_USE_CUDA)
+  endif()
+
+  # Make dlopen()-based module loading (glim::load_module) find the estimation module
+  # libraries (libodometry_estimation_cpu.so etc.) placed next to libglim.so
+  set_target_properties(glim PROPERTIES BUILD_RPATH "\$ORIGIN" INSTALL_RPATH "\$ORIGIN")
+  set_target_properties(pyglim PROPERTIES INSTALL_RPATH "\$ORIGIN/${CMAKE_INSTALL_LIBDIR}")
+
+  if(DEFINED SKBUILD_PROJECT_NAME)
+    set(PYTHON_INSTALL_DIR .)
+  elseif(NOT DEFINED PYTHON_INSTALL_DIR)
+    set(PYTHON_INSTALL_DIR lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/site-packages)
+  endif()
+
+  install(TARGETS pyglim DESTINATION ${PYTHON_INSTALL_DIR})
+endif()
+
 #################
 ## ROS-related ##
 #################
-if(DEFINED ENV{ROS_VERSION})
+if(DEFINED ENV{ROS_VERSION} AND NOT DEFINED SKBUILD_PROJECT_NAME)
   if($ENV{ROS_VERSION} EQUAL 2)
     # ROS2
     find_package(ament_cmake REQUIRED)
