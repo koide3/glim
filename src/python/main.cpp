@@ -8,9 +8,11 @@
 namespace py = pybind11;
 
 void define_util(py::module_& m);
+void define_callbacks(py::module_& m);
 void define_preprocess(py::module_& m);
 void define_odometry(py::module_& m);
 void define_mapping(py::module_& m);
+void define_batch(py::module_& m);
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -24,9 +26,11 @@ PYBIND11_MODULE(pyglim, m) {
 #endif
 
   define_util(m);
+  define_callbacks(m);
   define_preprocess(m);
   define_odometry(m);
   define_mapping(m);
+  define_batch(m);
 
 #ifdef VERSION_INFO
   m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

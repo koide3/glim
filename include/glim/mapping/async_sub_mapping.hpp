@@ -10,6 +10,7 @@ namespace glim {
 /**
  * @brief SubMapping executor to wrap and asynchronously run a sub mapping object
  * @note  All the exposed public methods are thread-safe
+ * @note  This class does not support callback switching with CallbackContext as it produces a background thread.
  */
 class AsyncSubMapping {
 public:

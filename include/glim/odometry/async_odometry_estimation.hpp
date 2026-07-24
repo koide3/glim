@@ -16,7 +16,7 @@ namespace glim {
 /**
  * @brief Odometry estimation executor to wrap and asynchronously run OdometryEstimationBase
  * @note  All the exposed public methods are thread-safe
- *
+ * @note  This class does not support callback switching with CallbackContext as it produces a background thread.
  */
 class AsyncOdometryEstimation {
 public:

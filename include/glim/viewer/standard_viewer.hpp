@@ -14,7 +14,7 @@
 
 #include <gtsam_points/util/gtsam_migration.hpp>
 #include <glim/util/extension_module.hpp>
-#include <gtsam_points/util/runnning_statistics.hpp>
+#include <gtsam_points/util/running_statistics.hpp>
 
 namespace spdlog {
 class logger;

@@ -66,6 +66,7 @@ add_library(glim SHARED
   src/glim/util/load_module.cpp
   src/glim/util/data_validator.cpp
   src/glim/util/serialization.cpp
+  src/glim/util/callback_slot.cpp
   src/glim/util/debug.cpp
   # preprocess
   src/glim/preprocess/callbacks.cpp
@@ -96,6 +97,14 @@ add_library(glim SHARED
   src/glim/mapping/sub_mapping_passthrough.cpp
   src/glim/mapping/global_mapping.cpp
   src/glim/mapping/global_mapping_pose_graph.cpp
+  # batch
+  src/glim/batch/batched_imu_measurements.cpp
+  src/glim/batch/batched_raw_points.cpp
+  src/glim/batch/batched_preprocessed_frame.cpp
+  src/glim/batch/batched_estimation_frame.cpp
+  src/glim/batch/batched_time_keeper.cpp
+  src/glim/batch/batched_cloud_preprocessor.cpp
+  src/glim/batch/batched_odometry_estimation.cpp
   # GPU-related
   ${GPU_SRCS}
 )
@@ -162,6 +171,13 @@ if(BUILD_WITH_VIEWER)
     glim
   )
 
+  add_library(standard_sub_viewer SHARED
+    src/glim/viewer/standard_sub_viewer.cpp
+  )
+  target_link_libraries(standard_sub_viewer
+    glim
+  )
+
   # Interactive viewer
   add_library(interactive_viewer SHARED
     src/glim/viewer/interactive_viewer.cpp
@@ -191,7 +207,7 @@ if(BUILD_WITH_VIEWER)
     glim
   )
 
-  list(APPEND glim_LIBRARIES standard_viewer interactive_viewer memory_monitor map_editor)
+  list(APPEND glim_LIBRARIES standard_viewer standard_sub_viewer interactive_viewer memory_monitor map_editor)
 endif()
 
 #############
@@ -262,9 +278,11 @@ if(BUILD_PYTHON_BINDINGS)
   pybind11_add_module(pyglim
     src/python/main.cpp
     src/python/util.cpp
+    src/python/callbacks.cpp
     src/python/preprocess.cpp
     src/python/odometry.cpp
     src/python/mapping.cpp
+    src/python/batch.cpp
   )
   target_link_libraries(pyglim PRIVATE glim)
   target_compile_definitions(pyglim PRIVATE VERSION_INFO=${PROJECT_VERSION})
