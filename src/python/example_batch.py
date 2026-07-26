@@ -8,7 +8,7 @@ from rosbags.typesys import Stores, get_typestore
 
 class GlimExecutor:
   def __init__(self):
-    self.batch_size = 1
+    self.batch_size = 8
     self.time_keeper = pyglim.BatchedTimeKeeper(batch_size=self.batch_size)
     self.preprocessor = pyglim.BatchedCloudPreprocessor(batch_size=self.batch_size)
     self.odometry = pyglim.BatchedOdometryEstimation(batch_size=self.batch_size, so_name='libodometry_estimation_cpu.so')
@@ -81,7 +81,7 @@ def main():
 
   all_imu_data = numpy.float64(all_imu_data)
 
-  points_shift = 5
+  points_shift = 10
   for i in range(1, len(all_points_data) - points_shift * glim.batch_size):
     batch = []
     for j in range(glim.batch_size):
@@ -100,14 +100,14 @@ def main():
       padded_points[j, :num_points, :] = batched_points[j]
       padded_times[j, :num_points, :] = batched_times[j]
 
-    prev_stamps = []
+    next_stamps = []
     for j in range(glim.batch_size):
-      prev_stamps.append(all_points_data[i + j * points_shift - 1][0])
-    prev_stamps = numpy.float64(prev_stamps)
+      next_stamps.append(all_points_data[i + j * points_shift + 1][0])
+    next_stamps = numpy.float64(next_stamps)
 
     batch = []
     for j in range(glim.batch_size):
-      imu_mask = (all_imu_data[:, 0] >= prev_stamps[j]) & (all_imu_data[:, 0] < batched_stamps[j])
+      imu_mask = (all_imu_data[:, 0] >= batched_stamps[j]) & (all_imu_data[:, 0] < next_stamps[j])
       batch.append(all_imu_data[imu_mask])
 
     max_num_imu = max(b.shape[0] for b in batch)
