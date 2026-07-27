@@ -102,6 +102,7 @@ add_library(glim SHARED
   src/glim/preprocess/callbacks.cpp
   src/glim/preprocess/cloud_preprocessor.cpp
   # common process
+  src/glim/common/callbacks.cpp
   src/glim/common/imu_integration.cpp
   src/glim/common/imu_validation.cpp
   src/glim/common/cloud_deskewing.cpp
@@ -135,6 +136,7 @@ add_library(glim SHARED
   src/glim/batch/batched_time_keeper.cpp
   src/glim/batch/batched_cloud_preprocessor.cpp
   src/glim/batch/batched_odometry_estimation.cpp
+  src/glim/batch/batched_data_collector.cpp
   # GPU-related
   ${GPU_SRCS}
 )

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <glim/preprocess/preprocessed_frame.hpp>
+#include <glim/batch/batched_raw_points.hpp>
 
 namespace glim {
 
@@ -17,6 +18,8 @@ public:
 
   PreprocessedFrame::Ptr& operator[](int index);
   const PreprocessedFrame::ConstPtr operator[](int index) const;
+
+  void set_raw_points(const BatchedRawPoints::Ptr& batched_raw_points);
 
 private:
   std::vector<PreprocessedFrame::Ptr> frames;
