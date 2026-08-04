@@ -93,8 +93,8 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   spdlog::trace("preprocessing input: {} points", raw_points->size());
 
   gtsam_points::PointCloudCPU::Ptr frame = std::make_shared<gtsam_points::PointCloudCPU>();
-  frame->add_times(raw_points->times);
   frame->add_points(raw_points->points);
+  frame->add_times(raw_points->times);
   if (raw_points->intensities.size()) {
     frame->add_intensities(raw_points->intensities);
   }
