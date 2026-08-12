@@ -1,5 +1,7 @@
 #include <glim/odometry/odometry_estimation_imu.hpp>
 
+#include <fstream>
+#include <filesystem>
 #include <spdlog/spdlog.h>
 
 #include <gtsam/inference/Symbol.h>
@@ -31,6 +33,8 @@ using Callbacks = OdometryEstimationCallbacks;
 using gtsam::symbol_shorthand::B;  // IMU bias
 using gtsam::symbol_shorthand::V;  // IMU velocity   (v_world_imu)
 using gtsam::symbol_shorthand::X;  // IMU pose       (T_world_imu)
+
+std::ofstream imu_ofs;
 
 OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
   // sensor config
@@ -124,8 +128,18 @@ void OdometryEstimationIMU::insert_imu(const double stamp, const Eigen::Vector3d
     init_estimation->insert_imu(stamp, linear_acc, angular_vel);
   }
   imu_integration->insert_imu(stamp, linear_acc, angular_vel);
+
+  if (!imu_ofs) {
+    std::filesystem::create_directories("/tmp/dump");
+    imu_ofs.open("/tmp/dump/raw_imu.txt");
+  }
+
+  imu_ofs
+    << fmt::format("{:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}", stamp, linear_acc.x(), linear_acc.y(), linear_acc.z(), angular_vel.x(), angular_vel.y(), angular_vel.z())
+    << std::endl;
 }
 
+int raw_frame_count = 0;
 EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const PreprocessedFrame::Ptr& raw_frame, std::vector<EstimationFrame::ConstPtr>& marginalized_frames) {
   if (raw_frame->size()) {
     logger->trace("insert_frame points={} times={} ~ {}", raw_frame->size(), raw_frame->times.front(), raw_frame->times.back());
@@ -133,6 +147,36 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     logger->warn("insert_frame points={}", raw_frame->size());
   }
   Callbacks::on_insert_frame(raw_frame);
+
+  if (raw_frame_count == 0) {
+    std::filesystem::create_directories("/tmp/dump/raw_frames");
+  }
+  std::filesystem::create_directories(fmt::format("/tmp/dump/raw_frames/{:06d}", raw_frame_count));
+  {
+    std::ofstream ofs(fmt::format("/tmp/dump/raw_frames/{:06d}/data.txt", raw_frame_count));
+    ofs << fmt::format("{:.6f} {:.6f}", raw_frame->stamp, raw_frame->scan_end_time) << std::endl;
+
+    if (raw_frame->times.size()) {
+      std::ofstream ofs(fmt::format("/tmp/dump/raw_frames/{:06d}/times.bin", raw_frame_count), std::ios::binary);
+      ofs.write(reinterpret_cast<const char*>(raw_frame->times.data()), raw_frame->times.size() * sizeof(double));
+    }
+
+    if (raw_frame->intensities.size()) {
+      std::ofstream ofs(fmt::format("/tmp/dump/raw_frames/{:06d}/intensities.bin", raw_frame_count), std::ios::binary);
+      ofs.write(reinterpret_cast<const char*>(raw_frame->intensities.data()), raw_frame->intensities.size() * sizeof(double));
+    }
+
+    if (raw_frame->points.size()) {
+      std::ofstream ofs(fmt::format("/tmp/dump/raw_frames/{:06d}/points.bin", raw_frame_count), std::ios::binary);
+      ofs.write(reinterpret_cast<const char*>(raw_frame->points.data()), raw_frame->points.size() * sizeof(Eigen::Vector4d));
+    }
+
+    if (raw_frame->neighbors.size()) {
+      std::ofstream ofs(fmt::format("/tmp/dump/raw_frames/{:06d}/neighbors.bin", raw_frame_count), std::ios::binary);
+      ofs.write(reinterpret_cast<const char*>(raw_frame->neighbors.data()), raw_frame->neighbors.size() * sizeof(int));
+    }
+  }
+  raw_frame_count++;
 
   const int current = frames.size();
   const int last = current - 1;
