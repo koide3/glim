@@ -24,6 +24,8 @@ public:
   virtual void insert_imu(double stamp, const Eigen::Vector3d& linear_acc, const Eigen::Vector3d& angular_vel) override;
   virtual EstimationFrame::ConstPtr initial_pose() override;
 
+  virtual std::vector<std::pair<double, Eigen::Isometry3d>> get_T_odom_lidar() const override { return T_odom_lidar; }
+
 private:
   const Eigen::Isometry3d T_lidar_imu;
 

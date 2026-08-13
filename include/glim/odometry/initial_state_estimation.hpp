@@ -41,6 +41,8 @@ public:
    */
   virtual EstimationFrame::ConstPtr initial_pose() = 0;
 
+  virtual std::vector<std::pair<double, Eigen::Isometry3d>> get_T_odom_lidar() const { return {}; }
+
 protected:
   // Logging
   std::shared_ptr<spdlog::logger> logger;
