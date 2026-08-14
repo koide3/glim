@@ -8,7 +8,7 @@
   "odometry_estimation": {
     "so_name": "libodometry_estimation_cpu.so",
     // Initialization params
-    "initialization_mode": "LOOSE",
+    "initialization_mode": "ROBUST",
     "initialization_window_size": 3.0,
     "init_pose_damping_scale": 1e10,
     // Optimizer params

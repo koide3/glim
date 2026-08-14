@@ -1,9 +1,10 @@
 {
   /*** Keyframe-based VGICP odometry estimation ***
   // --- Initialization ---
-  // initialization_mode         : "LOOSE" performs loose coupling-based IMU state initialization that takes a few seconds
+  // initialization_mode         : "ROBUST" performs robust initial state estimation that takes a few seconds
+  //                             : "LOOSE" is deprecated (use "ROBUST" instead)
   //                             : "NAIVE" simply uses the linear acceleration direction as the gravity direction
-  // initialization_window_size  : Initialization window size for the "LOOSE" initialization mode
+  // initialization_window_size  : Initialization window size for the "ROBUST" and "LOOSE" initialization modes
   // init_pose_damping_scale     : Damping scale for the initial pose (to fix the gauge freedom)
   //
   // --- Optimization params ---
@@ -40,7 +41,7 @@
   "odometry_estimation": {
     "so_name": "libodometry_estimation_gpu.so",
     // Initialization params
-    "initialization_mode": "LOOSE",
+    "initialization_mode": "ROBUST",
     "initialization_window_size": 1.0,
     "init_pose_damping_scale": 1e10,
     // Optimization params

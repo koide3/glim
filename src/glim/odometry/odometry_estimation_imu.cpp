@@ -18,6 +18,7 @@
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/odometry/initial_state_estimation.hpp>
 #include <glim/odometry/loose_initial_state_estimation.hpp>
+#include <glim/odometry/robust_initial_state_estimation.hpp>
 #include <glim/odometry/callbacks.hpp>
 
 #ifdef GTSAM_USE_TBB
@@ -49,7 +50,7 @@ OdometryEstimationIMUParams::OdometryEstimationIMUParams() {
 
   fix_imu_bias = config.param<bool>("odometry_estimation", "fix_imu_bias", false);
 
-  initialization_mode = config.param<std::string>("odometry_estimation", "initialization_mode", "LOOSE");
+  initialization_mode = config.param<std::string>("odometry_estimation", "initialization_mode", "ROBUST");
   const auto init_T_world_imu = config.param<Eigen::Isometry3d>("odometry_estimation", "init_T_world_imu");
   const auto init_v_world_imu = config.param<Eigen::Vector3d>("odometry_estimation", "init_v_world_imu");
   this->estimate_init_state = !init_T_world_imu && !init_v_world_imu;
@@ -86,6 +87,9 @@ OdometryEstimationIMU::OdometryEstimationIMU(std::unique_ptr<OdometryEstimationI
     this->init_estimation.reset(init_estimation);
   } else if (params->initialization_mode == "LOOSE") {
     auto init_estimation = new LooseInitialStateEstimation(params->T_lidar_imu, params->imu_bias);
+    this->init_estimation.reset(init_estimation);
+  } else if (params->initialization_mode == "ROBUST") {
+    auto init_estimation = new RobustInitialStateEstimation(params->T_lidar_imu);
     this->init_estimation.reset(init_estimation);
   } else {
     logger->error("unknown initialization mode {}", params->initialization_mode);

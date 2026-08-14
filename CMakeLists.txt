@@ -84,6 +84,10 @@ add_library(glim SHARED
   src/glim/odometry/estimation_frame.cpp
   src/glim/odometry/initial_state_estimation.cpp
   src/glim/odometry/loose_initial_state_estimation.cpp
+  src/glim/odometry/robust_initial_state_estimation.cpp
+  src/glim/odometry/robust_initial_state_estimation_odom.cpp
+  src/glim/odometry/robust_initial_state_estimation_estimate.cpp
+  src/glim/odometry/robust_initial_state_estimation_refine.cpp
   src/glim/odometry/odometry_estimation_base.cpp
   src/glim/odometry/async_odometry_estimation.cpp
   src/glim/odometry/odometry_estimation_imu.cpp
