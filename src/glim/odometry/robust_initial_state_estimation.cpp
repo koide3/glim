@@ -4,21 +4,10 @@
 #include <spdlog/spdlog.h>
 
 #include <gtsam/inference/Symbol.h>
-#include <gtsam/geometry/Rot3.h>
-#include <gtsam/geometry/Pose3.h>
-#include <gtsam/slam/expressions.h>
-#include <gtsam/slam/PriorFactor.h>
-#include <gtsam/slam/BetweenFactor.h>
-#include <gtsam/slam/PoseRotationPrior.h>
-#include <gtsam/navigation/ImuFactor.h>
-#include <gtsam/nonlinear/ExpressionFactor.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <gtsam_points/ann/ivox.hpp>
 #include <gtsam_points/types/point_cloud_cpu.hpp>
-#include <gtsam_points/factors/integrated_gicp_factor.hpp>
-#include <gtsam_points/optimizers/levenberg_marquardt_ext.hpp>
-#include <gtsam_points/util/expressions.hpp>
 
 #include <glim/util/config.hpp>
 #include <glim/util/convert_to_string.hpp>
@@ -26,8 +15,6 @@
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/odometry/callbacks.hpp>
-
-#include <guik/viewer/light_viewer.hpp>
 
 namespace glim {
 
