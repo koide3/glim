@@ -143,10 +143,9 @@ void StandardViewer::set_callbacks() {
               normal[3] = 1.0;
             }
             cloud_buffer->add_color(normals);
+            shader_setting.set_color_mode(guik::ColorMode::VERTEX_COLOR);
+            shader_setting_rainbow.set_color_mode(guik::ColorMode::VERTEX_COLOR);
           }
-
-          shader_setting.set_color_mode(guik::ColorMode::VERTEX_COLORMAP);
-          shader_setting_rainbow.set_color_mode(guik::ColorMode::VERTEX_COLORMAP);
           break;
       }
 
@@ -189,12 +188,17 @@ void StandardViewer::set_callbacks() {
         auto drawable = viewer->find_drawable(name);
         if (drawable.first == nullptr) {
           auto cloud_buffer = std::make_shared<glk::PointCloudBuffer>(keyframe->frame->points, keyframe->frame->size());
-          if (keyframe->frame->has_normals()) {
-            cloud_buffer->add_normals(keyframe->frame->normals, keyframe->frame->size());
-          }
           if (keyframe->frame->has_intensities()) {
             std::vector<float> intensities(keyframe->frame->intensities, keyframe->frame->intensities + keyframe->frame->size());
             cloud_buffer->add_colormap(intensities);
+          }
+          if (keyframe->frame->normals) {
+            std::vector<Eigen::Vector4d> normals(keyframe->frame->normals, keyframe->frame->normals + keyframe->frame->size());
+            for (auto& normal : normals) {
+              normal = normal.array().abs();
+              normal[3] = 1.0;
+            }
+            cloud_buffer->add_color(normals);
           }
 
           guik::Rainbow shader_setting(pose);
@@ -205,6 +209,9 @@ void StandardViewer::set_callbacks() {
               shader_setting.set_color_mode(guik::ColorMode::VERTEX_COLORMAP);
               break;
             case 2:  // NORMAL
+              if (keyframe->frame->normals) {
+                shader_setting.set_color_mode(guik::ColorMode::VERTEX_COLOR);
+              }
               break;
           }
 
@@ -218,7 +225,7 @@ void StandardViewer::set_callbacks() {
               drawable.first->set_color_mode(guik::ColorMode::VERTEX_COLORMAP);
               break;
             case 2:
-              drawable.first->set_color_mode(guik::ColorMode::RAINBOW);
+              drawable.first->set_color_mode(keyframe->frame->normals ? guik::ColorMode::VERTEX_COLOR : guik::ColorMode::RAINBOW);
               break;
           }
 
