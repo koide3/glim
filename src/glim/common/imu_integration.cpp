@@ -8,6 +8,7 @@ IMUIntegrationParams::IMUIntegrationParams(const bool upright) {
   glim::Config config_sensors(glim::GlobalConfig::get_config_path("config_sensors"));
 
   this->upright = upright;
+  this->gravity_magnitude = config_sensors.param<double>("sensors", "imu_gravity_magnitude", 9.80665);
   this->acc_noise = config_sensors.param<double>("sensors", "imu_acc_noise", 0.01);
   this->gyro_noise = config_sensors.param<double>("sensors", "imu_gyro_noise", 0.001);
   this->int_noise = config_sensors.param<double>("sensors", "imu_int_noise", 0.001);
@@ -16,9 +17,9 @@ IMUIntegrationParams::IMUIntegrationParams(const bool upright) {
 IMUIntegrationParams::~IMUIntegrationParams() {}
 
 IMUIntegration::IMUIntegration(const IMUIntegrationParams& params) {
-  auto imu_params = gtsam::PreintegrationParams::MakeSharedU();
+  auto imu_params = gtsam::PreintegrationParams::MakeSharedU(params.gravity_magnitude);
   if (!params.upright) {
-    imu_params = gtsam::PreintegrationParams::MakeSharedD();
+    imu_params = gtsam::PreintegrationParams::MakeSharedD(params.gravity_magnitude);
   }
 
   imu_params->accelerometerCovariance = gtsam::Matrix3::Identity() * std::pow(params.acc_noise, 2);
