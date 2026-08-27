@@ -1,10 +1,12 @@
 {
   /*** Sensor configurations ***
   // --- IMU config ---
-  // imu_acc_noise               : Accelerometer noise
-  // imu_gyro_noise              : Gyroscope noise
+  // imu_acc_noise               : Accelerometer noise density [m/s^2/sqrt(Hz)]
+  // imu_gyro_noise              : Gyroscope noise density [rad/s/sqrt(Hz)]
   // imu_int_noise               : Integration noise
-  // imu_bias_noise              : Bias randomwalk noise
+  // imu_bias_noise_acc          : Bias randomwalk noise for accelerometer [m/s^3/sqrt(Hz)]
+  // imu_bias_noise_gyro         : Bias randomwalk noise for gyroscope [rad/s^2/sqrt(Hz)]
+  // imu_bias_noise              : [deprecated] Bias randomwalk noise for both accelerometer and gyroscope
   //
   // --- LiDAR config ---
   // global_shutter_lidar        : If true, fill per-point timestamps with zero and disable points deskewing
@@ -47,7 +49,8 @@
     "imu_acc_noise": 0.05,
     "imu_gyro_noise": 0.02,
     "imu_int_noise": 0.001,
-    "imu_bias_noise": 1e-5,
+    "imu_bias_noise_acc": 1e-5,
+    "imu_bias_noise_gyro": 1e-6,
     // LiDAR config
     "global_shutter_lidar": false,
     "T_lidar_imu": [
