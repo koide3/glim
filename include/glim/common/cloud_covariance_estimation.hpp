@@ -19,6 +19,18 @@ public:
   ~CloudCovarianceEstimation();
 
   /**
+   * @brief Set the eigenvalues used for covariance regularization
+   * @param eigvals Eigenvalues to be forced to regularized covariance matrices (default [1e-3, 1.0, 1.0])
+   */
+  void set_regularization_eigvals(const Eigen::Vector3d& eigvals);
+
+  /**
+   * @brief Set the radius of the neighbor kernel used for covariance estimation
+   * @param radius Radius of the neighbor kernel (default -1.0 = disable)
+   */
+  void set_neighbor_kernel_radius(const double radius);
+
+  /**
    * @brief Estimate point normals and covariances
    * @param points    Input points
    * @param neighbors Neighbor indices (must be N * k, where N is the number of points)
@@ -58,8 +70,10 @@ public:
   Eigen::Matrix4d regularize(const Eigen::Matrix4d& cov, Eigen::Vector3d* eigenvalues = nullptr, Eigen::Matrix3d* eigenvectors = nullptr) const;
 
 private:
-  const RegularizationMethod regularization_method;
-  const int num_threads;
+  RegularizationMethod regularization_method;
+  Eigen::Vector3d regularization_eigvals;
+  double neighbor_kernel_radius;
+  int num_threads;
 };
 
 }  // namespace glim
