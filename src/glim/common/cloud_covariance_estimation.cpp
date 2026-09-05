@@ -21,9 +21,22 @@ CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads)
 : regularization_method(RegularizationMethod::PLANE),
   regularization_eigvals(1e-3, 1.0, 1.0),
   neighbor_kernel_radius(-1.0),
+  neighbor_weight_offset(1e-4),
   num_threads(num_threads) {}
 
 CloudCovarianceEstimation::~CloudCovarianceEstimation() {}
+
+void CloudCovarianceEstimation::set_regularization_eigvals(const Eigen::Vector3d& eigvals) {
+  regularization_eigvals = eigvals;
+}
+
+void CloudCovarianceEstimation::set_neighbor_kernel_radius(const double radius) {
+  neighbor_kernel_radius = radius;
+}
+
+void CloudCovarianceEstimation::set_neighbor_weight_offset(const double offset) {
+  neighbor_weight_offset = offset;
+}
 
 void CloudCovarianceEstimation::estimate(
   const std::vector<Eigen::Vector4d>& points,
@@ -94,7 +107,7 @@ void CloudCovarianceEstimation::estimate(
       if (enable_kernel) {
         const int index = neighbors[begin + j];
         const double dist_sq = (points[index] - points[i]).squaredNorm();
-        weight = std::exp(-dist_sq / (2.0 * neighbor_kernel_radius * neighbor_kernel_radius));
+        weight = std::exp(-dist_sq / (2.0 * neighbor_kernel_radius * neighbor_kernel_radius)) + neighbor_weight_offset;
       }
 
       const int index = neighbors[begin + j];
@@ -166,7 +179,7 @@ std::vector<Eigen::Matrix4d> CloudCovarianceEstimation::estimate(const std::vect
       if (enable_kernel) {
         const int index = neighbors[begin + j];
         const double dist_sq = (points[index] - points[i]).squaredNorm();
-        weight = std::exp(-dist_sq / (2.0 * neighbor_kernel_radius * neighbor_kernel_radius));
+        weight = std::exp(-dist_sq / (2.0 * neighbor_kernel_radius * neighbor_kernel_radius)) + neighbor_weight_offset;
       }
 
       const int index = neighbors[begin + j];

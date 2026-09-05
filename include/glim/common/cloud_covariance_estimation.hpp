@@ -31,6 +31,12 @@ public:
   void set_neighbor_kernel_radius(const double radius);
 
   /**
+   * @brief Set the offset for the neighbor weight to avoid zero weights
+   * @param offset Offset value for the neighbor weight (default 1e-4)
+   */
+  void set_neighbor_weight_offset(const double offset);
+
+  /**
    * @brief Estimate point normals and covariances
    * @param points    Input points
    * @param neighbors Neighbor indices (must be N * k, where N is the number of points)
@@ -73,6 +79,7 @@ private:
   RegularizationMethod regularization_method;
   Eigen::Vector3d regularization_eigvals;
   double neighbor_kernel_radius;
+  double neighbor_weight_offset;
   int num_threads;
 };
 
