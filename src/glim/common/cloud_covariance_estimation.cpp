@@ -17,9 +17,26 @@
 
 namespace glim {
 
-CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads) : regularization_method(RegularizationMethod::PLANE), num_threads(num_threads) {}
+CloudCovarianceEstimation::CloudCovarianceEstimation(const int num_threads)
+: regularization_method(RegularizationMethod::PLANE),
+  regularization_eigvals(1e-3, 1.0, 1.0),
+  neighbor_kernel_radius(-1.0),
+  neighbor_weight_offset(1e-4),
+  num_threads(num_threads) {}
 
 CloudCovarianceEstimation::~CloudCovarianceEstimation() {}
+
+void CloudCovarianceEstimation::set_regularization_eigvals(const Eigen::Vector3d& eigvals) {
+  regularization_eigvals = eigvals;
+}
+
+void CloudCovarianceEstimation::set_neighbor_kernel_radius(const double radius) {
+  neighbor_kernel_radius = radius;
+}
+
+void CloudCovarianceEstimation::set_neighbor_weight_offset(const double offset) {
+  neighbor_weight_offset = offset;
+}
 
 void CloudCovarianceEstimation::estimate(
   const std::vector<Eigen::Vector4d>& points,
@@ -78,18 +95,29 @@ void CloudCovarianceEstimation::estimate(
   covs.resize(points.size());
 
   const auto calc_cov = [&](int i) {
+    double sum_weights = 0.0;
     Eigen::Vector4d sum_points = Eigen::Vector4d::Zero();
     Eigen::Matrix4d sum_cross = Eigen::Matrix4d::Zero();
 
+    const bool enable_kernel = neighbor_kernel_radius > 0.0;
+
     const int begin = k_correspondences * i;
     for (int j = 0; j < k_neighbors; j++) {
+      double weight = 1.0;
+      if (enable_kernel) {
+        const int index = neighbors[begin + j];
+        const double dist_sq = (points[index] - points[i]).squaredNorm();
+        weight = std::exp(-dist_sq / (2.0 * neighbor_kernel_radius * neighbor_kernel_radius)) + neighbor_weight_offset;
+      }
+
       const int index = neighbors[begin + j];
-      sum_points += points[index];
-      sum_cross += pt_cross[index];
+      sum_points += weight * points[index];
+      sum_cross += weight * pt_cross[index];
+      sum_weights += weight;
     }
 
-    const Eigen::Vector4d mean = sum_points / k_neighbors;
-    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / k_neighbors;
+    const Eigen::Vector4d mean = sum_points / sum_weights;
+    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / sum_weights;
 
     Eigen::Matrix3d eigenvectors;
     covs[i] = regularize(cov, nullptr, &eigenvectors);
@@ -139,18 +167,29 @@ std::vector<Eigen::Matrix4d> CloudCovarianceEstimation::estimate(const std::vect
   // Calculate covariances
   std::vector<Eigen::Matrix4d> covs(points.size());
   for (int i = 0; i < points.size(); i++) {
+    const bool enable_kernel = neighbor_kernel_radius > 0.0;
+
+    double sum_weights = 0.0;
     Eigen::Vector4d sum_points = Eigen::Vector4d::Zero();
     Eigen::Matrix4d sum_cross = Eigen::Matrix4d::Zero();
 
     const int begin = k_correspondences * i;
     for (int j = 0; j < k_neighbors; j++) {
+      double weight = 1.0;
+      if (enable_kernel) {
+        const int index = neighbors[begin + j];
+        const double dist_sq = (points[index] - points[i]).squaredNorm();
+        weight = std::exp(-dist_sq / (2.0 * neighbor_kernel_radius * neighbor_kernel_radius)) + neighbor_weight_offset;
+      }
+
       const int index = neighbors[begin + j];
-      sum_points += points[index];
-      sum_cross += pt_cross[index];
+      sum_points += weight * points[index];
+      sum_cross += weight * pt_cross[index];
+      sum_weights += weight;
     }
 
-    const Eigen::Vector4d mean = sum_points / k_neighbors;
-    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / (k_neighbors - 1);
+    const Eigen::Vector4d mean = sum_points / sum_weights;
+    const Eigen::Matrix4d cov = (sum_cross - mean * sum_points.transpose()) / sum_weights;
     covs[i] = regularize(cov);
     covs[i](3, 3) = 0.0;
   }
@@ -189,7 +228,7 @@ Eigen::Matrix4d CloudCovarianceEstimation::regularize(const Eigen::Matrix4d& cov
         *eigenvectors = eig.eigenvectors();
       }
 
-      Eigen::Vector3d values(1e-3, 1.0, 1.0);
+      Eigen::Vector3d values = regularization_eigvals;
       Eigen::Matrix4d c = Eigen::Matrix4d::Zero();
       c.block<3, 3>(0, 0) = eig.eigenvectors() * values.asDiagonal() * eig.eigenvectors().transpose();
       return c;
