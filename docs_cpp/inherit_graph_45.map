@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classglim_1_1GlobalMappingBase.html" title="Global mapping base class." alt="" coords="5,31,195,56"/>
+<area shape="rect" id="Node000001" href="$classglim_1_1GlobalMapping.html" title="Global mapping." alt="" coords="277,5,435,31"/>
+<area shape="poly" id="edge8_Node000000_Node000001" title=" " alt="" coords="208,30,277,23,277,28,209,35"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1GlobalMappingPoseGraph.html" title="Global mapping with the old conventional pose graph optimization." alt="" coords="243,55,469,80"/>
+<area shape="poly" id="edge9_Node000000_Node000002" title=" " alt="" coords="209,51,243,54,242,59,208,56"/>
+</map>
