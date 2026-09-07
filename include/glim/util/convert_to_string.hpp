@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <fmt/format.h>
+#include <fmt/std.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
