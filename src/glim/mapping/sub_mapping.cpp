@@ -174,7 +174,16 @@ void SubMapping::insert_frame(const EstimationFrame::ConstPtr& odom_frame_) {
   const int current = odom_frames.size();
   const int last = current - 1;
   odom_frames.push_back(odom_frame);
-  values->insert(X(current), gtsam::Pose3(odom_frame->T_world_sensor().matrix()));
+
+  // Reuse previous graph poses for initialization
+  gtsam::Pose3 initial_pose = gtsam::Pose3(odom_frame->T_world_sensor().matrix());
+  if (current != 0) {
+    const Eigen::Isometry3d delta_odom = odom_frames[last]->T_world_sensor().inverse() * odom_frame->T_world_sensor();
+    if (values->exists(X(last))) {
+      initial_pose = values->at<gtsam::Pose3>(X(last)) * gtsam::Pose3(delta_odom.matrix());
+    }
+  }
+  values->insert(X(current), initial_pose);
 
   if (params.enable_imu && odom_frame->frame_id != FrameID::IMU) {
     logger->warn("odom frames are not estimated in the IMU frame while sub_mapping requires IMU estimation");
