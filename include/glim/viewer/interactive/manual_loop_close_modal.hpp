@@ -37,6 +37,12 @@ public:
 
   void clear();
 
+  /**
+   * @brief Consume the cancellation event from the last modal run
+   * @return True if the user cancelled preprocessing or alignment
+   */
+  bool consume_cancelled();
+
   gtsam::NonlinearFactor::shared_ptr run();
 
 private:
@@ -54,6 +60,7 @@ private:
   const int num_threads;
 
   bool request_to_open;
+  bool cancelled;
   std::unique_ptr<guik::GLCanvas> canvas;
   std::unique_ptr<guik::ProgressModal> progress_modal;
   std::unique_ptr<guik::ModelControl> model_control;

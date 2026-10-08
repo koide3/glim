@@ -35,6 +35,7 @@ void OfflineViewer::main_menu() {
   bool start_close_map = false;
   bool start_save_map = false;
   bool start_export_map = false;
+  const bool graph_editing = current_graph_edit_state.load() != GraphEditState::IDLE || needs_session_merge.load();
 
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
@@ -43,7 +44,7 @@ void OfflineViewer::main_menu() {
           start_open_map = true;
         }
       } else {
-        if (ImGui::MenuItem("Open Additional Map")) {
+        if (ImGui::MenuItem("Open Additional Map", nullptr, false, !graph_editing)) {
           start_open_map = true;
         }
       }
@@ -55,11 +56,11 @@ void OfflineViewer::main_menu() {
       }
 
       if (ImGui::BeginMenu("Save")) {
-        if (ImGui::MenuItem("Save Map")) {
+        const bool output_enabled = async_global_mapping && !graph_editing;
+        if (ImGui::MenuItem("Save Map", nullptr, false, output_enabled)) {
           start_save_map = true;
         }
-
-        if (ImGui::MenuItem("Export Points")) {
+        if (ImGui::MenuItem("Export Points", nullptr, false, output_enabled)) {
           start_export_map = true;
         }
 

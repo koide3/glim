@@ -25,8 +25,12 @@ CallbackSlot<void(const std::vector<SubMap::Ptr>& submaps)> GlobalMappingCallbac
 
 CallbackSlot<void(gtsam_points::ISAM2Ext&, gtsam::NonlinearFactorGraph&, gtsam::Values&)> GlobalMappingCallbacks::on_smoother_update;
 CallbackSlot<void(gtsam_points::ISAM2Ext&, const gtsam_points::ISAM2ResultExt& result)> GlobalMappingCallbacks::on_smoother_update_result;
+CallbackSlot<void(GraphEditState, const std::vector<uint8_t>&)> GlobalMappingCallbacks::on_graph_edit_state_changed;
+CallbackSlot<void(const CandidateGraph&)> GlobalMappingCallbacks::on_candidate_graph_updated;
 
 CallbackSlot<void()> GlobalMappingCallbacks::request_to_optimize;
+CallbackSlot<void(const gtsam::NonlinearFactorGraph&)> GlobalMappingCallbacks::request_to_add_graph_factors;
+CallbackSlot<void(const SessionMergeOptions&)> GlobalMappingCallbacks::request_to_merge_sessions;
 CallbackSlot<void()> GlobalMappingCallbacks::request_to_recover;
 CallbackSlot<void(double)> GlobalMappingCallbacks::request_to_find_overlapping_submaps;
 }  // namespace glim

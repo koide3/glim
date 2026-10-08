@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -9,8 +11,8 @@
 #include <Eigen/Geometry>
 
 #include <glim/mapping/sub_map.hpp>
+#include <glim/mapping/graph_edit.hpp>
 #include <glim/util/extension_module.hpp>
-#include <glim/util/concurrent_vector.hpp>
 #include <gtsam_points/util/gtsam_migration.hpp>
 
 namespace spdlog {
@@ -56,6 +58,7 @@ protected:
 
   void invoke(const std::function<void()>& task);
   void drawable_selection();
+  void draw_submap_pruning_window();
   void on_click();
   void context_menu();
   void run_modals();
@@ -67,6 +70,21 @@ protected:
   void globalmap_on_update_submaps(const std::vector<SubMap::Ptr>& updated_submaps);
   void globalmap_on_smoother_update(gtsam_points::ISAM2Ext& isam2, gtsam::NonlinearFactorGraph& new_factors, gtsam::Values& new_values);
   void globalmap_on_smoother_update_result(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result);
+  void globalmap_on_graph_edit_state_changed(GraphEditState state, const std::vector<uint8_t>& pruned_mask);
+  void globalmap_on_candidate_graph_updated(const CandidateGraph& candidate);
+
+  bool add_prune_range(int first, int last);
+  void update_normalized_prune_ranges();
+  bool is_prune_endpoint(int submap_id) const;
+  bool is_unavailable_submap(int submap_id) const;
+  bool is_orphaned_submap(int submap_id) const;
+  bool is_source_submap(int submap_id) const;
+  bool is_selected_for_pruning(int submap_id) const;
+  int count_selected_submaps(const std::vector<SubmapRange>& ranges) const;
+  bool has_remaining_submaps(bool source) const;
+  void set_prune_endpoint(int submap_id, bool start);
+  void begin_session_merge();
+  void reset_graph_edit_ui();
 
 protected:
   std::atomic_bool request_to_clear;
@@ -109,6 +127,27 @@ protected:
   double factors_alpha;
 
   std::atomic_bool needs_session_merge;
+  std::atomic<GraphEditState> current_graph_edit_state;
+
+  bool prune_selection_mode;
+  bool show_submap_pruning_window;
+  bool hide_selected_submaps;
+  bool prune_source_session;
+  bool show_other_session;
+  bool session_merge_in_progress;
+  int prune_range_start;
+  int prune_range_end;
+  int prune_start_input;
+  int prune_end_input;
+  std::vector<SubmapRange> requested_target_prune_ranges;
+  std::vector<SubmapRange> normalized_target_prune_ranges;
+  std::vector<SubmapRange> requested_source_prune_ranges;
+  std::vector<SubmapRange> normalized_source_prune_ranges;
+  std::vector<uint8_t> unavailable_submap_mask;
+  std::vector<uint8_t> orphaned_submap_mask;
+  std::unique_ptr<SessionMergeOptions> pending_merge_options;
+  std::size_t candidate_orphaned_subgraph_count;
+  std::string candidate_diagnostic;
 
   // Click information
   Eigen::Vector4i right_clicked_info;
@@ -127,9 +166,6 @@ protected:
 
   // Factors
   std::vector<std::tuple<FactorType, std::uint64_t, std::uint64_t>> global_factors;
-
-  // Factors to be inserted into the global mapping graph
-  ConcurrentVector<gtsam_points::shared_ptr<gtsam::NonlinearFactor>> new_factors;
 
   // Logging
   std::shared_ptr<spdlog::logger> logger;

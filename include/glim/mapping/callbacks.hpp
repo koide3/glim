@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <glim/util/callback_slot.hpp>
 #include <glim/odometry/estimation_frame.hpp>
 #include <glim/mapping/sub_map.hpp>
@@ -22,6 +24,10 @@ class LevenbergMarquardtOptimizationStatus;
 }  // namespace gtsam_points
 
 namespace glim {
+
+enum class GraphEditState;
+struct CandidateGraph;
+struct SessionMergeOptions;
 
 /**
  * @brief Sub mapping-related callbacks
@@ -133,10 +139,37 @@ struct GlobalMappingCallbacks {
   static CallbackSlot<void(gtsam_points::ISAM2Ext& isam2, const gtsam_points::ISAM2ResultExt& result)> on_smoother_update_result;
 
   /**
+   * @brief Graph edit state update callback
+   * @param state         Current graph edit state
+   * @param pruned_mask   Submaps unavailable for selection or rendering
+   */
+  static CallbackSlot<void(GraphEditState state, const std::vector<uint8_t>& pruned_mask)> on_graph_edit_state_changed;
+
+  /**
+   * @brief Candidate graph view update callback
+   * @param candidate Current graph being edited and displayed
+   */
+  static CallbackSlot<void(const CandidateGraph& candidate)> on_candidate_graph_updated;
+
+  /**
    * @brief Request the global mapping module to perform optimization
    * @note  This is a special inverse-direction callback slot
    */
   static CallbackSlot<void()> request_to_optimize;
+
+  /**
+   * @brief Request adding factors to the graph currently accepting edits
+   * @param factors Factors to add
+   * @note  This is a special inverse-direction callback slot
+   */
+  static CallbackSlot<void(const gtsam::NonlinearFactorGraph& factors)> request_to_add_graph_factors;
+
+  /**
+   * @brief Request committing the pending session merge as a graph transaction
+   * @param options Frozen session merge options
+   * @note  This is a special inverse-direction callback slot
+   */
+  static CallbackSlot<void(const SessionMergeOptions& options)> request_to_merge_sessions;
 
   /**
    * @brief Request the global mapping module to detect and recover from a graph corruption

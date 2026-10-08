@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <glim/mapping/global_mapping.hpp>
 #include <glim/util/concurrent_vector.hpp>
@@ -97,9 +98,19 @@ private:
   std::atomic_bool request_to_optimize;
   std::atomic_bool request_to_recover;
   std::atomic<double> request_to_find_overlapping_submaps;
+  std::mutex merge_request_mutex;
+  std::optional<SessionMergeOptions> merge_request;
+  std::mutex graph_factors_request_mutex;
+  gtsam::NonlinearFactorGraph graph_factors_request;
 
   std::mutex global_mapping_mutex;
   std::shared_ptr<glim::GlobalMappingBase> global_mapping;
+
+  int optimize_callback_id;
+  int graph_factors_callback_id;
+  int merge_sessions_callback_id;
+  int recover_callback_id;
+  int find_overlaps_callback_id;
 
   // Logging
   std::shared_ptr<spdlog::logger> logger;

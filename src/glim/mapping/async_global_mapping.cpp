@@ -15,9 +15,18 @@ AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMapping
   request_to_recover = false;
   request_to_find_overlapping_submaps.store(-1.0);
 
-  GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
-  GlobalMappingCallbacks::request_to_recover.add([this] { request_to_recover = true; });
-  GlobalMappingCallbacks::request_to_find_overlapping_submaps.add([this](double min_overlap) { request_to_find_overlapping_submaps.store(min_overlap); });
+  optimize_callback_id = GlobalMappingCallbacks::request_to_optimize.add([this] { request_to_optimize = true; });
+  graph_factors_callback_id = GlobalMappingCallbacks::request_to_add_graph_factors.add([this](const gtsam::NonlinearFactorGraph& factors) {
+    std::lock_guard<std::mutex> lock(graph_factors_request_mutex);
+    graph_factors_request.add(factors);
+  });
+  merge_sessions_callback_id = GlobalMappingCallbacks::request_to_merge_sessions.add([this](const SessionMergeOptions& options) {
+    std::lock_guard<std::mutex> lock(merge_request_mutex);
+    merge_request = options;
+  });
+  recover_callback_id = GlobalMappingCallbacks::request_to_recover.add([this] { request_to_recover = true; });
+  find_overlaps_callback_id =
+    GlobalMappingCallbacks::request_to_find_overlapping_submaps.add([this](double min_overlap) { request_to_find_overlapping_submaps.store(min_overlap); });
 
   kill_switch = false;
   end_of_sequence = false;
@@ -25,6 +34,12 @@ AsyncGlobalMapping::AsyncGlobalMapping(const std::shared_ptr<glim::GlobalMapping
 }
 
 AsyncGlobalMapping::~AsyncGlobalMapping() {
+  GlobalMappingCallbacks::request_to_optimize.remove(optimize_callback_id);
+  GlobalMappingCallbacks::request_to_add_graph_factors.remove(graph_factors_callback_id);
+  GlobalMappingCallbacks::request_to_merge_sessions.remove(merge_sessions_callback_id);
+  GlobalMappingCallbacks::request_to_recover.remove(recover_callback_id);
+  GlobalMappingCallbacks::request_to_find_overlapping_submaps.remove(find_overlaps_callback_id);
+
   kill_switch = true;
   join();
 }
@@ -100,10 +115,35 @@ void AsyncGlobalMapping::run() {
         global_mapping->find_overlapping_submaps(min_overlap);
       }
 
+      std::optional<SessionMergeOptions> requested_merge;
+      {
+        std::lock_guard<std::mutex> lock(merge_request_mutex);
+        requested_merge.swap(merge_request);
+      }
+      if (requested_merge) {
+        std::lock_guard<std::mutex> lock(global_mapping_mutex);
+        global_mapping->merge_sessions(*requested_merge);
+        last_optimization_time = std::chrono::high_resolution_clock::now();
+      }
+
+      gtsam::NonlinearFactorGraph requested_graph_factors;
+      {
+        std::lock_guard<std::mutex> lock(graph_factors_request_mutex);
+        requested_graph_factors = std::move(graph_factors_request);
+        graph_factors_request = gtsam::NonlinearFactorGraph();
+      }
+      if (!requested_graph_factors.empty()) {
+        std::lock_guard<std::mutex> lock(global_mapping_mutex);
+        global_mapping->add_graph_factors(requested_graph_factors);
+        last_optimization_time = std::chrono::high_resolution_clock::now();
+      }
+
       if (request_to_optimize || std::chrono::high_resolution_clock::now() - last_optimization_time > std::chrono::seconds(optimization_interval)) {
         std::lock_guard<std::mutex> lock(global_mapping_mutex);
         request_to_optimize = false;
-        global_mapping->optimize();
+        if (global_mapping->graph_edit_state() == GraphEditState::IDLE) {
+          global_mapping->optimize();
+        }
         last_optimization_time = std::chrono::high_resolution_clock::now();
       }
 

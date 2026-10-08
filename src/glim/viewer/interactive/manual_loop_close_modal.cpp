@@ -35,7 +35,11 @@
 
 namespace glim {
 
-ManualLoopCloseModal::ManualLoopCloseModal(const std::shared_ptr<spdlog::logger>& logger, int num_threads) : num_threads(num_threads), request_to_open(false), logger(logger) {
+ManualLoopCloseModal::ManualLoopCloseModal(const std::shared_ptr<spdlog::logger>& logger, int num_threads)
+: num_threads(num_threads),
+  request_to_open(false),
+  cancelled(false),
+  logger(logger) {
   target_pose.setIdentity();
   source_pose.setIdentity();
 
@@ -115,6 +119,7 @@ void ManualLoopCloseModal::set_submaps(const std::vector<SubMap::ConstPtr>& targ
   this->source_drawable = nullptr;
   this->source_submaps = source_submaps;
 
+  cancelled = false;
   request_to_open = true;
 }
 
@@ -129,6 +134,12 @@ void ManualLoopCloseModal::clear() {
   source_drawable = nullptr;
   target_submaps.clear();
   source_submaps.clear();
+}
+
+bool ManualLoopCloseModal::consume_cancelled() {
+  const bool was_cancelled = cancelled;
+  cancelled = false;
+  return was_cancelled;
 }
 
 gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
@@ -184,6 +195,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
 
     ImGui::SameLine();
     if (ImGui::Button("Cancel")) {
+      cancelled = true;
       ImGui::CloseCurrentPopup();
       clear();
     }
@@ -306,6 +318,7 @@ gtsam::NonlinearFactor::shared_ptr ManualLoopCloseModal::run() {
 
     ImGui::SameLine();
     if (ImGui::Button("Cancel")) {
+      cancelled = true;
       ImGui::CloseCurrentPopup();
       clear();
     }

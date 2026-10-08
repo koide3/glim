@@ -3,6 +3,7 @@
 #include <any>
 #include <memory>
 #include <random>
+#include <glim/mapping/graph_edit.hpp>
 #include <glim/mapping/global_mapping_base.hpp>
 
 namespace gtsam {
@@ -66,7 +67,10 @@ public:
   virtual void insert_submap(const SubMap::Ptr& submap) override;
 
   virtual void find_overlapping_submaps(double min_overlap) override;
+  virtual void add_graph_factors(const gtsam::NonlinearFactorGraph& factors) override;
   virtual void optimize() override;
+  virtual GraphEditState graph_edit_state() const override;
+  virtual void merge_sessions(const SessionMergeOptions& options) override;
 
   virtual void save(const std::string& path) override;
   virtual gtsam_points::PointCloud::Ptr export_points() override;
@@ -82,8 +86,16 @@ private:
 
   std::shared_ptr<gtsam::NonlinearFactorGraph> create_between_factors(int current) const;
   std::shared_ptr<gtsam::NonlinearFactorGraph> create_matching_cost_factors(int current) const;
+  gtsam::NonlinearFactorGraph create_overlapping_factors(const gtsam::Values& values, const gtsam::NonlinearFactorGraph& factors, double min_overlap) const;
 
   void update_submaps();
+  void notify_graph_edit_state() const;
+  void notify_candidate_graph() const;
+  void rebuild_pruned_mask();
+  bool is_pruned(int submap_id) const;
+  int count_active_frames() const;
+  gtsam::ISAM2Params create_isam2_params() const;
+  bool try_commit_candidate();
   gtsam_points::ISAM2ResultExt update_isam2(const gtsam::NonlinearFactorGraph& new_factors, const gtsam::Values& new_values);
 
   void recover_graph() override;
@@ -95,6 +107,12 @@ private:
 
   std::mt19937 mt;
   int session_id;
+  GraphEditState edit_state;
+  int committed_submap_count;
+  std::unique_ptr<CandidateGraph> candidate;
+  std::vector<SubmapRange> pruned_ranges;
+  std::vector<SubmapRange> pending_source_pruned_ranges;
+  std::vector<uint8_t> pruned_mask;
 
   std::unique_ptr<IMUIntegration> imu_integration;
   std::any stream_buffer_roundrobin;

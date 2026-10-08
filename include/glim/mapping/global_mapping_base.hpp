@@ -13,7 +13,14 @@ namespace spdlog {
 class logger;
 }
 
+namespace gtsam {
+class NonlinearFactorGraph;
+}
+
 namespace glim {
+
+enum class GraphEditState;
+struct SessionMergeOptions;
 
 /**
  * @brief Global mapping base class
@@ -53,9 +60,26 @@ public:
   virtual void find_overlapping_submaps(double min_overlap);
 
   /**
+   * @brief Add factors to the graph currently accepting edits
+   * @param factors Factors to add
+   */
+  virtual void add_graph_factors(const gtsam::NonlinearFactorGraph& factors);
+
+  /**
    * @brief Request to perform optimization
    */
   virtual void optimize();
+
+  /**
+   * @brief Get the current graph editing state
+   */
+  virtual GraphEditState graph_edit_state() const;
+
+  /**
+   * @brief Build and commit a candidate for the pending session merge
+   * @param options Frozen session merge options
+   */
+  virtual void merge_sessions(const SessionMergeOptions& options);
 
   /**
    * @brief Request to detect and recover graph corruption
