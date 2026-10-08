@@ -1,0 +1,13 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classglim_1_1ExtensionModule.html" title="Extension module to be dynamically loaded via dynamic linking." alt="" coords="5,80,176,105"/>
+<area shape="rect" id="Node000001" href="$classglim_1_1ExtensionModuleROS.html" title="Extension module with ROS1 topic subscription." alt="" coords="228,5,427,31"/>
+<area shape="poly" id="edge2_Node000000_Node000001" title=" " alt="" coords="134,72,223,39,265,28,266,33,225,45,136,77"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1ExtensionModuleROS2.html" title=" " alt="" coords="224,55,431,80"/>
+<area shape="poly" id="edge3_Node000000_Node000002" title=" " alt="" coords="190,79,223,76,224,81,190,85"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1InteractiveViewer.html" title=" " alt="" coords="240,104,415,129"/>
+<area shape="poly" id="edge4_Node000000_Node000003" title=" " alt="" coords="190,100,240,105,239,110,190,105"/>
+<area shape="rect" id="Node000005" href="$classglim_1_1StandardViewer.html" title=" " alt="" coords="246,153,409,179"/>
+<area shape="poly" id="edge6_Node000000_Node000005" title=" " alt="" coords="138,108,225,138,271,151,269,156,223,143,136,113"/>
+<area shape="rect" id="Node000004" href="$classglim_1_1OfflineViewer.html" title=" " alt="" coords="479,104,625,129"/>
+<area shape="poly" id="edge5_Node000003_Node000004" title=" " alt="" coords="429,114,478,114,478,119,429,119"/>
+</map>

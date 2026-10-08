@@ -1,0 +1,6 @@
+<map id="glim::GenericTopicSubscription" name="glim::GenericTopicSubscription">
+<area shape="rect" id="Node000001" title="Generic topic subscription that allows transparently subscribes to a topic through glim_rosnode and g..." alt="" coords="5,5,228,31"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1TopicSubscription.html" title="Specialized topic subscription for type erasure." alt="" coords="31,79,203,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="111,44,112,78,106,79,106,44"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="128,44,127,79,122,78,122,44"/>
+</map>

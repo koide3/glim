@@ -1,0 +1,9 @@
+<map id="glim::InitialStateEstimation" name="glim::InitialStateEstimation">
+<area shape="rect" id="Node000001" title="Initial sensor state estimator." alt="" coords="5,55,205,80"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1LooseInitialStateEstimation.html" title=" " alt="" coords="253,5,492,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,50,302,28,303,33,189,55"/>
+<area shape="rect" id="Node000003" href="$classglim_1_1NaiveInitialStateEstimation.html" title="Naive initial state estimator that simply calculates a pose that aligns linear acc with the gravity d..." alt="" coords="253,55,492,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="219,65,253,65,253,70,219,70"/>
+<area shape="rect" id="Node000004" href="$classglim_1_1RobustInitialStateEstimation.html" title="Robust initial state estimation. This class first performs odometry estimation using GICP frame&#45;to&#45;mo..." alt="" coords="285,105,460,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="179,80,286,103,285,109,178,86"/>
+</map>

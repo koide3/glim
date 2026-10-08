@@ -1,0 +1,23 @@
+var searchData=
+[
+  ['save_0',['save',['../classglim_1_1Config.html#a3ee355a4e6dac2ce11d4a641f6e00f26',1,'glim::Config::save()'],['../structglim_1_1SubMap.html#a93520bc3346ea9cb37648849c6a8b869',1,'glim::SubMap::save()'],['../classglim_1_1GlobalMappingPoseGraph.html#a32c21574e54e82dde885241847697088',1,'glim::GlobalMappingPoseGraph::save()'],['../classglim_1_1GlobalMappingBase.html#a9dfd0d2e271dfc333c1d24ac1415ae92',1,'glim::GlobalMappingBase::save()'],['../classglim_1_1GlobalMapping.html#a872641db8f862f44e8cba2623e980904',1,'glim::GlobalMapping::save()'],['../classglim_1_1AsyncGlobalMapping.html#ae6a58c3722465268c2d5d6d638f489e2',1,'glim::AsyncGlobalMapping::save()']]],
+  ['session_5fid_1',['session_id',['../structglim_1_1SubMap.html#ab9ad90d7b18a782601649f747890f4c8',1,'glim::SubMap']]],
+  ['set_5fneighbor_5fkernel_5fradius_2',['set_neighbor_kernel_radius',['../classglim_1_1CloudCovarianceEstimation.html#a771f390a79d45f58f65e111f1268b462',1,'glim::CloudCovarianceEstimation']]],
+  ['set_5fneighbor_5fweight_5foffset_3',['set_neighbor_weight_offset',['../classglim_1_1CloudCovarianceEstimation.html#afe0191d1700279a285c945030ef1c153',1,'glim::CloudCovarianceEstimation']]],
+  ['set_5fregularization_5feigvals_4',['set_regularization_eigvals',['../classglim_1_1CloudCovarianceEstimation.html#abbc9c9895c0ff5eab85ac7741961274f',1,'glim::CloudCovarianceEstimation']]],
+  ['set_5ft_5fworld_5fsensor_5',['set_T_world_sensor',['../structglim_1_1EstimationFrame.html#af8c8a09e9dd205edd7508289923ae03a',1,'glim::EstimationFrame']]],
+  ['size_6',['size',['../structglim_1_1PreprocessedFrame.html#a875a90dc0ff8828e4463bc62d9da4712',1,'glim::PreprocessedFrame::size()'],['../classglim_1_1InterpolationHelper.html#a4cd8e540f5bedd7792260dfd77991395',1,'glim::InterpolationHelper::size()'],['../structglim_1_1RawPoints.html#a00dfb74b5e38167b91ae081d4451742b',1,'glim::RawPoints::size()']]],
+  ['smoother_5flag_7',['smoother_lag',['../structglim_1_1OdometryEstimationCTParams.html#a1bb56fbb52e825687e0be9dd44c4027e',1,'glim::OdometryEstimationCTParams']]],
+  ['stamp_8',['stamp',['../structglim_1_1EstimationFrame.html#afbf62be6d208de8f0c5cefa5c7e7a250',1,'glim::EstimationFrame::stamp'],['../structglim_1_1RawPoints.html#ac3779cdf422f15af43a37e52775c296d',1,'glim::RawPoints::stamp']]],
+  ['standardviewer_9',['StandardViewer',['../classglim_1_1StandardViewer.html',1,'glim']]],
+  ['submap_10',['SubMap',['../structglim_1_1SubMap.html',1,'glim']]],
+  ['submapmemorystats_11',['SubMapMemoryStats',['../structglim_1_1SubMapMemoryStats.html',1,'glim']]],
+  ['submapping_12',['SubMapping',['../classglim_1_1SubMapping.html',1,'glim']]],
+  ['submappingbase_13',['SubMappingBase',['../classglim_1_1SubMappingBase.html',1,'glim']]],
+  ['submappingcallbacks_14',['SubMappingCallbacks',['../structglim_1_1SubMappingCallbacks.html',1,'glim']]],
+  ['submappingparams_15',['SubMappingParams',['../structglim_1_1SubMappingParams.html',1,'glim']]],
+  ['submappingpassthrough_16',['SubMappingPassthrough',['../classglim_1_1SubMappingPassthrough.html',1,'glim']]],
+  ['submappingpassthroughparams_17',['SubMappingPassthroughParams',['../structglim_1_1SubMappingPassthroughParams.html',1,'glim']]],
+  ['submaptarget_18',['SubMapTarget',['../structglim_1_1SubMapTarget.html',1,'glim']]],
+  ['submit_5fend_5fof_5fsequence_19',['submit_end_of_sequence',['../classglim_1_1SubMapping.html#a5241abd44ca90a6bf1294a0968f74b79',1,'glim::SubMapping::submit_end_of_sequence()'],['../classglim_1_1SubMappingBase.html#a11cd6ee888e15efdc54e8bc7c32f9557',1,'glim::SubMappingBase::submit_end_of_sequence()'],['../classglim_1_1SubMappingPassthrough.html#a28ccbd21f494f6d7eb5e3ecb6df3327a',1,'glim::SubMappingPassthrough::submit_end_of_sequence()']]]
+];

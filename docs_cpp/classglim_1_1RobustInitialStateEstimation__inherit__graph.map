@@ -1,0 +1,5 @@
+<map id="glim::RobustInitialStateEstimation" name="glim::RobustInitialStateEstimation">
+<area shape="rect" id="Node000001" title="Robust initial state estimation. This class first performs odometry estimation using GICP frame&#45;to&#45;mo..." alt="" coords="18,79,193,119"/>
+<area shape="rect" id="Node000002" href="$classglim_1_1InitialStateEstimation.html" title="Initial sensor state estimator." alt="" coords="5,5,205,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="108,44,108,79,103,79,103,44"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="glim::PreprocessCallbacks" name="glim::PreprocessCallbacks">
+<area shape="rect" id="Node000001" title="Point cloud preprocessing related callbacks." alt="" coords="455,60,648,85"/>
+<area shape="rect" id="Node000002" href="$classCallbackSlot.html" title=" " alt="" coords="17,5,214,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,40,455,61,454,67,228,46"/>
+<area shape="rect" id="Node000003" href="$classCallbackSlot.html" title=" " alt="" coords="5,84,225,139"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="239,114,333,112,430,103,473,94,513,83,514,88,475,100,431,109,333,118,239,119"/>
+</map>
