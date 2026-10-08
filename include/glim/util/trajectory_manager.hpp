@@ -14,6 +14,7 @@ public:
   ~TrajectoryManager();
 
   void add_odom(double stamp, const Eigen::Isometry3d& T_odom_sensor, int priority = 1);
+  // Anchors newer than the latest odometry leave the current transform unchanged.
   void update_anchor(double stamp, const Eigen::Isometry3d& T_world_sensor);
 
   Eigen::Isometry3d current_pose() const;
