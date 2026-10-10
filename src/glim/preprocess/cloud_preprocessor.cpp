@@ -11,6 +11,7 @@
 
 #include <glim/util/config.hpp>
 #include <glim/util/convert_to_string.hpp>
+#include <glim/util/point_attributes.hpp>
 
 #ifdef GTSAM_POINTS_USE_TBB
 #include <tbb/task_arena.h>
@@ -98,7 +99,13 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
   if (raw_points->intensities.size()) {
     frame->add_intensities(raw_points->intensities);
   }
+  add_point_attributes(*frame, normalize_point_attributes(raw_points->aux_attributes, raw_points->size()));
   PreprocessCallbacks::on_preprocessing_begin(frame);
+
+  if (!params.use_random_grid_downsampling && !point_attribute_types.empty() && !aux_attributes_warned) {
+    spdlog::warn("voxelgrid downsampling discards extra point fields (enable use_random_grid_downsampling to keep them)");
+    aux_attributes_warned = true;
+  }
 
   // Downsampling
   if (params.use_random_grid_downsampling) {
@@ -179,12 +186,49 @@ PreprocessedFrame::Ptr CloudPreprocessor::preprocess_impl(const RawPoints::Const
     preprocessed->intensities.assign(frame->intensities, frame->intensities + frame->size());
   }
 
+  preprocessed->aux_attributes = get_point_attributes(*frame, point_attribute_types);
+
   preprocessed->k_neighbors = params.k_correspondences;
   preprocessed->neighbors = find_neighbors(frame->points, frame->size(), params.k_correspondences);
 
   spdlog::trace("preprocessed: {} -> {} points", raw_points->size(), preprocessed->size());
 
   return preprocessed;
+}
+
+PointAttributes CloudPreprocessor::normalize_point_attributes(const PointAttributes& attributes, const size_t num_points) {
+  PointAttributes normalized;
+  bool new_types = false;
+
+  for (const auto& [name, attribute] : attributes) {
+    const auto found = point_attribute_types.find(name);
+    if (found == point_attribute_types.end()) {
+      // The value type of an attribute is fixed by its first occurrence
+      spdlog::info("extra point field '{}' ({})", name, point_field_type_name(attribute.type));
+      point_attribute_types[name] = attribute.type;
+      new_types = true;
+      normalized[name] = attribute;
+    } else if (found->second != attribute.type) {
+      spdlog::debug("convert extra point field '{}' from {} to {}", name, point_field_type_name(attribute.type), point_field_type_name(found->second));
+      normalized[name] = attribute.convert_to(found->second);
+    } else {
+      normalized[name] = attribute;
+    }
+  }
+
+  // Fill attributes missing in this frame so that they are kept when frames are merged
+  for (const auto& [name, type] : point_attribute_types) {
+    if (!normalized.count(name)) {
+      normalized[name] = PointAttribute::invalid(type, num_points);
+    }
+  }
+
+  if (new_types) {
+    // Record the types in the global config so that they are dumped together with the map
+    set_point_attribute_types(point_attribute_types);
+  }
+
+  return normalized;
 }
 
 std::vector<int> CloudPreprocessor::find_neighbors(const Eigen::Vector4d* points, const int num_points, const int k) const {

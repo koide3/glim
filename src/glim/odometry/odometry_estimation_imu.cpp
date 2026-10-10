@@ -12,6 +12,7 @@
 
 #include <glim/util/config.hpp>
 #include <glim/util/convert_to_string.hpp>
+#include <glim/util/point_attributes.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/imu_validation.hpp>
 #include <glim/common/cloud_deskewing.hpp>
@@ -208,6 +209,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
     if (raw_frame->intensities.size()) {
       frame->add_intensities(raw_frame->intensities);
     }
+    add_point_attributes(*frame, raw_frame->aux_attributes);
     frame->add_covs(covs);
     frame->add_normals(normals);
     new_frame->frame = frame;
@@ -344,6 +346,7 @@ EstimationFrame::ConstPtr OdometryEstimationIMU::insert_frame(const Preprocessed
   if (raw_frame->intensities.size()) {
     frame->add_intensities(raw_frame->intensities);
   }
+  add_point_attributes(*frame, raw_frame->aux_attributes);
   frame->add_covs(deskewed_covs);
   frame->add_normals(deskewed_normals);
   new_frame->frame = frame;

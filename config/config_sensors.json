@@ -13,6 +13,10 @@
   // T_lidar_imu                 : LiDAR-IMU transformation (See below for the format)
   // intensity_field             : Field name used for extracting point intensity from PointCloud2 message
   // ring_field                  : Field name used for extracting ring number (laser ID) from PointCloud2 message
+  // extra_point_fields          : Names of additional PointCloud2 fields (e.g., ["red", "green", "blue"]) to be passed through the mapping pipeline
+  //                             : and written to exported maps and published point clouds. Values keep their native types (e.g., uint8),
+  //                             : which are detected from the first message and recorded in meta/point_attribute_types of the dumped config.
+  //                             : Names must not contain '_'. Requires use_random_grid_downsampling=true (voxelgrid downsampling discards them)
   //
   // --- LiDAR per-point time settings ---
   // autoconf_perpoint_times     : If true, automatically configure per-point timestamps. If false, use the following settings.
@@ -64,6 +68,7 @@
     ],
     "intensity_field": "intensity",
     "ring_field": "",
+    "extra_point_fields": [],
     // LiDAR per-point time settings
     "autoconf_perpoint_times": true,
     "autoconf_prefer_frame_time": false,

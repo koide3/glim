@@ -21,6 +21,7 @@
 
 #include <glim/util/config.hpp>
 #include <glim/util/convert_to_string.hpp>
+#include <glim/util/point_attributes.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/common/cloud_deskewing.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
@@ -378,6 +379,7 @@ void SubMapping::insert_keyframe(const int current, const EstimationFrame::Const
     if (!odom_frame->raw_frame->intensities.empty()) {
       frame->add_intensities(odom_frame->raw_frame->intensities);
     }
+    add_point_attributes(*frame, odom_frame->raw_frame->aux_attributes);
     deskewed_frame = frame;
   }
 

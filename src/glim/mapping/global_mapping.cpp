@@ -30,6 +30,7 @@
 #include <gtsam_points/cuda/stream_temp_buffer_roundrobin.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/point_attributes.hpp>
 #include <glim/util/serialization.hpp>
 #include <glim/common/imu_integration.hpp>
 #include <glim/mapping/callbacks.hpp>
@@ -682,6 +683,15 @@ gtsam_points::PointCloud::Ptr GlobalMapping::export_points() {
     if (export_intensities) {
       merged->add_intensities(intensities);
     }
+
+    std::vector<gtsam_points::PointCloud::ConstPtr> frames;
+    frames.reserve(submaps.size());
+    for (const auto& submap : submaps) {
+      if (submap && submap->frame) {
+        frames.emplace_back(submap->frame);
+      }
+    }
+    concat_aux_attributes(frames, *merged);
   }
 
   return merged;
