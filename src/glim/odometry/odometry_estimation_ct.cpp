@@ -17,6 +17,7 @@
 #include <gtsam_points/optimizers/incremental_fixed_lag_smoother_with_fallback.hpp>
 
 #include <glim/util/config.hpp>
+#include <glim/util/point_attributes.hpp>
 #include <glim/common/cloud_covariance_estimation.hpp>
 #include <glim/odometry/callbacks.hpp>
 
@@ -99,6 +100,7 @@ EstimationFrame::ConstPtr OdometryEstimationCT::insert_frame(const PreprocessedF
 
   gtsam_points::PointCloudCPU::Ptr frame_cpu(new gtsam_points::PointCloudCPU(raw_frame->points));
   frame_cpu->add_times(raw_frame->times);
+  add_point_attributes(*frame_cpu, raw_frame->aux_attributes);
 
   covariance_estimation->estimate(raw_frame->points, raw_frame->neighbors, frame_cpu->normals_storage, frame_cpu->covs_storage);
   frame_cpu->normals = frame_cpu->normals_storage.data();

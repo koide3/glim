@@ -5,6 +5,7 @@
 #include <gtsam_points/optimizers/linearization_hook.hpp>
 #include <gtsam_points/cuda/nonlinear_factor_set_gpu_create.hpp>
 #include <glim/util/config.hpp>
+#include <glim/util/point_attributes.hpp>
 
 #include <spdlog/spdlog.h>
 #include <portable-file-dialogs.h>
@@ -256,6 +257,14 @@ bool OfflineViewer::export_map(guik::ProgressInterface& progress, const std::str
     if (has_intensities) {
       ply.intensities.push_back(points->intensities[i]);
     }
+  }
+
+  const auto attributes = get_point_attributes(*points, get_point_attribute_types());
+  for (const auto& [name, attribute] : attributes) {
+    visit_point_field_type(attribute.type, [&](auto tag) {
+      using T = decltype(tag);
+      ply.add_prop<T>(name, attribute.values<T>(), attribute.size());
+    });
   }
 
   glk::save_ply_binary(path, ply);

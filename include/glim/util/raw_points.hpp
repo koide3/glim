@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <Eigen/Core>
+#include <glim/util/point_attribute_types.hpp>
 
 namespace glim {
 
@@ -24,6 +25,7 @@ public:
   std::vector<Eigen::Vector4d> points;  ///< Point coordinates
   std::vector<Eigen::Vector4d> colors;  ///< Point colors
   std::vector<uint32_t> rings;          ///< Ring numbers of scanned points
+  PointAttributes aux_attributes;       ///< Extra per-point attributes (e.g., "red", "green", "blue")
 };
 
 }  // namespace glim

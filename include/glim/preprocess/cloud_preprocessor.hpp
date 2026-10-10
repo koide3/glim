@@ -64,12 +64,15 @@ public:
 private:
   PreprocessedFrame::Ptr preprocess_impl(const RawPoints::ConstPtr& raw_points);
   std::vector<int> find_neighbors(const Eigen::Vector4d* points, const int num_points, const int k) const;
+  PointAttributes normalize_point_attributes(const PointAttributes& attributes, const size_t num_points);
 
 private:
   using Params = CloudPreprocessorParams;
   Params params;
 
   mutable std::mt19937 mt;
+  PointAttributeTypes point_attribute_types;  ///< Value types of extra point attributes (fixed by their first occurrence)
+  bool aux_attributes_warned = false;
 
   std::shared_ptr<void> tbb_task_arena;
 };

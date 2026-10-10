@@ -1,14 +1,17 @@
 #pragma once
 
+#include <cstring>
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include <spdlog/spdlog.h>
 #include <boost/format.hpp>
 
 #include <Eigen/Core>
 #include <gtsam_points/types/point_cloud.hpp>
 #include <glim/util/raw_points.hpp>
+#include <glim/util/point_attribute_types.hpp>
 
 #ifdef GLIM_ROS2
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -61,7 +64,11 @@ Eigen::Vector4d get_vec4(const void* x, const void* y, const void* z) {
   return Eigen::Vector4d(*reinterpret_cast<const T*>(x), *reinterpret_cast<const T*>(y), *reinterpret_cast<const T*>(z), 1.0);
 }
 
-static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const std::string& intensity_channel, const std::string& ring_channel) {
+static RawPoints::Ptr extract_raw_points(
+  const PointCloud2& points_msg,
+  const std::string& intensity_channel,
+  const std::string& ring_channel,
+  const std::vector<std::string>& extra_fields = {}) {
   int num_points = points_msg.width * points_msg.height;
 
   int x_type = 0;
@@ -227,6 +234,27 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2& points_msg, const st
     }
   }
 
+  for (const auto& extra_field : extra_fields) {
+    const auto field = std::find_if(points_msg.fields.begin(), points_msg.fields.end(), [&](const auto& f) { return f.name == extra_field; });
+    if (field == points_msg.fields.end()) {
+      spdlog::warn("extra point field '{}' not found in the point cloud", extra_field);
+      continue;
+    }
+
+    if (!is_valid_point_field_type(field->datatype)) {
+      spdlog::warn("unsupported type {} of extra point field '{}'", field->datatype, extra_field);
+      return nullptr;
+    }
+
+    // Copy values in their native type
+    PointAttribute attribute(static_cast<PointFieldType>(field->datatype), num_points);
+    const size_t elem_size = attribute.elem_size();
+    for (int i = 0; i < num_points; i++) {
+      std::memcpy(attribute.data.data() + elem_size * i, &points_msg.data[points_msg.point_step * i + field->offset], elem_size);
+    }
+    raw_points->aux_attributes[extra_field] = std::move(attribute);
+  }
+
   raw_points->stamp = to_sec(points_msg.header.stamp);
   return raw_points;
 }
@@ -239,7 +267,15 @@ static RawPoints::Ptr extract_raw_points(const PointCloud2ConstPtr& points_msg, 
   return extract_raw_points(*points_msg, intensity_channel, "");
 }
 
-static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_points::PointCloud& frame) {
+/**
+ * @brief Convert a point cloud to PointCloud2
+ * @param frame_id      Frame ID
+ * @param stamp         Timestamp
+ * @param frame         Point cloud
+ * @param extra_fields  Names and types of aux attributes to be written as extra fields in their native types
+ */
+static PointCloud2ConstPtr
+frame_to_pointcloud2(const std::string& frame_id, const double stamp, const gtsam_points::PointCloud& frame, const PointAttributeTypes& extra_fields = {}) {
   PointCloud2Ptr msg(new PointCloud2);
   msg->header.frame_id = frame_id;
   msg->header.stamp = from_sec(stamp);
@@ -280,6 +316,24 @@ static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, con
     point_step += sizeof(std::uint32_t);
   }
 
+  std::vector<std::pair<size_t, const std::uint8_t*>> extra_values;  // (elem_size, values)
+  for (const auto& [name, type] : extra_fields) {
+    const size_t elem_size = point_field_type_size(type);
+    const auto found = frame.aux_attributes.find(name);
+    if (found == frame.aux_attributes.end() || found->second.first != elem_size) {
+      continue;
+    }
+
+    const bool reserved = std::any_of(msg->fields.begin(), msg->fields.end(), [&](const auto& f) { return f.name == name; });
+    if (reserved) {
+      continue;
+    }
+
+    msg->fields.emplace_back(create_field(name, point_step, static_cast<int>(type), 1));
+    point_step += elem_size;
+    extra_values.emplace_back(elem_size, static_cast<const std::uint8_t*>(found->second.second));
+  }
+
   msg->is_bigendian = false;
   msg->point_step = point_step;
   msg->row_step = point_step * frame.size();
@@ -308,6 +362,11 @@ static PointCloud2ConstPtr frame_to_pointcloud2(const std::string& frame_id, con
       point_bytes[2] = rgba[2];
       point_bytes[3] = rgba[3];
       point_bytes += sizeof(std::uint32_t);
+    }
+
+    for (const auto& [elem_size, values] : extra_values) {
+      std::memcpy(point_bytes, values + elem_size * i, elem_size);
+      point_bytes += elem_size;
     }
   }
 
