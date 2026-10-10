@@ -52,6 +52,8 @@ OdometryEstimationGPUParams::OdometryEstimationGPUParams() : OdometryEstimationI
   const std::string strategy = config.param<std::string>("odometry_estimation", "keyframe_update_strategy", "OVERLAP");
   if (strategy == "OVERLAP") {
     keyframe_strategy = KeyframeUpdateStrategy::OVERLAP;
+  } else if (strategy == "OVERLAP2") {
+    keyframe_strategy = KeyframeUpdateStrategy::OVERLAP2;
   } else if (strategy == "DISPLACEMENT") {
     keyframe_strategy = KeyframeUpdateStrategy::DISPLACEMENT;
   } else if (strategy == "ENTROPY") {
@@ -113,6 +115,9 @@ void OdometryEstimationGPU::update_frames(const int current, const gtsam::Nonlin
   switch (params->keyframe_strategy) {
     case OdometryEstimationGPUParams::KeyframeUpdateStrategy::OVERLAP:
       update_keyframes_overlap(current);
+      break;
+    case OdometryEstimationGPUParams::KeyframeUpdateStrategy::OVERLAP2:
+      update_keyframes_overlap2(current);
       break;
     case OdometryEstimationGPUParams::KeyframeUpdateStrategy::DISPLACEMENT:
       update_keyframes_displacement(current);
@@ -180,9 +185,24 @@ gtsam::NonlinearFactorGraph OdometryEstimationGPU::create_factors(const int curr
     create_binary_factor(factors, X(target), X(current), frames[target], frames[current]);
   }
 
-  for (const auto& keyframe : keyframes) {
+  // Compute overlaps to keyframes
+  std::vector<gtsam_points::GaussianVoxelMap::ConstPtr> keyframe_voxelmaps(keyframes.size());
+  std::vector<Eigen::Isometry3d> Ts_keyframe_current(keyframes.size());
+  for (int i = 0; i < keyframes.size(); i++) {
+    keyframe_voxelmaps[i] = keyframes[i]->voxelmaps.back();
+    Ts_keyframe_current[i] = keyframes[i]->T_world_imu.inverse() * frames[current]->T_world_imu;
+  }
+  std::vector<gtsam_points::PointCloud::ConstPtr> current_points(keyframes.size(), frames[current]->frame);
+  std::vector<double> overlaps = gtsam_points::overlap_gpu(keyframe_voxelmaps, current_points, Ts_keyframe_current, *stream);
+
+  for (int i = 0; i < keyframes.size(); i++) {
+    const auto& keyframe = keyframes[i];
     if (keyframe->id >= current - params->full_connection_window_size) {
       // There already exists a factor
+      continue;
+    }
+
+    if (overlaps[i] < 0.01) {
       continue;
     }
 
@@ -288,6 +308,86 @@ void OdometryEstimationGPU::update_keyframes_overlap(int current) {
       frame_to_eliminate = i;
     }
   }
+
+  marginalized_keyframes.push_back(keyframes[frame_to_eliminate]);
+  keyframes.erase(keyframes.begin() + frame_to_eliminate);
+  Callbacks::on_marginalized_keyframes(marginalized_keyframes);
+}
+
+/**
+ * @brief Keyframe management based on an overlap metric
+ * @ref   Koide et al., "Globally Consistent and Tightly Coupled 3D LiDAR Inertial Mapping", ICRA2022
+ */
+void OdometryEstimationGPU::update_keyframes_overlap2(int current) {
+  const auto params = static_cast<OdometryEstimationGPUParams*>(this->params.get());
+
+  if (!frames[current]->frame->size()) {
+    return;
+  }
+
+  if (keyframes.empty()) {
+    keyframes.push_back(frames[current]);
+    return;
+  }
+
+  std::vector<gtsam_points::GaussianVoxelMap::ConstPtr> keyframes_(keyframes.size());
+  std::vector<Eigen::Isometry3d> delta_from_keyframes(keyframes.size());
+  for (int i = 0; i < keyframes.size(); i++) {
+    keyframes_[i] = keyframes[i]->voxelmaps.back();
+    delta_from_keyframes[i] = keyframes[i]->T_world_imu.inverse() * frames[current]->T_world_imu;
+  }
+
+  const double overlap = gtsam_points::overlap_gpu(keyframes_, frames[current]->frame, delta_from_keyframes, *stream);
+  if (overlap > params->keyframe_max_overlap) {
+    return;
+  }
+
+  const auto& new_keyframe = frames[current];
+  keyframes.push_back(new_keyframe);
+
+  if (keyframes.size() <= params->max_num_keyframes) {
+    return;
+  }
+
+  std::vector<EstimationFrame::ConstPtr> marginalized_keyframes;
+
+  std::vector<gtsam_points::GaussianVoxelMap::ConstPtr> overlap_targets;
+  std::vector<gtsam_points::PointCloud::ConstPtr> overlap_sources;
+  std::vector<Eigen::Isometry3d> Ts_target_source;
+
+  for (int i = 0; i < keyframes.size(); i++) {
+    for (int j = i + 1; j < keyframes.size(); j++) {
+      overlap_targets.emplace_back(keyframes[i]->voxelmaps.back());
+      overlap_sources.emplace_back(keyframes[j]->frame);
+      Ts_target_source.emplace_back(keyframes[i]->T_world_imu.inverse() * keyframes[j]->T_world_imu);
+    }
+  }
+
+  std::vector<double> overlaps = gtsam_points::overlap_gpu(overlap_targets, overlap_sources, Ts_target_source, *stream);
+
+  Eigen::MatrixXd overlap_map = Eigen::MatrixXd::Ones(keyframes.size(), keyframes.size());
+  int count = 0;
+  for (int i = 0; i < keyframes.size(); i++) {
+    for (int j = i + 1; j < keyframes.size(); j++) {
+      overlap_map(i, j) = overlaps[count];
+      count++;
+    }
+  }
+
+  constexpr int power = 3;
+  std::vector<double> scores(keyframes.size() - 1, 0.0);
+  for (int i = 0; i < keyframes.size() - 1; i++) {
+    Eigen::MatrixXd overlap_map_i = overlap_map.topLeftCorner(keyframes.size() - 1, keyframes.size() - 1);
+    overlap_map_i.row(i).setZero();
+    overlap_map_i.col(i).setZero();
+
+    const double sum_overlap = overlap_map_i.array().pow(power).sum();
+    const double overlap_latest = overlap_map(i, keyframes.size() - 1);
+    scores[i] = std::pow(overlap_latest, 1.0 / power) * sum_overlap;
+  }
+
+  auto min_loc = std::min_element(scores.begin(), scores.end());
+  int frame_to_eliminate = std::distance(scores.begin(), min_loc);
 
   marginalized_keyframes.push_back(keyframes[frame_to_eliminate]);
   keyframes.erase(keyframes.begin() + frame_to_eliminate);
